@@ -95,7 +95,7 @@ use metadata_gen::utils::async_extract_metadata_from_file;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let (metadata, keywords, meta_tags) = async_extract_metadata_from_file("./examples/post.md").await?;
+    let (metadata, keywords, meta_tags) = async_extract_metadata_from_file("./examples/example.md").await?;
     println!("Metadata: {:?}", metadata);
     println!("Keywords: {:?}", keywords);
     println!("Meta tags: {}", meta_tags);

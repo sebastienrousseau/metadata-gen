@@ -78,9 +78,26 @@ serde = { version = "1.0", features = ["derive"] }
 # Examples
 # -----------------------------------------------------------------------------
 
-# [[example]]
-# name = "error"
-# path = "examples/error_examples.rs"
+[[example]]
+name = "error_example"
+path = "examples/error_example.rs"
+
+[[example]]
+name = "lib_example"
+path = "examples/lib_example.rs"
+
+[[example]]
+name = "metadata_example"
+path = "examples/metadata_example.rs"
+
+[[example]]
+name = "metatags_example"
+path = "examples/metatags_example.rs"
+
+[[example]]
+name = "utils_example"
+path = "examples/utils_example.rs"
+
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
