@@ -103,12 +103,12 @@ path = "examples/utils_example.rs"
 # Criterion Benchmark
 # -----------------------------------------------------------------------------
 
-# [[bench]]
-# name = "metadata_benchmark"
-# harness = false
+[[bench]]
+name = "metadata_benchmark"
+harness = false
 
-# [profile.bench]
-# debug = true
+[profile.bench]
+debug = true
 
 # -----------------------------------------------------------------------------
 # Features
