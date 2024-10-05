@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["generate_metatags"],"struct":["MetaTagGroups"]};
+window.SIDEBAR_ITEMS = {"fn":["extract_meta_tags","generate_metatags","meta_tags_to_hashmap"],"struct":["MetaTag","MetaTagGroups"]};

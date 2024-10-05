@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-d5c83a227aeda803.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="metadata_gen" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (14f303bc1 2024-10-04)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">metadata_gen/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-d5c83a227aeda803.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="metadata_gen" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (14f303bc1 2024-10-04)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="icon" href="https://kura.pro/metadata-gen/images/favicon.ico"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">metadata_gen/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -101,20 +101,75 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a></pre></div><pre class="rust"><code><span class="doccomment">//! # metadata-gen
-//!
-//! `metadata-gen` is a library for extracting and processing metadata
-//! for static site generators. It supports various formats including
-//! YAML, TOML, and JSON front matter in Markdown files.
-//!
-//! This crate provides functionality to:
-//! - Extract metadata from content files
-//! - Process and validate metadata
-//! - Generate keywords based on metadata
-//! - Create meta tags for HTML documents
-//! - Asynchronously extract metadata from files
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a></pre></div><pre class="rust"><code><span class="comment">// src/lib.rs
 
-/// The `error` module contains error types for metadata processing.
+</span><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
+#![doc(
+    html_favicon_url = <span class="string">"https://kura.pro/metadata-gen/images/favicon.ico"</span>,
+    html_logo_url = <span class="string">"https://kura.pro/metadata-gen/images/logos/metadata-gen.svg"</span>,
+    html_root_url = <span class="string">"https://docs.rs/metadata-gen"
+</span>)]
+#![crate_name = <span class="string">"metadata_gen"</span>]
+#![crate_type = <span class="string">"lib"</span>]
+
+</span><span class="kw">use </span>std::collections::HashMap;
+
+<span class="doccomment">/// The `error` module contains error types for metadata processing.
 </span><span class="kw">pub mod </span>error;
 <span class="doccomment">/// The `metadata` module contains functions for extracting and processing metadata.
 </span><span class="kw">pub mod </span>metadata;
@@ -126,16 +181,14 @@
 <span class="kw">pub use </span>error::MetadataError;
 <span class="kw">pub use </span>metadata::{extract_metadata, process_metadata, Metadata};
 <span class="kw">pub use </span>metatags::{generate_metatags, MetaTagGroups};
-<span class="kw">pub use </span>utils::{
-    async_extract_metadata_from_file, escape_html_entities,
-};
+<span class="kw">pub use </span>utils::{async_extract_metadata_from_file, escape_html};
 
-<span class="kw">use </span>std::collections::HashMap;
-
-<span class="doccomment">/// Type aliases for improving readability and reducing complexity
-</span><span class="kw">type </span>MetadataMap = HashMap&lt;String, String&gt;;
-<span class="kw">type </span>Keywords = Vec&lt;String&gt;;
-<span class="kw">type </span>MetadataResult =
+<span class="doccomment">/// Type alias for a map of metadata key-value pairs.
+</span><span class="kw">pub type </span>MetadataMap = HashMap&lt;String, String&gt;;
+<span class="doccomment">/// Type alias for a list of keywords.
+</span><span class="kw">pub type </span>Keywords = Vec&lt;String&gt;;
+<span class="doccomment">/// Type alias for the result of metadata extraction and processing.
+</span><span class="kw">pub type </span>MetadataResult =
     <span class="prelude-ty">Result</span>&lt;(MetadataMap, Keywords, MetaTagGroups), MetadataError&gt;;
 
 <span class="doccomment">/// Extracts metadata from the content, generates keywords based on the metadata,
@@ -143,7 +196,7 @@
 ///
 /// This function performs three key tasks:
 /// 1. It extracts metadata from the front matter of the content.
-/// 2. It extracts keywords based on this metadata.
+/// 2. It generates keywords based on this metadata.
 /// 3. It generates various meta tags required for the page.
 ///
 /// # Arguments
@@ -177,6 +230,13 @@
 /// assert!(result.is_ok());
 /// ```
 </span><span class="kw">pub fn </span>extract_and_prepare_metadata(content: <span class="kw-2">&amp;</span>str) -&gt; MetadataResult {
+    <span class="comment">// Ensure the front matter format is correct
+    </span><span class="kw">if </span>!content.contains(<span class="string">":"</span>) {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(MetadataError::ExtractionError {
+            message: <span class="string">"No valid front matter found"</span>.to_string(),
+        });
+    }
+
     <span class="kw">let </span>metadata = extract_metadata(content)<span class="question-mark">?</span>;
     <span class="kw">let </span>metadata_map = metadata.into_inner();
     <span class="kw">let </span>keywords = extract_keywords(<span class="kw-2">&amp;</span>metadata_map);
@@ -203,5 +263,55 @@
         .get(<span class="string">"keywords"</span>)
         .map(|k| k.split(<span class="string">','</span>).map(|s| s.trim().to_string()).collect())
         .unwrap_or_default()
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_extract_and_prepare_metadata() {
+        <span class="kw">let </span>content = <span class="string">r#"---
+title: Test Page
+description: A test page for metadata extraction
+keywords: test, metadata, extraction
+---
+# Test Content
+This is a test file for metadata extraction."#</span>;
+
+        <span class="kw">let </span>result = extract_and_prepare_metadata(content);
+        <span class="macro">assert!</span>(result.is_ok());
+
+        <span class="kw">let </span>(metadata, keywords, meta_tags) = result.unwrap();
+        <span class="macro">assert_eq!</span>(
+            metadata.get(<span class="string">"title"</span>),
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"Test Page"</span>.to_string())
+        );
+        <span class="macro">assert_eq!</span>(
+            metadata.get(<span class="string">"description"</span>),
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">"A test page for metadata extraction"</span>.to_string())
+        );
+        <span class="macro">assert_eq!</span>(keywords, <span class="macro">vec!</span>[<span class="string">"test"</span>, <span class="string">"metadata"</span>, <span class="string">"extraction"</span>]);
+        <span class="macro">assert!</span>(!meta_tags.primary.is_empty());
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_extract_keywords() {
+        <span class="kw">let </span><span class="kw-2">mut </span>metadata = HashMap::new();
+        metadata.insert(
+            <span class="string">"keywords"</span>.to_string(),
+            <span class="string">"rust, programming, metadata"</span>.to_string(),
+        );
+
+        <span class="kw">let </span>keywords = extract_keywords(<span class="kw-2">&amp;</span>metadata);
+        <span class="macro">assert_eq!</span>(keywords, <span class="macro">vec!</span>[<span class="string">"rust"</span>, <span class="string">"programming"</span>, <span class="string">"metadata"</span>]);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_extract_keywords_empty() {
+        <span class="kw">let </span>metadata = HashMap::new();
+        <span class="kw">let </span>keywords = extract_keywords(<span class="kw-2">&amp;</span>metadata);
+        <span class="macro">assert!</span>(keywords.is_empty());
+    }
 }
 </code></pre></div></section></main></body></html>

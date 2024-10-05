@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["MetadataError"]};
+window.SIDEBAR_ITEMS = {"enum":["MetadataError"],"struct":["ContextError"]};
