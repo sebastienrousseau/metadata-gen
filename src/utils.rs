@@ -18,20 +18,52 @@ use tokio::io::AsyncReadExt;
 /// # Example
 ///
 /// ```
-/// use metadata_gen::escape_html_entities;
+/// use metadata_gen::utils::escape_html;
 ///
 /// let input = "Hello, <world>!";
 /// let expected = "Hello, &lt;world&gt;!";
 ///
-/// assert_eq!(escape_html_entities(input), expected);
+/// assert_eq!(escape_html(input), expected);
 /// ```
-pub fn escape_html_entities(value: &str) -> String {
+pub fn escape_html(value: &str) -> String {
     value
         .replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('\"', "&quot;")
         .replace('\'', "&#x27;")
+}
+
+/// Unescapes HTML entities in a string.
+///
+/// # Arguments
+///
+/// * `value` - The string to unescape.
+///
+/// # Returns
+///
+/// A new string with HTML entities unescaped.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::utils::unescape_html;
+///
+/// let input = "Hello, &lt;world&gt;!";
+/// let expected = "Hello, <world>!";
+///
+/// assert_eq!(unescape_html(input), expected);
+/// ```
+pub fn unescape_html(value: &str) -> String {
+    value
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#x27;", "'")
+        .replace("&#39;", "'")
+        .replace("&#x2F;", "/")
+        .replace("&#x2f;", "/")
 }
 
 /// Asynchronously reads a file and extracts metadata from its content.
@@ -76,11 +108,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_escape_html_entities() {
+    fn test_escape_html() {
         let input = "Hello, <world> & \"friends\"!";
         let expected =
             "Hello, &lt;world&gt; &amp; &quot;friends&quot;!";
-        assert_eq!(escape_html_entities(input), expected);
+        assert_eq!(escape_html(input), expected);
     }
 
     #[tokio::test]
@@ -119,5 +151,20 @@ This is a test file for metadata extraction."#;
         );
         assert_eq!(keywords, vec!["test", "metadata", "extraction"]);
         assert!(!meta_tags.primary.is_empty());
+    }
+
+    #[test]
+    fn test_unescape_html() {
+        let input = "Hello, &lt;world&gt; &amp; &quot;friends&quot;!";
+        let expected = "Hello, <world> & \"friends\"!";
+        assert_eq!(unescape_html(input), expected);
+    }
+
+    #[test]
+    fn test_escape_unescape_roundtrip() {
+        let original = "Test <script>alert('XSS');</script> & other \"special\" chars";
+        let escaped = escape_html(original);
+        let unescaped = unescape_html(&escaped);
+        assert_eq!(original, unescaped);
     }
 }

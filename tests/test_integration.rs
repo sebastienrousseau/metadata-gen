@@ -3,7 +3,7 @@ mod integration_tests {
     use metadata_gen::error::MetadataError;
     use metadata_gen::metadata::extract_metadata;
     use metadata_gen::metatags::generate_metatags;
-    use metadata_gen::utils::escape_html_entities;
+    use metadata_gen::utils::escape_html;
 
     /// Integration test: Metadata extraction and meta tag generation.
     ///
@@ -67,7 +67,7 @@ keywords: "escape, html, test"
 
         // Escape HTML characters in metadata fields
         let escaped_description =
-            escape_html_entities(metadata.get("description").unwrap());
+            escape_html(metadata.get("description").unwrap());
 
         // Verify that HTML in the description is escaped
         assert_eq!(

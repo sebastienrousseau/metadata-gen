@@ -1,15 +1,15 @@
-//! # metadata-gen
-//!
-//! `metadata-gen` is a library for extracting and processing metadata
-//! for static site generators. It supports various formats including
-//! YAML, TOML, and JSON front matter in Markdown files.
-//!
-//! This crate provides functionality to:
-//! - Extract metadata from content files
-//! - Process and validate metadata
-//! - Generate keywords based on metadata
-//! - Create meta tags for HTML documents
-//! - Asynchronously extract metadata from files
+// src/lib.rs
+
+#![doc = include_str!("../README.md")]
+#![doc(
+    html_favicon_url = "https://kura.pro/metadata-gen/images/favicon.ico",
+    html_logo_url = "https://kura.pro/metadata-gen/images/logos/metadata-gen.svg",
+    html_root_url = "https://docs.rs/metadata-gen"
+)]
+#![crate_name = "metadata_gen"]
+#![crate_type = "lib"]
+
+use std::collections::HashMap;
 
 /// The `error` module contains error types for metadata processing.
 pub mod error;
@@ -23,16 +23,14 @@ pub mod utils;
 pub use error::MetadataError;
 pub use metadata::{extract_metadata, process_metadata, Metadata};
 pub use metatags::{generate_metatags, MetaTagGroups};
-pub use utils::{
-    async_extract_metadata_from_file, escape_html_entities,
-};
+pub use utils::{async_extract_metadata_from_file, escape_html};
 
-use std::collections::HashMap;
-
-/// Type aliases for improving readability and reducing complexity
-type MetadataMap = HashMap<String, String>;
-type Keywords = Vec<String>;
-type MetadataResult =
+/// Type alias for a map of metadata key-value pairs.
+pub type MetadataMap = HashMap<String, String>;
+/// Type alias for a list of keywords.
+pub type Keywords = Vec<String>;
+/// Type alias for the result of metadata extraction and processing.
+pub type MetadataResult =
     Result<(MetadataMap, Keywords, MetaTagGroups), MetadataError>;
 
 /// Extracts metadata from the content, generates keywords based on the metadata,
@@ -40,7 +38,7 @@ type MetadataResult =
 ///
 /// This function performs three key tasks:
 /// 1. It extracts metadata from the front matter of the content.
-/// 2. It extracts keywords based on this metadata.
+/// 2. It generates keywords based on this metadata.
 /// 3. It generates various meta tags required for the page.
 ///
 /// # Arguments
@@ -100,4 +98,54 @@ pub fn extract_keywords(
         .get("keywords")
         .map(|k| k.split(',').map(|s| s.trim().to_string()).collect())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_and_prepare_metadata() {
+        let content = r#"---
+title: Test Page
+description: A test page for metadata extraction
+keywords: test, metadata, extraction
+---
+# Test Content
+This is a test file for metadata extraction."#;
+
+        let result = extract_and_prepare_metadata(content);
+        assert!(result.is_ok());
+
+        let (metadata, keywords, meta_tags) = result.unwrap();
+        assert_eq!(
+            metadata.get("title"),
+            Some(&"Test Page".to_string())
+        );
+        assert_eq!(
+            metadata.get("description"),
+            Some(&"A test page for metadata extraction".to_string())
+        );
+        assert_eq!(keywords, vec!["test", "metadata", "extraction"]);
+        assert!(!meta_tags.primary.is_empty());
+    }
+
+    #[test]
+    fn test_extract_keywords() {
+        let mut metadata = HashMap::new();
+        metadata.insert(
+            "keywords".to_string(),
+            "rust, programming, metadata".to_string(),
+        );
+
+        let keywords = extract_keywords(&metadata);
+        assert_eq!(keywords, vec!["rust", "programming", "metadata"]);
+    }
+
+    #[test]
+    fn test_extract_keywords_empty() {
+        let metadata = HashMap::new();
+        let keywords = extract_keywords(&metadata);
+        assert!(keywords.is_empty());
+    }
 }

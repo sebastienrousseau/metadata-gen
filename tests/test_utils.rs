@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod tests {
     use metadata_gen::async_extract_metadata_from_file;
-    use metadata_gen::utils::escape_html_entities;
+    use metadata_gen::utils::escape_html;
 
     /// Test if string escaping works as expected.
     ///
@@ -13,7 +13,7 @@ mod tests {
     #[test]
     fn test_string_escaping() {
         let input = "<script>alert('test');</script>";
-        let escaped = escape_html_entities(input);
+        let escaped = escape_html(input);
         let expected =
             "&lt;script&gt;alert(&#x27;test&#x27;);&lt;/script&gt;"; // No forward slash escaping
         assert_eq!(escaped, expected, "The escaped HTML entities should match the expected result.");
@@ -25,7 +25,7 @@ mod tests {
     #[test]
     fn test_invalid_input_handling() {
         let input = "";
-        let result = escape_html_entities(input);
+        let result = escape_html(input);
         assert_eq!(
             result, "",
             "Empty string should return empty result"
@@ -34,11 +34,11 @@ mod tests {
 
     /// Test escaping of a variety of special HTML characters.
     #[test]
-    fn test_escape_html_entities() {
+    fn test_escape_html() {
         let input = "Hello, <world> & \"friends\"!";
         let expected =
             "Hello, &lt;world&gt; &amp; &quot;friends&quot;!";
-        assert_eq!(escape_html_entities(input), expected);
+        assert_eq!(escape_html(input), expected);
     }
 
     /// Test async file-based metadata extraction.

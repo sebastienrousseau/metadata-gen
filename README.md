@@ -37,20 +37,28 @@ Here are some examples of how to use the library:
 ### Basic Usage
 
 ```rust
-use metadata_gen::{extract_meta_tags, extract_keywords};
+use metadata_gen::metatags::{extract_meta_tags, meta_tags_to_hashmap};
+use metadata_gen::extract_keywords;
 
 let html_content = "<html>...</html>";
-let meta_tags = extract_meta_tags(html_content);
-let keywords = extract_keywords(html_content);
 
-println!("Meta tags: {:?}", meta_tags);
+// Extract meta tags
+let meta_tags = extract_meta_tags(html_content).unwrap_or_default();
+
+// Convert meta tags to HashMap
+let metadata = meta_tags_to_hashmap(meta_tags);
+
+// Extract keywords from the metadata
+let keywords = extract_keywords(&metadata);
+
+println!("Meta tags: {:?}", metadata);
 println!("Keywords: {:?}", keywords);
 ```
 
 ### HTML Escape/Unescape Example
 
 ```rust
-use metadata_gen::escape::{escape_html, unescape_html};
+use metadata_gen::utils::{escape_html, unescape_html};
 
 let escaped = escape_html("Hello <World>");
 let unescaped = unescape_html(&escaped);
