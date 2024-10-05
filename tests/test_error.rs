@@ -5,9 +5,9 @@
 
 #[cfg(test)]
 mod tests {
+    use metadata_gen::error::MetadataError;
     use serde_json::Error as JsonError;
     use serde_yml::Error as YamlError;
-    use metadata_gen::error::MetadataError;
     use std::io;
     use toml::de::Error as TomlError;
 
@@ -16,12 +16,12 @@ mod tests {
     /// This test ensures that the `ExtractionError` variant is created and its message is correct.
     #[test]
     fn test_extraction_error() {
-        let error = MetadataError::ExtractionError(
-            "Invalid metadata format".to_string(),
-        );
+        let error = MetadataError::ExtractionError {
+            message: "No valid front matter found.".to_string(),
+        };
         assert_eq!(
             error.to_string(),
-            "Failed to extract metadata: Invalid metadata format"
+            "Failed to extract metadata: No valid front matter found."
         );
     }
 
@@ -30,8 +30,9 @@ mod tests {
     /// This test ensures that the `ProcessingError` variant is created and its message is correct.
     #[test]
     fn test_processing_error() {
-        let error =
-            MetadataError::ProcessingError("Unknown field".to_string());
+        let error = MetadataError::ProcessingError {
+            message: "Unknown field".to_string(),
+        };
         assert_eq!(
             error.to_string(),
             "Failed to process metadata: Unknown field"

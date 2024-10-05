@@ -60,9 +60,9 @@ pub fn extract_metadata(
         Ok(json_metadata)
     } else {
         // println!("No valid front matter found."); // Debugging output
-        Err(MetadataError::ExtractionError(
-            "No valid front matter found.".to_string(),
-        ))
+        Err(MetadataError::ExtractionError {
+            message: "No valid front matter found.".to_string(),
+        })
     }
 }
 

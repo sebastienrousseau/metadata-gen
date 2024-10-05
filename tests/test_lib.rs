@@ -106,10 +106,11 @@ description A sample page
         );
 
         // Ensure the error is of type MetadataError::ExtractionError
-        if let Err(MetadataError::ExtractionError(_)) = result {
-            // This is the expected error
+        if let Err(MetadataError::ExtractionError { message }) = result
+        {
+            assert!(message.contains("No valid front matter found"));
         } else {
-            panic!("Expected MetadataError::ExtractionError");
+            panic!("Expected ExtractionError, got {:?}", result);
         }
     }
 }

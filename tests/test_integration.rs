@@ -96,10 +96,11 @@ description: This is an invalid front matter format.
         assert!(result.is_err());
 
         // Check for the specific type of error (MetadataError::ExtractionError)
-        if let Err(MetadataError::ExtractionError(_)) = result {
-            // Expected error
+        if let Err(MetadataError::ExtractionError { message }) = result
+        {
+            assert!(message.contains("No valid front matter found"));
         } else {
-            panic!("Expected MetadataError::ExtractionError");
+            panic!("Expected ExtractionError, got {:?}", result);
         }
     }
 
