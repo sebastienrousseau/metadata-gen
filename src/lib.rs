@@ -72,6 +72,13 @@ pub type MetadataResult =
 /// assert!(result.is_ok());
 /// ```
 pub fn extract_and_prepare_metadata(content: &str) -> MetadataResult {
+    // Ensure the front matter format is correct
+    if !content.contains(":") {
+        return Err(MetadataError::ExtractionError {
+            message: "No valid front matter found".to_string(),
+        });
+    }
+
     let metadata = extract_metadata(content)?;
     let metadata_map = metadata.into_inner();
     let keywords = extract_keywords(&metadata_map);

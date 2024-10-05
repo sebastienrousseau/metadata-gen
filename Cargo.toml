@@ -50,7 +50,7 @@ serde_json = "1.0"
 serde_yml = "0.0.12"
 tempfile = "3.13"
 thiserror = "1.0"
-time = "0.3"
+time = { version = "0.3", features = ["parsing"] }
 tokio = { version = "1.40", features = ["full"] }
 toml = "0.8"
 yaml-rust2 = "0.9"
@@ -61,7 +61,7 @@ yaml-rust2 = "0.9"
 
 [build-dependencies]
 # Dependencies for build scripts.
-version_check = "0.9"
+version_check = "0.9.4"
 
 # -----------------------------------------------------------------------------
 # Development Dependencies
@@ -69,9 +69,9 @@ version_check = "0.9"
 
 [dev-dependencies]
 # Dependencies required for development, testing, and documentation.
-assert_fs = "1.0"
+assert_fs = "1.1"
 criterion = "0.5"
-predicates = "3.0"
+predicates = "3.1"
 serde = { version = "1.0", features = ["derive"] }
 
 # -----------------------------------------------------------------------------
@@ -92,3 +92,29 @@ serde = { version = "1.0", features = ["derive"] }
 
 # [profile.bench]
 # debug = true
+
+# -----------------------------------------------------------------------------
+# Features
+# -----------------------------------------------------------------------------
+
+[features]
+default = []
+advanced_parsing = []
+
+# -----------------------------------------------------------------------------
+# Release Profile
+# -----------------------------------------------------------------------------
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
+
+# -----------------------------------------------------------------------------
+# Documentation Configuration
+# -----------------------------------------------------------------------------
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
