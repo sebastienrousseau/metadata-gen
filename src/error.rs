@@ -257,9 +257,9 @@ impl MetadataError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io;
-    use std::fmt;
     use std::error::Error;
+    use std::fmt;
+    use std::io;
 
     #[test]
     fn test_extraction_error() {
@@ -567,20 +567,27 @@ mod tests {
 
     #[test]
     fn test_extraction_error_empty_message() {
-        let error = MetadataError::ExtractionError { message: "".to_string() };
+        let error = MetadataError::ExtractionError {
+            message: "".to_string(),
+        };
         assert_eq!(error.to_string(), "Failed to extract metadata: ");
     }
 
     #[test]
     fn test_processing_error_empty_message() {
-        let error = MetadataError::ProcessingError { message: "".to_string()};
+        let error = MetadataError::ProcessingError {
+            message: "".to_string(),
+        };
         assert_eq!(error.to_string(), "Failed to process metadata: ");
     }
 
     #[test]
     fn test_missing_field_error_empty_message() {
         let error = MetadataError::MissingFieldError("".to_string());
-        assert_eq!(error.to_string(), "Missing required metadata field: ");
+        assert_eq!(
+            error.to_string(),
+            "Missing required metadata field: "
+        );
     }
 
     #[test]
@@ -590,23 +597,33 @@ mod tests {
     }
 
     #[test]
-fn test_extraction_error_debug() {
-    let error = MetadataError::ExtractionError { message: "Error extracting metadata".to_string() };
-    // The correct Debug output for the struct variant should include the field name
-    assert_eq!(format!("{:?}", error), r#"ExtractionError { message: "Error extracting metadata" }"#);
-}
+    fn test_extraction_error_debug() {
+        let error = MetadataError::ExtractionError {
+            message: "Error extracting metadata".to_string(),
+        };
+        // The correct Debug output for the struct variant should include the field name
+        assert_eq!(
+            format!("{:?}", error),
+            r#"ExtractionError { message: "Error extracting metadata" }"#
+        );
+    }
 
-#[test]
-fn test_processing_error_debug() {
-    let error = MetadataError::ProcessingError { message: "Error processing metadata".to_string() };
-    // The correct Debug output for the struct variant should include the field name
-    assert_eq!(format!("{:?}", error), r#"ProcessingError { message: "Error processing metadata" }"#);
-}
-
+    #[test]
+    fn test_processing_error_debug() {
+        let error = MetadataError::ProcessingError {
+            message: "Error processing metadata".to_string(),
+        };
+        // The correct Debug output for the struct variant should include the field name
+        assert_eq!(
+            format!("{:?}", error),
+            r#"ProcessingError { message: "Error processing metadata" }"#
+        );
+    }
 
     #[test]
     fn test_io_error_propagation() {
-        let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
+        let io_error =
+            io::Error::new(io::ErrorKind::NotFound, "file not found");
         let error: MetadataError = io_error.into();
         assert_eq!(error.to_string(), "I/O error: file not found");
         assert!(matches!(error, MetadataError::IoError(_)));
@@ -616,7 +633,10 @@ fn test_processing_error_debug() {
     fn test_yaml_error_propagation() {
         let yaml_error = serde_yml::Error::custom("Custom YAML error");
         let error: MetadataError = yaml_error.into();
-        assert_eq!(error.to_string(), "YAML parsing error: Custom YAML error");
+        assert_eq!(
+            error.to_string(),
+            "YAML parsing error: Custom YAML error"
+        );
         assert!(matches!(error, MetadataError::YamlError(_)));
     }
 
@@ -624,7 +644,10 @@ fn test_processing_error_debug() {
     fn test_json_error_propagation() {
         let json_error = serde_json::Error::custom("Custom JSON error");
         let error: MetadataError = json_error.into();
-        assert_eq!(error.to_string(), "JSON parsing error: Custom JSON error");
+        assert_eq!(
+            error.to_string(),
+            "JSON parsing error: Custom JSON error"
+        );
         assert!(matches!(error, MetadataError::JsonError(_)));
     }
 
@@ -632,20 +655,32 @@ fn test_processing_error_debug() {
     fn test_toml_error_propagation() {
         let toml_error = toml::de::Error::custom("Custom TOML error");
         let error: MetadataError = toml_error.into();
-        assert_eq!(error.to_string(), "TOML parsing error: Custom TOML error\n");
+        assert_eq!(
+            error.to_string(),
+            "TOML parsing error: Custom TOML error\n"
+        );
         assert!(matches!(error, MetadataError::TomlError(_)));
     }
 
     #[test]
     fn test_missing_field_error_debug() {
-        let error = MetadataError::MissingFieldError("title".to_string());
-        assert_eq!(format!("{:?}", error), r#"MissingFieldError("title")"#);
+        let error =
+            MetadataError::MissingFieldError("title".to_string());
+        assert_eq!(
+            format!("{:?}", error),
+            r#"MissingFieldError("title")"#
+        );
     }
 
     #[test]
     fn test_date_parse_error_debug() {
-        let error = MetadataError::DateParseError("Invalid date format".to_string());
-        assert_eq!(format!("{:?}", error), r#"DateParseError("Invalid date format")"#);
+        let error = MetadataError::DateParseError(
+            "Invalid date format".to_string(),
+        );
+        assert_eq!(
+            format!("{:?}", error),
+            r#"DateParseError("Invalid date format")"#
+        );
     }
 
     #[test]
@@ -690,7 +725,10 @@ fn test_processing_error_debug() {
         };
 
         let formatted = format!("{}", context_error);
-        assert_eq!(formatted, "An error occurred while processing: Custom error occurred");
+        assert_eq!(
+            formatted,
+            "An error occurred while processing: Custom error occurred"
+        );
     }
 
     #[test]
@@ -707,19 +745,18 @@ fn test_processing_error_debug() {
     }
 
     #[test]
-fn test_context_error_debug() {
-    let custom_error = CustomError;
-    let context_error = ContextError {
-        context: "Error during processing".to_string(),
-        source: Box::new(custom_error),
-    };
+    fn test_context_error_debug() {
+        let custom_error = CustomError;
+        let context_error = ContextError {
+            context: "Error during processing".to_string(),
+            source: Box::new(custom_error),
+        };
 
-    let debug_output = format!("{:?}", context_error);
+        let debug_output = format!("{:?}", context_error);
 
-    // Ensure the debug output includes the "ContextError" struct and its fields
-    assert!(debug_output.contains("ContextError"));
-    assert!(debug_output.contains("Error during processing"));
-    assert!(debug_output.contains("CustomError"));
-}
-
+        // Ensure the debug output includes the "ContextError" struct and its fields
+        assert!(debug_output.contains("ContextError"));
+        assert!(debug_output.contains("Error during processing"));
+        assert!(debug_output.contains("CustomError"));
+    }
 }
