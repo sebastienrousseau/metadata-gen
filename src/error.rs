@@ -258,6 +258,8 @@ impl MetadataError {
 mod tests {
     use super::*;
     use std::io;
+    use std::fmt;
+    use std::error::Error;
 
     #[test]
     fn test_extraction_error() {
@@ -666,4 +668,58 @@ fn test_processing_error_debug() {
         let error: MetadataError = toml_error.into();
         assert_eq!(error.to_string(), "TOML parsing error: \n");
     }
+
+    // A custom error for testing purposes
+    #[derive(Debug)]
+    struct CustomError;
+
+    impl fmt::Display for CustomError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "Custom error occurred")
+        }
+    }
+
+    impl Error for CustomError {}
+
+    #[test]
+    fn test_context_error_fmt() {
+        let custom_error = CustomError;
+        let context_error = ContextError {
+            context: "An error occurred while processing".to_string(),
+            source: Box::new(custom_error),
+        };
+
+        let formatted = format!("{}", context_error);
+        assert_eq!(formatted, "An error occurred while processing: Custom error occurred");
+    }
+
+    #[test]
+    fn test_context_error_source() {
+        let custom_error = CustomError;
+        let context_error = ContextError {
+            context: "Error with context".to_string(),
+            source: Box::new(custom_error),
+        };
+
+        // The source method should return a reference to the original error (custom_error in this case)
+        let source = context_error.source().unwrap();
+        assert_eq!(source.to_string(), "Custom error occurred");
+    }
+
+    #[test]
+fn test_context_error_debug() {
+    let custom_error = CustomError;
+    let context_error = ContextError {
+        context: "Error during processing".to_string(),
+        source: Box::new(custom_error),
+    };
+
+    let debug_output = format!("{:?}", context_error);
+
+    // Ensure the debug output includes the "ContextError" struct and its fields
+    assert!(debug_output.contains("ContextError"));
+    assert!(debug_output.contains("Error during processing"));
+    assert!(debug_output.contains("CustomError"));
+}
+
 }
