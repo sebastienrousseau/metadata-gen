@@ -1,0 +1,93 @@
+# -----------------------------------------------------------------------------
+# Metadata Gen - A powerful Rust library for extracting, validating, and processing metadata in YAML, TOML, and JSON formats from any content or data file.
+# -----------------------------------------------------------------------------
+
+[package]
+name = "metadata-gen"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.56.0"
+license = "MIT OR Apache-2.0"
+description = """
+A powerful Rust library for extracting, validating, and processing metadata in YAML, TOML, and JSON formats from any content or data file.
+"""
+homepage = "https://metadata-gen.com/"
+documentation = "https://doc.metadata-gen.com/metadata_gen/"
+repository = "https://github.com/sebastienrousseau/metadata-gen"
+readme = "README.md"
+build = "build.rs"
+
+# -----------------------------------------------------------------------------
+# Crate Configuration
+# -----------------------------------------------------------------------------
+categories = [
+    "command-line-utilities",
+    "data-structures",
+    "text-processing",
+    "parsing",
+    "development-tools"
+]
+
+keywords = ["metadata", "yaml", "toml", "json", "metadata-gen"]
+
+[lib]
+name = "metadata_gen"
+path = "src/lib.rs"
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+
+[dependencies]
+# Dependencies required for building and running the project.
+dtt = "0.0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+yaml-rust2 = "0.9.0"
+anyhow = "1.0"
+tempfile = "3.12"
+thiserror = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+time = "0.3"
+regex = "1.10"
+serde_yml = "0.0.12"
+quick-xml = "0.36"
+
+# -----------------------------------------------------------------------------
+# Build Dependencies
+# -----------------------------------------------------------------------------
+
+[build-dependencies]
+# Dependencies for build scripts.
+version_check = "0.9"
+
+# -----------------------------------------------------------------------------
+# Development Dependencies
+# -----------------------------------------------------------------------------
+
+[dev-dependencies]
+# Dependencies required for development, testing, and documentation.
+assert_fs = "1.0"
+criterion = "0.5"
+predicates = "3.0"
+serde = { version = "1.0", features = ["derive"] }
+
+# -----------------------------------------------------------------------------
+# Examples
+# -----------------------------------------------------------------------------
+
+# [[example]]
+# name = "error"
+# path = "examples/error_examples.rs"
+
+# -----------------------------------------------------------------------------
+# Criterion Benchmark
+# -----------------------------------------------------------------------------
+
+# [[bench]]
+# name = "metadata_benchmark"
+# harness = false
+
+# [profile.bench]
+# debug = true
