@@ -3,8 +3,33 @@
 //! This module defines custom error types used throughout the library,
 //! providing detailed information about various failure scenarios.
 
+use serde::de::Error as SerdeError;
 use serde_yml::Error as SerdeYmlError;
+use std::fmt::Display;
 use thiserror::Error;
+
+/// A custom error type to add context to the `Other` variant of `MetadataError`.
+///
+/// This struct wraps another error and provides additional context information.
+#[derive(Debug)]
+pub struct ContextError {
+    /// The context message providing additional information about the error.
+    context: String,
+    /// The source error that this `ContextError` is wrapping.
+    source: Box<dyn std::error::Error + Send + Sync>,
+}
+
+impl std::fmt::Display for ContextError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.context, self.source)
+    }
+}
+
+impl std::error::Error for ContextError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&*self.source)
+    }
+}
 
 /// Custom error types for the metadata-gen library.
 ///
@@ -149,12 +174,89 @@ impl MetadataError {
             message: message.into(),
         }
     }
+
+    /// Adds context to an existing error.
+    ///
+    /// This method wraps the current error with additional context information.
+    ///
+    /// # Arguments
+    ///
+    /// * `ctx` - The context to add to the error.
+    ///
+    /// # Returns
+    ///
+    /// A new `MetadataError` with the added context.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::error::MetadataError;
+    ///
+    /// let error = MetadataError::new_extraction_error("Failed to parse YAML")
+    ///     .context("Processing file 'example.md'");
+    /// assert_eq!(error.to_string(), "Failed to extract metadata: Processing file 'example.md': Failed to parse YAML");
+    /// ```
+    pub fn context<C>(self, ctx: C) -> Self
+    where
+        C: Display + Send + Sync + 'static,
+    {
+        match self {
+            Self::ExtractionError { message } => {
+                Self::ExtractionError {
+                    message: format!("{}: {}", ctx, message),
+                }
+            }
+            Self::ProcessingError { message } => {
+                Self::ProcessingError {
+                    message: format!("{}: {}", ctx, message),
+                }
+            }
+            Self::MissingFieldError(field) => {
+                Self::MissingFieldError(format!("{}: {}", ctx, field))
+            }
+            Self::DateParseError(error) => {
+                Self::DateParseError(format!("{}: {}", ctx, error))
+            }
+            Self::IoError(error) => Self::IoError(std::io::Error::new(
+                error.kind(),
+                format!("{}: {}", ctx, error),
+            )),
+            Self::YamlError(error) => Self::YamlError(
+                SerdeYmlError::custom(format!("{}: {}", ctx, error)),
+            ),
+            Self::JsonError(error) => {
+                Self::JsonError(serde_json::Error::custom(format!(
+                    "{}: {}",
+                    ctx, error
+                )))
+            }
+            Self::TomlError(error) => Self::TomlError(
+                toml::de::Error::custom(format!("{}: {}", ctx, error)),
+            ),
+            Self::UnsupportedFormatError(format) => {
+                Self::UnsupportedFormatError(format!(
+                    "{}: {}",
+                    ctx, format
+                ))
+            }
+            Self::ValidationError { field, message } => {
+                Self::ValidationError {
+                    field,
+                    message: format!("{}: {}", ctx, message),
+                }
+            }
+            Self::Utf8Error(error) => Self::Utf8Error(error),
+            Self::Other(error) => Self::Other(Box::new(ContextError {
+                context: ctx.to_string(),
+                source: error,
+            })),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::de::Error;
     use std::io;
 
     #[test]
@@ -297,6 +399,7 @@ mod tests {
             "Unexpected error: Custom error occurred"
         );
     }
+
     #[test]
     fn test_extraction_error_with_empty_message() {
         let error = MetadataError::new_extraction_error("");
@@ -435,5 +538,28 @@ mod tests {
 
         // Ensure the debug output is correctly formatted
         assert!(format!("{:?}", error).contains("Other("));
+    }
+
+    #[test]
+    fn test_context_error() {
+        let error =
+            MetadataError::new_extraction_error("Failed to parse YAML")
+                .context("Processing file 'example.md'");
+        assert_eq!(
+            error.to_string(),
+            "Failed to extract metadata: Processing file 'example.md': Failed to parse YAML"
+        );
+    }
+
+    #[test]
+    fn test_nested_context_error() {
+        let error =
+            MetadataError::new_extraction_error("Failed to parse YAML")
+                .context("Processing file 'example.md'")
+                .context("Metadata extraction process");
+        assert_eq!(
+            error.to_string(),
+            "Failed to extract metadata: Metadata extraction process: Processing file 'example.md': Failed to parse YAML"
+        );
     }
 }
