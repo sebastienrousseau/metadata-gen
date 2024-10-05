@@ -562,4 +562,108 @@ mod tests {
             "Failed to extract metadata: Metadata extraction process: Processing file 'example.md': Failed to parse YAML"
         );
     }
+
+    #[test]
+    fn test_extraction_error_empty_message() {
+        let error = MetadataError::ExtractionError { message: "".to_string() };
+        assert_eq!(error.to_string(), "Failed to extract metadata: ");
+    }
+
+    #[test]
+    fn test_processing_error_empty_message() {
+        let error = MetadataError::ProcessingError { message: "".to_string()};
+        assert_eq!(error.to_string(), "Failed to process metadata: ");
+    }
+
+    #[test]
+    fn test_missing_field_error_empty_message() {
+        let error = MetadataError::MissingFieldError("".to_string());
+        assert_eq!(error.to_string(), "Missing required metadata field: ");
+    }
+
+    #[test]
+    fn test_date_parse_error_empty_message() {
+        let error = MetadataError::DateParseError("".to_string());
+        assert_eq!(error.to_string(), "Failed to parse date: ");
+    }
+
+    #[test]
+fn test_extraction_error_debug() {
+    let error = MetadataError::ExtractionError { message: "Error extracting metadata".to_string() };
+    // The correct Debug output for the struct variant should include the field name
+    assert_eq!(format!("{:?}", error), r#"ExtractionError { message: "Error extracting metadata" }"#);
+}
+
+#[test]
+fn test_processing_error_debug() {
+    let error = MetadataError::ProcessingError { message: "Error processing metadata".to_string() };
+    // The correct Debug output for the struct variant should include the field name
+    assert_eq!(format!("{:?}", error), r#"ProcessingError { message: "Error processing metadata" }"#);
+}
+
+
+    #[test]
+    fn test_io_error_propagation() {
+        let io_error = io::Error::new(io::ErrorKind::NotFound, "file not found");
+        let error: MetadataError = io_error.into();
+        assert_eq!(error.to_string(), "I/O error: file not found");
+        assert!(matches!(error, MetadataError::IoError(_)));
+    }
+
+    #[test]
+    fn test_yaml_error_propagation() {
+        let yaml_error = serde_yml::Error::custom("Custom YAML error");
+        let error: MetadataError = yaml_error.into();
+        assert_eq!(error.to_string(), "YAML parsing error: Custom YAML error");
+        assert!(matches!(error, MetadataError::YamlError(_)));
+    }
+
+    #[test]
+    fn test_json_error_propagation() {
+        let json_error = serde_json::Error::custom("Custom JSON error");
+        let error: MetadataError = json_error.into();
+        assert_eq!(error.to_string(), "JSON parsing error: Custom JSON error");
+        assert!(matches!(error, MetadataError::JsonError(_)));
+    }
+
+    #[test]
+    fn test_toml_error_propagation() {
+        let toml_error = toml::de::Error::custom("Custom TOML error");
+        let error: MetadataError = toml_error.into();
+        assert_eq!(error.to_string(), "TOML parsing error: Custom TOML error\n");
+        assert!(matches!(error, MetadataError::TomlError(_)));
+    }
+
+    #[test]
+    fn test_missing_field_error_debug() {
+        let error = MetadataError::MissingFieldError("title".to_string());
+        assert_eq!(format!("{:?}", error), r#"MissingFieldError("title")"#);
+    }
+
+    #[test]
+    fn test_date_parse_error_debug() {
+        let error = MetadataError::DateParseError("Invalid date format".to_string());
+        assert_eq!(format!("{:?}", error), r#"DateParseError("Invalid date format")"#);
+    }
+
+    #[test]
+    fn test_empty_yaml_error_message() {
+        let yaml_error = serde_yml::Error::custom("");
+        let error: MetadataError = yaml_error.into();
+        assert_eq!(error.to_string(), "YAML parsing error: ");
+    }
+
+    #[test]
+    fn test_empty_json_error_message() {
+        let json_error = serde_json::Error::custom("");
+        let error: MetadataError = json_error.into();
+        assert_eq!(error.to_string(), "JSON parsing error: ");
+    }
+
+    #[test]
+    fn test_empty_toml_error_message() {
+        let toml_error = toml::de::Error::custom("");
+        let error: MetadataError = toml_error.into();
+        assert_eq!(error.to_string(), "TOML parsing error: \n");
+    }
 }
