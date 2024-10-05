@@ -40,19 +40,20 @@ path = "src/lib.rs"
 
 [dependencies]
 # Dependencies required for building and running the project.
+anyhow = "1.0"
 dtt = "0.0.8"
+quick-xml = "0.36"
+regex = "1.11"
+scraper = "0.20"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8"
-yaml-rust2 = "0.9.0"
-anyhow = "1.0"
-tempfile = "3.12"
-thiserror = "1.0"
-tokio = { version = "1.0", features = ["full"] }
-time = "0.3"
-regex = "1.10"
 serde_yml = "0.0.12"
-quick-xml = "0.36"
+tempfile = "3.13"
+thiserror = "1.0"
+time = { version = "0.3", features = ["parsing"] }
+tokio = { version = "1.40", features = ["full"] }
+toml = "0.8"
+yaml-rust2 = "0.9"
 
 # -----------------------------------------------------------------------------
 # Build Dependencies
@@ -60,7 +61,7 @@ quick-xml = "0.36"
 
 [build-dependencies]
 # Dependencies for build scripts.
-version_check = "0.9"
+version_check = "0.9.4"
 
 # -----------------------------------------------------------------------------
 # Development Dependencies
@@ -68,26 +69,69 @@ version_check = "0.9"
 
 [dev-dependencies]
 # Dependencies required for development, testing, and documentation.
-assert_fs = "1.0"
+assert_fs = "1.1"
 criterion = "0.5"
-predicates = "3.0"
+predicates = "3.1"
 serde = { version = "1.0", features = ["derive"] }
 
 # -----------------------------------------------------------------------------
 # Examples
 # -----------------------------------------------------------------------------
 
-# [[example]]
-# name = "error"
-# path = "examples/error_examples.rs"
+[[example]]
+name = "error_example"
+path = "examples/error_example.rs"
+
+[[example]]
+name = "lib_example"
+path = "examples/lib_example.rs"
+
+[[example]]
+name = "metadata_example"
+path = "examples/metadata_example.rs"
+
+[[example]]
+name = "metatags_example"
+path = "examples/metatags_example.rs"
+
+[[example]]
+name = "utils_example"
+path = "examples/utils_example.rs"
+
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
 # -----------------------------------------------------------------------------
 
-# [[bench]]
-# name = "metadata_benchmark"
-# harness = false
+[[bench]]
+name = "metadata_benchmark"
+harness = false
 
-# [profile.bench]
-# debug = true
+[profile.bench]
+debug = true
+
+# -----------------------------------------------------------------------------
+# Features
+# -----------------------------------------------------------------------------
+
+[features]
+default = []
+advanced_parsing = []
+
+# -----------------------------------------------------------------------------
+# Release Profile
+# -----------------------------------------------------------------------------
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
+
+# -----------------------------------------------------------------------------
+# Documentation Configuration
+# -----------------------------------------------------------------------------
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

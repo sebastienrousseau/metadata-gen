@@ -113,10 +113,11 @@ Content here
             "Invalid YAML front matter should result in an error"
         );
 
-        if let Err(MetadataError::ExtractionError(_)) = result {
-            // Expected error
+        if let Err(MetadataError::ExtractionError { message }) = result
+        {
+            assert!(message.contains("No valid front matter found"));
         } else {
-            panic!("Expected MetadataError::ExtractionError");
+            panic!("Expected ExtractionError, got {:?}", result);
         }
     }
 }
