@@ -1,3 +1,8 @@
+//! Meta tag generation and extraction module.
+//!
+//! This module provides functionality for generating HTML meta tags from metadata
+//! and extracting meta tags from HTML content.
+
 use crate::error::MetadataError;
 use scraper::{Html, Selector};
 use std::{collections::HashMap, fmt};
@@ -35,15 +40,22 @@ impl MetaTagGroups {
     /// * `content` - The content of the meta tag.
     pub fn add_custom_tag(&mut self, name: &str, content: &str) {
         let formatted_tag = self.format_meta_tag(name, content);
-        if name.starts_with("apple") {
+
+        // Match based on specific prefixes for Apple, MS, OG, Twitter, etc.
+        if name.starts_with("apple-") {
+            // println!("Adding Apple meta tag: {}", formatted_tag);  // Debugging output
             self.apple.push_str(&formatted_tag);
-        } else if name.starts_with("og") {
-            self.og.push_str(&formatted_tag);
-        } else if name.starts_with("ms") {
+        } else if name.starts_with("msapplication-") {
+            // println!("Adding MS meta tag: {}", formatted_tag);  // Debugging output
             self.ms.push_str(&formatted_tag);
-        } else if name.starts_with("twitter") {
+        } else if name.starts_with("og:") {
+            // println!("Adding OG meta tag: {}", formatted_tag);  // Debugging output
+            self.og.push_str(&formatted_tag);
+        } else if name.starts_with("twitter:") {
+            // println!("Adding Twitter meta tag: {}", formatted_tag);  // Debugging output
             self.twitter.push_str(&formatted_tag);
         } else {
+            // println!("Adding Primary meta tag: {}", formatted_tag);  // Debugging output
             self.primary.push_str(&formatted_tag);
         }
     }
@@ -52,7 +64,7 @@ impl MetaTagGroups {
     ///
     /// # Arguments
     ///
-    /// * `name` - The name of the meta tag (e.g., `author`, `description`).
+    /// * `name` - The name of the meta tag.
     /// * `content` - The content of the meta tag.
     ///
     /// # Returns
@@ -60,12 +72,17 @@ impl MetaTagGroups {
     /// A formatted meta tag string.
     pub fn format_meta_tag(&self, name: &str, content: &str) -> String {
         format!(
-            "<meta name=\"{}\" content=\"{}\">",
+            r#"<meta name="{}" content="{}">"#,
             name,
             content.replace('"', "&quot;")
         )
     }
+
     /// Generates meta tags for Apple devices.
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata` - A reference to a HashMap containing the metadata.
     pub fn generate_apple_meta_tags(
         &mut self,
         metadata: &HashMap<String, String>,
@@ -79,6 +96,10 @@ impl MetaTagGroups {
     }
 
     /// Generates primary meta tags like `author`, `description`, and `keywords`.
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata` - A reference to a HashMap containing the metadata.
     pub fn generate_primary_meta_tags(
         &mut self,
         metadata: &HashMap<String, String>,
@@ -89,6 +110,10 @@ impl MetaTagGroups {
     }
 
     /// Generates Open Graph (`og`) meta tags for social media.
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata` - A reference to a HashMap containing the metadata.
     pub fn generate_og_meta_tags(
         &mut self,
         metadata: &HashMap<String, String>,
@@ -104,6 +129,10 @@ impl MetaTagGroups {
     }
 
     /// Generates Microsoft-specific meta tags.
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata` - A reference to a HashMap containing the metadata.
     pub fn generate_ms_meta_tags(
         &mut self,
         metadata: &HashMap<String, String>,
@@ -114,6 +143,10 @@ impl MetaTagGroups {
     }
 
     /// Generates Twitter meta tags for embedding rich media in tweets.
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata` - A reference to a HashMap containing the metadata.
     pub fn generate_twitter_meta_tags(
         &mut self,
         metadata: &HashMap<String, String>,
@@ -201,29 +234,6 @@ pub fn generate_metatags(
 ///
 /// Returns a `Result` containing a `Vec<MetaTag>` if successful, or a `MetadataError` if parsing fails.
 ///
-/// # Examples
-///
-/// ```
-/// use metadata_gen::metatags::extract_meta_tags;
-///
-/// let html = r#"
-/// <html>
-///   <head>
-///     <meta name="description" content="A sample page">
-///     <meta property="og:title" content="Sample Title">
-///   </head>
-///   <body>
-///     <p>Some content</p>
-///   </body>
-/// </html>
-/// "#;
-///
-/// let meta_tags = extract_meta_tags(html).unwrap();
-/// assert_eq!(meta_tags.len(), 2);
-/// assert!(meta_tags.iter().any(|tag| tag.name == "description" && tag.content == "A sample page"));
-/// assert!(meta_tags.iter().any(|tag| tag.name == "og:title" && tag.content == "Sample Title"));
-/// ```
-///
 /// # Errors
 ///
 /// This function will return a `MetadataError` if:
@@ -283,13 +293,26 @@ pub fn meta_tags_to_hashmap(
         .collect()
 }
 
-// ... (rest of the existing functions)
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // ... (existing tests)
+    #[test]
+    fn test_generate_metatags() {
+        let mut metadata = HashMap::new();
+        metadata.insert("title".to_string(), "Test Page".to_string());
+        metadata.insert(
+            "description".to_string(),
+            "A test page".to_string(),
+        );
+        metadata
+            .insert("og:title".to_string(), "OG Test Page".to_string());
+
+        let meta_tags = generate_metatags(&metadata);
+
+        assert!(meta_tags.primary.contains("description"));
+        assert!(meta_tags.og.contains("og:title"));
+    }
 
     #[test]
     fn test_extract_meta_tags() {
@@ -345,6 +368,34 @@ mod tests {
         assert_eq!(
             hashmap.get("og:title"),
             Some(&"Sample Title".to_string())
+        );
+    }
+
+    #[test]
+    fn test_meta_tag_groups_display() {
+        let groups = MetaTagGroups {
+    apple: "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">".to_string(),
+    primary: "<meta name=\"description\" content=\"A test page\">".to_string(),
+    og: "<meta property=\"og:title\" content=\"Test Page\">".to_string(),
+    ms: "<meta name=\"msapplication-TileColor\" content=\"#ffffff\">".to_string(),
+    twitter: "<meta name=\"twitter:card\" content=\"summary\">".to_string(),
+};
+
+        let display = groups.to_string();
+        assert!(display.contains("apple-mobile-web-app-capable"));
+        assert!(display.contains("description"));
+        assert!(display.contains("og:title"));
+        assert!(display.contains("msapplication-TileColor"));
+        assert!(display.contains("twitter:card"));
+    }
+
+    #[test]
+    fn test_format_meta_tag() {
+        let groups = MetaTagGroups::default();
+        let tag = groups.format_meta_tag("test", "Test \"Value\"");
+        assert_eq!(
+            tag,
+            r#"<meta name="test" content="Test &quot;Value&quot;">"#
         );
     }
 }

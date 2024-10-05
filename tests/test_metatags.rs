@@ -56,8 +56,9 @@ mod tests {
         let mut meta_tags = MetaTagGroups::default();
         meta_tags.add_custom_tag("custom-tag", "custom value");
 
-        assert!(meta_tags.primary.contains("custom-tag"));
-        assert!(meta_tags.primary.contains("custom value"));
+        assert!(meta_tags.primary.contains(
+            "<meta name=\"custom-tag\" content=\"custom value\">"
+        ));
     }
 
     /// Test adding a custom OpenGraph (og) meta tag.
@@ -66,8 +67,9 @@ mod tests {
         let mut meta_tags = MetaTagGroups::default();
         meta_tags.add_custom_tag("og:custom", "custom og value");
 
-        assert!(meta_tags.og.contains("og:custom"));
-        assert!(meta_tags.og.contains("custom og value"));
+        assert!(meta_tags.og.contains(
+            "<meta name=\"og:custom\" content=\"custom og value\">"
+        ));
     }
 
     /// Test adding a custom Twitter meta tag.
@@ -77,8 +79,7 @@ mod tests {
         meta_tags
             .add_custom_tag("twitter:custom", "custom twitter value");
 
-        assert!(meta_tags.twitter.contains("twitter:custom"));
-        assert!(meta_tags.twitter.contains("custom twitter value"));
+        assert!(meta_tags.twitter.contains("<meta name=\"twitter:custom\" content=\"custom twitter value\">"));
     }
 
     /// Test adding a custom Apple meta tag.
@@ -90,10 +91,7 @@ mod tests {
             "custom apple value",
         );
 
-        assert!(meta_tags
-            .apple
-            .contains("apple-mobile-web-app-custom"));
-        assert!(meta_tags.apple.contains("custom apple value"));
+        assert!(meta_tags.apple.contains("<meta name=\"apple-mobile-web-app-custom\" content=\"custom apple value\">"));
     }
 
     /// Test adding a custom Microsoft meta tag.
@@ -103,8 +101,7 @@ mod tests {
         meta_tags
             .add_custom_tag("msapplication-custom", "custom ms value");
 
-        assert!(meta_tags.ms.contains("msapplication-custom"));
-        assert!(meta_tags.ms.contains("custom ms value"));
+        assert!(meta_tags.ms.contains("<meta name=\"msapplication-custom\" content=\"custom ms value\">"));
     }
 
     /// Test adding multiple custom tags of different types.
