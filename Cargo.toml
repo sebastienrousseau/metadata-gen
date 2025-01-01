@@ -41,7 +41,7 @@ path = "src/lib.rs"
 [dependencies]
 # Dependencies required for building and running the project.
 anyhow = "1.0"
-dtt = "0.0.8"
+dtt = "0.0.9"
 quick-xml = "0.37"
 regex = "1.11"
 scraper = "0.22"
