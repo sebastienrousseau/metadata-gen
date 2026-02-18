@@ -54,6 +54,7 @@ time = { version = "0.3", features = ["parsing"] }
 tokio = { version = "1.40", features = ["full"] }
 toml = "0.8"
 yaml-rust2 = "0.9"
+commons = { git = "https://github.com/sebastienrousseau/commons", tag = "v0.0.1", default-features = false, features = ["error", "validation", "time"] }
 
 # -----------------------------------------------------------------------------
 # Build Dependencies
