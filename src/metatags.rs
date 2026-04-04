@@ -42,8 +42,7 @@ impl MetaTagGroups {
         let formatted_tag = self.format_meta_tag(name, content);
 
         // Match based on specific prefixes for Apple, MS, OG, Twitter, etc.
-        if name.starts_with("apple-") {
-            // println!("Adding Apple meta tag: {}", formatted_tag);  // Debugging output
+        if name.starts_with("apple-") || name == "mobile-web-app-capable" {
             self.apple.push_str(&formatted_tag);
         } else if name.starts_with("msapplication-") {
             // println!("Adding MS meta tag: {}", formatted_tag);  // Debugging output
@@ -87,8 +86,9 @@ impl MetaTagGroups {
         &mut self,
         metadata: &HashMap<String, String>,
     ) {
-        const APPLE_TAGS: [&str; 3] = [
+        const APPLE_TAGS: [&str; 4] = [
             "apple-mobile-web-app-capable",
+            "mobile-web-app-capable",
             "apple-mobile-web-app-status-bar-style",
             "apple-mobile-web-app-title",
         ];
