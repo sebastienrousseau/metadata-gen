@@ -30,4 +30,4 @@ jobs:
     uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@main
     with:
       type: rust
-      redirect-crate: metadata-gen
+      redirect-crate: metadata_gen
