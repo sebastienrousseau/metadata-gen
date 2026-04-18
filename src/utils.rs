@@ -234,6 +234,8 @@ This is a test file for metadata extraction."#;
 
         let mut file = File::create(&file_path).await.unwrap();
         file.write_all(content.as_bytes()).await.unwrap();
+        file.flush().await.unwrap();
+        drop(file);
 
         // Test the async_extract_metadata_from_file function
         let result = async_extract_metadata_from_file(
@@ -263,6 +265,8 @@ This is a test file for metadata extraction."#;
         // Create an empty file
         let mut file = File::create(&file_path).await.unwrap();
         file.write_all(b"").await.unwrap();
+        file.flush().await.unwrap();
+        drop(file);
 
         let result = async_extract_metadata_from_file(
             file_path.to_str().unwrap(),
