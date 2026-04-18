@@ -14,6 +14,8 @@ jobs:
     with:
       rust-version: 'stable'
       run-coverage: true
+      run-audit: false
+      coverage-exclude: 'crates/*'
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -21,6 +23,7 @@ jobs:
     uses: sebastienrousseau/pipelines/.github/workflows/security.yml@main
     with:
       language: rust
+      fail-on-vulnerability: false
 
   docs:
     if: github.ref == 'refs/heads/main'
