@@ -19,12 +19,14 @@ pub struct ContextError {
     source: Box<dyn std::error::Error + Send + Sync>,
 }
 
+/// Displays the context error as `"context: source"`.
 impl std::fmt::Display for ContextError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: {}", self.context, self.source)
     }
 }
 
+/// Provides access to the underlying source error.
 impl std::error::Error for ContextError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(&*self.source)

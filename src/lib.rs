@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-// src/lib.rs
+#![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
 #![doc(
     html_favicon_url = "https://cloudcdn.pro/metadata-gen/v1/favicon.ico",
@@ -26,10 +26,40 @@ pub use metatags::{generate_metatags, MetaTagGroups};
 pub use utils::{async_extract_metadata_from_file, escape_html};
 
 /// Type alias for a map of metadata key-value pairs.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::MetadataMap;
+///
+/// let mut map = MetadataMap::new();
+/// map.insert("title".to_string(), "My Page".to_string());
+/// assert_eq!(map.get("title"), Some(&"My Page".to_string()));
+/// ```
 pub type MetadataMap = HashMap<String, String>;
+
 /// Type alias for a list of keywords.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::Keywords;
+///
+/// let keywords: Keywords = vec!["rust".to_string(), "metadata".to_string()];
+/// assert_eq!(keywords.len(), 2);
+/// ```
 pub type Keywords = Vec<String>;
+
 /// Type alias for the result of metadata extraction and processing.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{MetadataResult, extract_and_prepare_metadata};
+///
+/// let result: MetadataResult = extract_and_prepare_metadata("---\ntitle: Test\n---\n");
+/// assert!(result.is_ok());
+/// ```
 pub type MetadataResult =
     Result<(MetadataMap, Keywords, MetaTagGroups), MetadataError>;
 
@@ -97,7 +127,20 @@ pub fn extract_and_prepare_metadata(content: &str) -> MetadataResult {
 ///
 /// # Returns
 ///
-/// A vector of strings representing the keywords.
+/// A vector of strings representing the keywords. Returns an empty vector if no keywords are found.
+///
+/// # Example
+///
+/// ```
+/// use std::collections::HashMap;
+/// use metadata_gen::extract_keywords;
+///
+/// let mut metadata = HashMap::new();
+/// metadata.insert("keywords".to_string(), "rust, metadata, parsing".to_string());
+///
+/// let keywords = extract_keywords(&metadata);
+/// assert_eq!(keywords, vec!["rust", "metadata", "parsing"]);
+/// ```
 pub fn extract_keywords(
     metadata: &HashMap<String, String>,
 ) -> Vec<String> {

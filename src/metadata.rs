@@ -11,8 +11,21 @@ use std::collections::HashMap;
 use toml::Value as TomlValue;
 
 /// Represents metadata for a page or content item.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::Metadata;
+/// use std::collections::HashMap;
+///
+/// let mut data = HashMap::new();
+/// data.insert("title".to_string(), "My Page".to_string());
+/// let metadata = Metadata::new(data);
+/// assert_eq!(metadata.get("title"), Some(&"My Page".to_string()));
+/// ```
 #[derive(Debug, Default, Clone)]
 pub struct Metadata {
+    /// The underlying key-value store for metadata fields.
     inner: HashMap<String, String>,
 }
 
@@ -133,12 +146,18 @@ fn extract_yaml_metadata(content: &str) -> Option<Metadata> {
     Some(Metadata::new(metadata))
 }
 
+/// Flattens a nested YAML value into a flat key-value map.
+///
+/// Nested keys are joined with `.` (e.g., `author.name`).
+/// Sequences are rendered as comma-separated lists wrapped in brackets.
 fn flatten_yaml(value: &serde_yml::Value) -> HashMap<String, String> {
     let mut map = HashMap::new();
     flatten_yaml_recursive(value, String::new(), &mut map);
     map
 }
 
+/// Recursively walks a YAML value tree, inserting leaf values into the map
+/// with dot-separated keys for nested mappings.
 fn flatten_yaml_recursive(
     value: &serde_yml::Value,
     prefix: String,
@@ -198,6 +217,10 @@ fn extract_toml_metadata(content: &str) -> Option<Metadata> {
     Some(Metadata::new(metadata))
 }
 
+/// Recursively flattens a TOML value tree into a flat key-value map.
+///
+/// Nested keys are joined with `.` (e.g., `author.name`).
+/// Arrays are rendered as comma-separated lists wrapped in brackets.
 fn flatten_toml(
     value: &TomlValue,
     map: &mut HashMap<String, String>,
