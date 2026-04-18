@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD033 MD041 -->
-<img src="https://kura.pro/metadata-gen/images/logos/metadata-gen.svg"
+<img src="https://cloudcdn.pro/metadata-gen/v1/logos/metadata-gen.svg"
 alt="Metadata Gen logo" height="66" align="right" />
 <!-- markdownlint-enable MD033 MD041 -->
 

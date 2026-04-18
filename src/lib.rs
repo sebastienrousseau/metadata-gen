@@ -2,8 +2,8 @@
 // src/lib.rs
 #![doc = include_str!("../README.md")]
 #![doc(
-    html_favicon_url = "https://kura.pro/metadata-gen/images/favicon.ico",
-    html_logo_url = "https://kura.pro/metadata-gen/images/logos/metadata-gen.svg",
+    html_favicon_url = "https://cloudcdn.pro/metadata-gen/v1/favicon.ico",
+    html_logo_url = "https://cloudcdn.pro/metadata-gen/v1/logos/metadata-gen.svg",
     html_root_url = "https://docs.rs/metadata-gen"
 )]
 #![crate_name = "metadata_gen"]
