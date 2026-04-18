@@ -82,8 +82,8 @@ mod tests {
     /// This test ensures that a `serde_yml::Error` is correctly converted into the `YamlError` variant.
     #[test]
     fn test_yaml_error() {
-        // Malformed YAML content
-        let invalid_yaml = "invalid: yaml: data";
+        // Malformed YAML content (unclosed flow mapping)
+        let invalid_yaml = "{ key: value, ";
 
         // Try to parse the invalid YAML, which will trigger a `serde_yml::Error`
         let yaml_error: Result<serde_yml::Value, YamlError> =

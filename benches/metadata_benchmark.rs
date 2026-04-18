@@ -1,6 +1,8 @@
 // benches/metadata_benchmark.rs
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{
+    black_box, criterion_group, criterion_main, Criterion,
+};
 use metadata_gen::{
     extract_and_prepare_metadata,
     metadata::{extract_metadata, process_metadata, Metadata},
@@ -40,8 +42,12 @@ keywords: benchmark, metadata, extraction
 
 fn benchmark_process_metadata(c: &mut Criterion) {
     let mut metadata = HashMap::new();
-    metadata.insert("title".to_string(), "Benchmark Test Page".to_string());
-    metadata.insert("description".to_string(), "A test page for benchmarking metadata processing".to_string());
+    metadata
+        .insert("title".to_string(), "Benchmark Test Page".to_string());
+    metadata.insert(
+        "description".to_string(),
+        "A test page for benchmarking metadata processing".to_string(),
+    );
     metadata.insert("date".to_string(), "2023-05-25".to_string());
     let metadata = Metadata::new(metadata);
 
@@ -52,9 +58,16 @@ fn benchmark_process_metadata(c: &mut Criterion) {
 
 fn benchmark_generate_metatags(c: &mut Criterion) {
     let mut metadata = HashMap::new();
-    metadata.insert("title".to_string(), "Benchmark Test Page".to_string());
-    metadata.insert("description".to_string(), "A test page for benchmarking meta tag generation".to_string());
-    metadata.insert("og:title".to_string(), "OG Benchmark Test Page".to_string());
+    metadata
+        .insert("title".to_string(), "Benchmark Test Page".to_string());
+    metadata.insert(
+        "description".to_string(),
+        "A test page for benchmarking meta tag generation".to_string(),
+    );
+    metadata.insert(
+        "og:title".to_string(),
+        "OG Benchmark Test Page".to_string(),
+    );
     metadata.insert("twitter:card".to_string(), "summary".to_string());
 
     c.bench_function("generate_metatags", |b| {
@@ -63,7 +76,8 @@ fn benchmark_generate_metatags(c: &mut Criterion) {
 }
 
 fn benchmark_escape_html(c: &mut Criterion) {
-    let input = r#"<script>alert("XSS");</script> & "quotes" & 'apostrophes'"#;
+    let input =
+        r#"<script>alert("XSS");</script> & "quotes" & 'apostrophes'"#;
 
     c.bench_function("escape_html", |b| {
         b.iter(|| escape_html(black_box(input)))

@@ -42,7 +42,9 @@ impl MetaTagGroups {
         let formatted_tag = self.format_meta_tag(name, content);
 
         // Match based on specific prefixes for Apple, MS, OG, Twitter, etc.
-        if name.starts_with("apple-") || name == "mobile-web-app-capable" {
+        if name.starts_with("apple-")
+            || name == "mobile-web-app-capable"
+        {
             self.apple.push_str(&formatted_tag);
         } else if name.starts_with("msapplication-") {
             // println!("Adding MS meta tag: {}", formatted_tag);  // Debugging output

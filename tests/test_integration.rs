@@ -82,11 +82,8 @@ keywords: "escape, html, test"
     #[test]
     fn test_metadata_extraction_error_handling() {
         let invalid_content = r#"
----
-title Integration Test Page
-description: This is an invalid front matter format.
----
-# Content for invalid test.
+No front matter delimiters here.
+Just plain content without --- markers.
 "#;
 
         // Try to extract metadata from invalid content

@@ -1,5 +1,5 @@
+#![forbid(unsafe_code)]
 // src/lib.rs
-
 #![doc = include_str!("../README.md")]
 #![doc(
     html_favicon_url = "https://kura.pro/metadata-gen/images/favicon.ico",
@@ -73,7 +73,7 @@ pub type MetadataResult =
 /// ```
 pub fn extract_and_prepare_metadata(content: &str) -> MetadataResult {
     // Ensure the front matter format is correct
-    if !content.contains(":") {
+    if !content.contains(':') {
         return Err(MetadataError::ExtractionError {
             message: "No valid front matter found".to_string(),
         });
