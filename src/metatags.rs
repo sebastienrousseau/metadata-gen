@@ -8,6 +8,21 @@ use scraper::{Html, Selector};
 use std::{collections::HashMap, fmt};
 
 /// Holds collections of meta tags for different platforms and categories.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metatags::generate_metatags;
+/// use std::collections::HashMap;
+///
+/// let mut metadata = HashMap::new();
+/// metadata.insert("description".to_string(), "A sample page".to_string());
+/// metadata.insert("og:title".to_string(), "Sample".to_string());
+///
+/// let tags = generate_metatags(&metadata);
+/// assert!(tags.primary.contains("description"));
+/// assert!(tags.og.contains("og:title"));
+/// ```
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 pub struct MetaTagGroups {
     /// The `apple` meta tags.
@@ -22,12 +37,24 @@ pub struct MetaTagGroups {
     pub twitter: String,
 }
 
-/// Represents a single meta tag
+/// Represents a single meta tag.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metatags::MetaTag;
+///
+/// let tag = MetaTag {
+///     name: "description".to_string(),
+///     content: "A sample page".to_string(),
+/// };
+/// assert_eq!(tag.name, "description");
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetaTag {
-    /// The name or property of the meta tag
+    /// The name or property of the meta tag.
     pub name: String,
-    /// The content of the meta tag
+    /// The content of the meta tag.
     pub content: String,
 }
 

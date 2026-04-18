@@ -2,7 +2,7 @@
 
 author: "John Smith <john.smith@metadata-gen.com>"
 banner:
-  url: "https://kura.pro/metadata-gen/images/logos/metadata-gen.webp"
+  url: "https://cloudcdn.pro/metadata-gen/v1/logos/metadata-gen.svg"
   alt: "Metadata Gen Library Banner"
   height: 66
   width: 66
@@ -12,7 +12,7 @@ charset: "utf-8"
 date: "2024-10-05"
 description: "Metadata-Gen - A Powerful Rust Library for Metadata Management"
 image:
-  url: "https://kura.pro/metadata-gen/images/logos/metadata-gen.webp"
+  url: "https://cloudcdn.pro/metadata-gen/v1/logos/metadata-gen.svg"
   alt: "Metadata Gen Library Banner"
   height: 66
   width: 66
@@ -24,7 +24,7 @@ language: "en-US"
 layout: "default"
 locale: "en_US"
 logo:
-  url: "https://kura.pro/metadata-gen/images/banners/banner-metadata-gen.webp"
+  url: "https://cloudcdn.pro/metadata-gen/v1/banners/banner-metadata-gen.svg"
   alt: "Metadata-Gen Logo"
   height: 75
   width: 450

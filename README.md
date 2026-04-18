@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://kura.pro/metadata-gen/images/logos/metadata-gen.svg" alt="Metadata Gen logo" width="128" />
+  <img src="https://cloudcdn.pro/metadata-gen/v1/logos/metadata-gen.svg" alt="Metadata Gen logo" width="128" />
 </p>
 
 <h1 align="center">Metadata Gen</h1>

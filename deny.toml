@@ -18,4 +18,9 @@ skip-tree = []
 
 [advisories]
 # List of advisory IDs to ignore
-ignore = []
+ignore = [
+    "RUSTSEC-2025-0057", # fxhash — unmaintained, transitive dep via scraper/selectors
+    "RUSTSEC-2024-0436", # paste — unmaintained, transitive dep via dtt
+    "RUSTSEC-2026-0097", # rand 0.8 — unsound with custom logger, transitive dep via phf_generator
+    "RUSTSEC-2025-0068", # serde_yml — replaced with local safe implementation in crates/serde_yml
+]
