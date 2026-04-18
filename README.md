@@ -85,8 +85,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 
 ---
 
-**THE ARCHITECT** \u1d2b [Sebastien Rousseau](https://sebastienrousseau.com)
-**THE ENGINE** \u1d5e [EUXIS](https://euxis.co) \u1d2b Enterprise Unified Execution Intelligence System
+**THE ARCHITECT** ᛫ [Sebastien Rousseau](https://sebastienrousseau.com)
+**THE ENGINE** ᛞ [EUXIS](https://euxis.co) ᛫ Enterprise Unified Execution Intelligence System
 
 ---
 
