@@ -70,7 +70,7 @@ version_check = "0.9.4"
 [dev-dependencies]
 # Dependencies required for development, testing, and documentation.
 assert_fs = "1.1"
-criterion = "0.5"
+criterion = "0.8"
 predicates = "3.1"
 serde = { version = "1.0", features = ["derive"] }
 
