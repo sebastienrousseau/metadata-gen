@@ -52,7 +52,7 @@ tempfile = "3.27"
 thiserror = "2.0"
 time = { version = "0.3", features = ["parsing"] }
 tokio = { version = "1.50", features = ["full"] }
-toml = "0.8"
+toml = "1.1"
 yaml-rust2 = "0.10"
 
 # -----------------------------------------------------------------------------
