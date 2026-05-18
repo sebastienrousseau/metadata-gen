@@ -42,7 +42,7 @@ path = "src/lib.rs"
 # Dependencies required for building and running the project.
 anyhow = "1.0"
 dtt = "0.0.9"
-quick-xml = "0.39"
+quick-xml = "0.40"
 regex = "1.12"
 scraper = "0.23"
 serde = { version = "1.0.228", features = ["derive"] }
