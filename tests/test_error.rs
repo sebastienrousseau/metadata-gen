@@ -7,7 +7,7 @@
 mod tests {
     use metadata_gen::error::MetadataError;
     use serde_json::Error as JsonError;
-    use serde_yml::Error as YamlError;
+    use noyalib::Error as YamlError;
     use std::io;
     use toml::de::Error as TomlError;
 
@@ -79,18 +79,18 @@ mod tests {
 
     /// Test `YamlError` conversion.
     ///
-    /// This test ensures that a `serde_yml::Error` is correctly converted into the `YamlError` variant.
+    /// This test ensures that a `noyalib::Error` is correctly converted into the `YamlError` variant.
     #[test]
     fn test_yaml_error() {
         // Malformed YAML content (unclosed flow mapping)
         let invalid_yaml = "{ key: value, ";
 
-        // Try to parse the invalid YAML, which will trigger a `serde_yml::Error`
-        let yaml_error: Result<serde_yml::Value, YamlError> =
-            serde_yml::from_str(invalid_yaml);
+        // Try to parse the invalid YAML, which will trigger a `noyalib::Error`
+        let yaml_error: Result<noyalib::Value, YamlError> =
+            noyalib::from_str(invalid_yaml);
 
         if let Err(yaml_error) = yaml_error {
-            // Convert the `serde_yml::Error` into `MetadataError`
+            // Convert the `noyalib::Error` into `MetadataError`
             let error = MetadataError::from(yaml_error);
 
             // Check that the error message is correctly formatted

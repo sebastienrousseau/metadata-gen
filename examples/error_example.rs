@@ -100,8 +100,8 @@ fn yaml_error_example() -> Result<(), MetadataError> {
     println!("---------------------------------------------");
 
     let invalid_yaml = "invalid: yaml: data";
-    let result: Result<serde_yml::Value, _> =
-        serde_yml::from_str(invalid_yaml);
+    let result: Result<noyalib::Value, _> =
+        noyalib::from_str(invalid_yaml);
 
     match result {
         Ok(_) => println!(
