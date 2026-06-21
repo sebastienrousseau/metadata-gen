@@ -315,8 +315,7 @@ mod tests {
 
     #[test]
     fn test_yaml_error() {
-        let yaml_error =
-            noyalib::Error::custom("YAML structure error");
+        let yaml_error = noyalib::Error::custom("YAML structure error");
         let error: MetadataError = yaml_error.into();
         assert!(error.to_string().contains("YAML parsing error"));
     }

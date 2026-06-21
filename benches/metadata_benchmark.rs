@@ -1,7 +1,6 @@
 // benches/metadata_benchmark.rs
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use std::hint::black_box;
 use metadata_gen::{
     extract_and_prepare_metadata,
     metadata::{extract_metadata, process_metadata, Metadata},
@@ -9,6 +8,7 @@ use metadata_gen::{
     utils::{escape_html, unescape_html},
 };
 use std::collections::HashMap;
+use std::hint::black_box;
 
 fn benchmark_extract_and_prepare_metadata(c: &mut Criterion) {
     let content = r#"---

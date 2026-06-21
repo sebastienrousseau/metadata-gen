@@ -6,8 +6,8 @@
 #[cfg(test)]
 mod tests {
     use metadata_gen::error::MetadataError;
-    use serde_json::Error as JsonError;
     use noyalib::Error as YamlError;
+    use serde_json::Error as JsonError;
     use std::io;
     use toml::de::Error as TomlError;
 
