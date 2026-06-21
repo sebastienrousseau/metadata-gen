@@ -4,9 +4,9 @@
 
 [package]
 name = "metadata-gen"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
-rust-version = "1.56.0"
+rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
 description = """
 A powerful Rust library for extracting, validating, and processing metadata in YAML, TOML, and JSON formats from any content or data file.
@@ -41,10 +41,10 @@ path = "src/lib.rs"
 [dependencies]
 # Dependencies required for building and running the project.
 anyhow = "1.0"
-dtt = "0.0.9"
-quick-xml = "0.39"
+dtt = "0.0.10"
+quick-xml = "0.40"
 regex = "1.12"
-scraper = "0.23"
+scraper = "0.27"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
 noyalib = { version = "0.0.8", default-features = false, features = ["std"] }
@@ -52,8 +52,8 @@ tempfile = "3.27"
 thiserror = "2.0"
 time = { version = "0.3", features = ["parsing"] }
 tokio = { version = "1.50", features = ["full"] }
-toml = "0.8"
-yaml-rust2 = "0.10"
+toml = "1.1"
+yaml-rust2 = "0.11"
 
 # -----------------------------------------------------------------------------
 # Build Dependencies
@@ -70,7 +70,7 @@ version_check = "0.9.4"
 [dev-dependencies]
 # Dependencies required for development, testing, and documentation.
 assert_fs = "1.1"
-criterion = "0.5"
+criterion = "0.8"
 predicates = "3.1"
 serde = { version = "1.0", features = ["derive"] }
 
