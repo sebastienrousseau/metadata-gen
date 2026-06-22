@@ -138,8 +138,8 @@ fn extract_yaml_metadata(content: &str) -> Option<Metadata> {
 
     let yaml_str = captures.get(1)?.as_str().trim();
 
-    let yaml_value: serde_yml::Value =
-        serde_yml::from_str(yaml_str).ok()?;
+    let yaml_value: noyalib::Value =
+        noyalib::from_str(yaml_str).ok()?;
 
     let metadata: HashMap<String, String> = flatten_yaml(&yaml_value);
 
@@ -150,7 +150,7 @@ fn extract_yaml_metadata(content: &str) -> Option<Metadata> {
 ///
 /// Nested keys are joined with `.` (e.g., `author.name`).
 /// Sequences are rendered as comma-separated lists wrapped in brackets.
-fn flatten_yaml(value: &serde_yml::Value) -> HashMap<String, String> {
+fn flatten_yaml(value: &noyalib::Value) -> HashMap<String, String> {
     let mut map = HashMap::new();
     flatten_yaml_recursive(value, String::new(), &mut map);
     map
@@ -159,38 +159,43 @@ fn flatten_yaml(value: &serde_yml::Value) -> HashMap<String, String> {
 /// Recursively walks a YAML value tree, inserting leaf values into the map
 /// with dot-separated keys for nested mappings.
 fn flatten_yaml_recursive(
-    value: &serde_yml::Value,
+    value: &noyalib::Value,
     prefix: String,
     map: &mut HashMap<String, String>,
 ) {
     match value {
-        serde_yml::Value::Mapping(m) => {
+        noyalib::Value::Mapping(m) => {
             for (k, v) in m {
+                // In noyalib, mapping keys are `String`, so `k.as_str()`
+                // already yields `&str` directly.
                 let new_prefix = if prefix.is_empty() {
-                    k.as_str().unwrap_or_default().to_string()
+                    k.as_str().to_string()
                 } else {
-                    format!(
-                        "{}.{}",
-                        prefix,
-                        k.as_str().unwrap_or_default()
-                    )
+                    format!("{}.{}", prefix, k.as_str())
                 };
                 flatten_yaml_recursive(v, new_prefix, map);
             }
         }
-        serde_yml::Value::Sequence(seq) => {
+        noyalib::Value::Sequence(seq) => {
             let inline_list = seq
                 .iter()
-                .filter_map(|item| item.as_str().map(|s| s.to_string()))
+                .map(|item| match item.as_str() {
+                    Some(s) => s.to_string(),
+                    None => item.to_string(),
+                })
                 .collect::<Vec<String>>()
                 .join(", ");
             map.insert(prefix, format!("[{}]", inline_list));
         }
         _ => {
-            map.insert(
-                prefix,
-                value.as_str().unwrap_or_default().to_string(),
-            );
+            // `as_str()` returns `Some` only for `Value::String`; for
+            // scalars (numbers, bools, dates rendered as numbers, etc.)
+            // we fall back to the `Display` representation.
+            let leaf = match value.as_str() {
+                Some(s) => s.to_string(),
+                None => value.to_string(),
+            };
+            map.insert(prefix, leaf);
         }
     }
 }

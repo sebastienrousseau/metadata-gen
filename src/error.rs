@@ -3,8 +3,8 @@
 //! This module defines custom error types used throughout the library,
 //! providing detailed information about various failure scenarios.
 
+use noyalib::Error as SerdeYmlError;
 use serde::de::Error as SerdeError;
-use serde_yml::Error as SerdeYmlError;
 use std::fmt::Display;
 use thiserror::Error;
 
@@ -315,8 +315,7 @@ mod tests {
 
     #[test]
     fn test_yaml_error() {
-        let yaml_error =
-            serde_yml::Error::custom("YAML structure error");
+        let yaml_error = noyalib::Error::custom("YAML structure error");
         let error: MetadataError = yaml_error.into();
         assert!(error.to_string().contains("YAML parsing error"));
     }
@@ -439,7 +438,7 @@ mod tests {
     fn test_yaml_error_with_custom_message() {
         // Custom YAML error message
         let yaml_error =
-            serde_yml::Error::custom("Custom YAML error occurred");
+            noyalib::Error::custom("Custom YAML error occurred");
         let error: MetadataError = yaml_error.into();
         assert!(error.to_string().contains(
             "YAML parsing error: Custom YAML error occurred"
@@ -633,7 +632,7 @@ mod tests {
 
     #[test]
     fn test_yaml_error_propagation() {
-        let yaml_error = serde_yml::Error::custom("Custom YAML error");
+        let yaml_error = noyalib::Error::custom("Custom YAML error");
         let error: MetadataError = yaml_error.into();
         assert_eq!(
             error.to_string(),
@@ -687,7 +686,7 @@ mod tests {
 
     #[test]
     fn test_empty_yaml_error_message() {
-        let yaml_error = serde_yml::Error::custom("");
+        let yaml_error = noyalib::Error::custom("");
         let error: MetadataError = yaml_error.into();
         assert_eq!(error.to_string(), "YAML parsing error: ");
     }
