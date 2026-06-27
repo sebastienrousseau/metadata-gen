@@ -115,8 +115,14 @@ impl Metadata {
 pub fn extract_metadata(
     content: &str,
 ) -> Result<Metadata, MetadataError> {
-    extract_yaml_metadata(content)
-        .or_else(|| extract_toml_metadata(content))
+    // YAML returns Option<Result<...>>: `Some(Ok)` = parsed OK,
+    // `Some(Err)` = fence matched but YAML failed (surface that
+    // specific error), `None` = no YAML fence found, fall through.
+    // Issue #20.
+    if let Some(yaml_result) = extract_yaml_metadata(content) {
+        return yaml_result;
+    }
+    extract_toml_metadata(content)
         .or_else(|| extract_json_metadata(content))
         .ok_or_else(|| MetadataError::ExtractionError {
             message: "No valid front matter found.".to_string(),
@@ -132,18 +138,89 @@ pub fn extract_metadata(
 /// # Returns
 ///
 /// An `Option<Metadata>` containing the extracted metadata if successful, or `None` if extraction fails.
-fn extract_yaml_metadata(content: &str) -> Option<Metadata> {
+fn extract_yaml_metadata(
+    content: &str,
+) -> Option<Result<Metadata, MetadataError>> {
     let re = Regex::new(r"(?s)^\s*---\s*\n(.*?)\n\s*---\s*").ok()?;
     let captures = re.captures(content)?;
 
     let yaml_str = captures.get(1)?.as_str().trim();
 
-    let yaml_value: noyalib::Value =
-        noyalib::from_str(yaml_str).ok()?;
+    // noyalib enforces YAML 1.2.2 §7.3.2 strictly: continuation lines
+    // of a multi-line double-quoted scalar must be indented more than
+    // the parent block. PyYAML / serde_yaml relax this. Real-world
+    // frontmatter (esp. human-edited URLs that picked up an
+    // accidental newline) routinely violates the strict rule.
+    // Collapse the offending shape upstream of noyalib so consumers
+    // don't need to re-implement this each. Issue #20.
+    let collapsed = collapse_multiline_quoted_scalars(yaml_str);
 
-    let metadata: HashMap<String, String> = flatten_yaml(&yaml_value);
+    match noyalib::from_str::<noyalib::Value>(&collapsed) {
+        Ok(v) => {
+            let metadata: HashMap<String, String> = flatten_yaml(&v);
+            Some(Ok(Metadata::new(metadata)))
+        }
+        Err(e) => Some(Err(MetadataError::ExtractionError {
+            message: format!("YAML parse error in frontmatter: {e}"),
+        })),
+    }
+}
 
-    Some(Metadata::new(metadata))
+/// Collapses multi-line double-quoted YAML scalars onto a single line.
+///
+/// noyalib correctly enforces YAML 1.2.2 §7.3.2 (continuation must be
+/// indented more than the parent block). Human-edited frontmatter
+/// often violates this — e.g. a `url: "\n<value>"` shape where a
+/// literal newline crept in after the opening quote. PyYAML and
+/// serde_yaml fold those onto one line; this helper does the same so
+/// noyalib never sees the offending shape.
+///
+/// The scan is line-based and deliberately simple: when a line ends
+/// with `: "` (key + opening quote with nothing after), walk forward
+/// joining subsequent lines until the closing `"` is found. Comments
+/// and other quote styles are not transformed.
+fn collapse_multiline_quoted_scalars(block: &str) -> String {
+    let mut out = String::with_capacity(block.len());
+    let lines: Vec<&str> = block.lines().collect();
+    let mut i = 0;
+    while i < lines.len() {
+        let line = lines[i];
+        if let Some(eq_pos) = line.find(": \"") {
+            let after_quote = &line[eq_pos + 3..];
+            if after_quote.trim().is_empty() {
+                let mut joined = String::from(&line[..eq_pos + 3]);
+                let mut closed = false;
+                i += 1;
+                while i < lines.len() {
+                    let next = lines[i];
+                    if let Some(close) = next.find('"') {
+                        joined.push_str(next[..close].trim_start());
+                        joined.push_str(&next[close..]);
+                        out.push_str(&joined);
+                        out.push('\n');
+                        i += 1;
+                        closed = true;
+                        break;
+                    }
+                    joined.push_str(next.trim_start());
+                    joined.push(' ');
+                    i += 1;
+                }
+                if !closed {
+                    // Pathological — no closing quote. Emit what we
+                    // have so the downstream parser sees the same
+                    // broken content rather than silently swallowing.
+                    out.push_str(joined.trim_end());
+                    out.push('\n');
+                }
+                continue;
+            }
+        }
+        out.push_str(line);
+        out.push('\n');
+        i += 1;
+    }
+    out
 }
 
 /// Flattens a nested YAML value into a flat key-value map.
@@ -690,6 +767,55 @@ Content here"#;
         assert_eq!(
             generate_slug("  Multiple   Spaces  "),
             "--multiple---spaces--"
+        );
+    }
+
+    #[test]
+    fn test_extract_metadata_collapses_multiline_quoted_scalar() {
+        // Regression for sebastienrousseau/metadata-gen#20.
+        // A literal newline immediately after `: "` would previously
+        // make noyalib reject the frontmatter and the user would see
+        // the misleading "No valid front matter found" message.
+        // The collapse step joins continuation lines so noyalib sees
+        // valid input.
+        let content = "---\n\
+                       title: Test\n\
+                       twitter_url: \"\n\
+                       https://example.com/post\"\n\
+                       ---\n\
+                       body";
+        let metadata = extract_metadata(content)
+            .expect("multi-line quoted scalar should now parse");
+        assert_eq!(metadata.get("title"), Some(&"Test".to_string()));
+        assert!(
+            metadata
+                .get("twitter_url")
+                .expect("twitter_url present")
+                .contains("https://example.com/post"),
+            "twitter_url should retain the URL after collapse"
+        );
+    }
+
+    #[test]
+    fn test_extract_metadata_surfaces_yaml_parse_error() {
+        // Regression for sebastienrousseau/metadata-gen#20.
+        // A genuinely malformed YAML body (after the collapse step
+        // can't help) should surface the noyalib parse error, not
+        // the misleading "No valid front matter found" fallback.
+        let content = "---\n\
+                       title: [unclosed sequence\n\
+                       ---\n\
+                       body";
+        let err = extract_metadata(content)
+            .expect_err("malformed YAML should error");
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("YAML parse error in frontmatter"),
+            "expected surfaced YAML error, got: {msg}"
+        );
+        assert!(
+            !msg.contains("No valid front matter found"),
+            "should not fall back to the generic message: {msg}"
         );
     }
 }
