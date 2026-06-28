@@ -17,9 +17,7 @@ skip = []
 skip-tree = []
 
 [advisories]
-# List of advisory IDs to ignore
+# List of advisory IDs to ignore. Mirrors audit.toml.
 ignore = [
-    "RUSTSEC-2025-0057", # fxhash — unmaintained, transitive dep via scraper/selectors
-    "RUSTSEC-2024-0436", # paste — unmaintained, transitive dep via dtt
-    "RUSTSEC-2026-0097", # rand 0.8 — unsound with custom logger, transitive dep via phf_generator
+    "RUSTSEC-2024-0436", # paste — unmaintained, build-time only via dtt
 ]

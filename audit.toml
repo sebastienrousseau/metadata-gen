@@ -1,6 +1,13 @@
 [advisories]
 ignore = [
-    "RUSTSEC-2025-0057", # fxhash — unmaintained, transitive dep via scraper/selectors
-    "RUSTSEC-2024-0436", # paste — unmaintained, transitive dep via dtt
-    "RUSTSEC-2026-0097", # rand 0.8 — unsound with custom logger, transitive dep via phf_generator
+    # paste — unmaintained, transitive dep via dtt. Will clear when dtt
+    # migrates off `paste` (tracked upstream). The risk is low: `paste` is
+    # a proc-macro that runs only at build time.
+    "RUSTSEC-2024-0436",
+    # RUSTSEC-2025-0057 (fxhash) and RUSTSEC-2026-0097 (rand 0.8 via
+    # phf_generator) were both rooted in the scraper → html5ever →
+    # selectors → fxhash / phf_generator chain. Replaced scraper with
+    # quick-xml in issue #22 (v0.0.5). The ignores are intentionally
+    # removed so `cargo deny check advisories` will fail if either crate
+    # ever re-enters the tree.
 ]

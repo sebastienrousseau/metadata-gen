@@ -388,11 +388,16 @@ trigger a `cargo-fuzz` target so the same shape can't reappear.
 
 ### 11. Will my dependency tree grow when I add this crate?
 
-Today, yes — `metadata-gen` v0.0.5 still pulls `scraper`, `tokio`, and `regex`.
-v0.0.5 issue [#22](https://github.com/sebastienrousseau/metadata-gen/issues/22)
-replaces `scraper` with `quick-xml`, dropping ~30 transitive crates and
-silencing two RUSTSEC advisories. Per-format Cargo feature gates land in
-v0.0.6 ([#41](https://github.com/sebastienrousseau/metadata-gen/issues/41)).
+Less than before. v0.0.5 retired the `scraper` → `html5ever` → `selectors` →
+`fxhash` / `phf_generator` chain in favour of a `quick-xml`-backed
+`<meta>` extractor — dropping ~30 transitive crates and silencing
+RUSTSEC-2025-0057 (`fxhash`) and RUSTSEC-2026-0097 (`rand 0.8` via
+`phf_generator`). Remaining runtime crates: `tokio` (trimmed to
+`fs`+`io-util`), `regex`, `serde`, `serde_json`, `noyalib`, `toml`,
+`yaml-rust2`, `thiserror`, `quick-xml`, `time`, `dtt`. Per-format Cargo
+feature gates land in v0.0.6
+([#41](https://github.com/sebastienrousseau/metadata-gen/issues/41)) so
+you can opt out of formats you don't use.
 
 ### 12. Is there a CLI?
 

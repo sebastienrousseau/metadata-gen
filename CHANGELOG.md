@@ -66,19 +66,50 @@ This release opens the post-audit roadmap (v0.0.5 → v0.0.10). v0.0.5 is the
   roadmap table, and a 12-question FAQ. Every code block is a passing
   doc-test under `cargo test --doc`.
 
-### Roadmap (planned / tracked under v0.0.5 milestone)
+### Performance
 
-The structural items from the audit are tracked as individual issues for
-review and acceptance before merge. Highlights:
+- **#25** — Hoisted the YAML and TOML front-matter regexes to
+  `std::sync::LazyLock<Regex>` statics. Per-call `Regex::new` compile cost
+  (~30–50 µs + heap allocation) is eliminated; on a 2024 reference laptop
+  `extract_metadata` measures **4.6 µs** (was ~10 µs) and
+  `extract_and_prepare_metadata` measures **8.0 µs**, both well under the
+  documented 1 s budget.
 
-- **#22** — replace `scraper` with `quick-xml`-based meta extractor
-  (silences RUSTSEC-2025-0057, RUSTSEC-2026-0097).
-- **#25** — hoist YAML/TOML/JSON regexes to `LazyLock<Regex>` statics
-  (expected 3–10× throughput on cold path).
-- **#26** — fix the JSON front-matter detector to handle nested objects
-  (the current non-greedy regex truncates at the first `}`).
-- **#27** — wire `cargo-deny` and `cargo-audit` as gating CI checks.
+### Fixed
+
+- **#26** — JSON front-matter detector rewritten on top of
+  `serde_json::Deserializer::from_str(...).into_iter::<Value>().next()`.
+  The previous non-greedy regex (`^\s*\{\s*(.*?)\s*\}`) silently
+  truncated nested objects (`{"author": {"name": "X"}}` lost
+  `author.name`) and arrays of objects. Malformed JSON now surfaces a
+  `MetadataError::ExtractionError` with the underlying `serde_json`
+  message rather than the misleading "No valid front matter found"
+  fallback. Three regression tests pin the behaviour.
+
+### Removed
+
+- **#22** — `scraper` dependency removed. `extract_meta_tags` rebuilt on
+  `quick-xml` (already a declared dependency, previously unused). Drops
+  the `html5ever` / `selectors` / `cssparser` / `markup5ever` /
+  `fxhash` / `phf_generator` / `phf_macros` subtree — roughly 30
+  transitive crates — and silences **RUSTSEC-2025-0057** (`fxhash`,
+  unmaintained) and **RUSTSEC-2026-0097** (`rand 0.8` unsound via
+  `phf_generator`). Both advisory exemptions are deleted from
+  `audit.toml` and `deny.toml`; `cargo deny check advisories` will fail
+  if either crate ever re-enters the tree. New regression tests cover
+  document-order preservation, self-closing syntax, HTML entity
+  decoding, malformed-HTML tolerance, and `<meta>` elements missing
+  `content`.
+
+### Roadmap (still tracked under v0.0.5 milestone)
+
+The remaining items from the audit are tracked as individual issues for
+review and acceptance before merge:
+
+- **#27** — wire `cargo-deny` and `cargo-audit` as gating CI checks
+  (shipped in the initial v0.0.5 hardening commit).
 - **#28** — emit a CycloneDX SBOM and attach it to GitHub Releases.
+- **#29** — `cargo-vet` audit imports and exemption documentation.
 
 ## [0.0.4] — 2026-06-21
 

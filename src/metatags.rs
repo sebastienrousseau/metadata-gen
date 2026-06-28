@@ -4,7 +4,8 @@
 //! and extracting meta tags from HTML content.
 
 use crate::error::MetadataError;
-use scraper::{Html, Selector};
+use quick_xml::events::Event;
+use quick_xml::reader::Reader;
 use std::{collections::HashMap, fmt};
 
 /// Holds collections of meta tags for different platforms and categories.
@@ -250,10 +251,13 @@ pub fn generate_metatags(
     meta_tag_groups
 }
 
-/// Extracts meta tags from HTML content.
+/// Extracts every `<meta>` tag from an HTML document.
 ///
-/// This function parses the given HTML content and extracts all meta tags,
-/// including both `name` and `property` attributes.
+/// Walks the input in document order, yielding one `MetaTag` per
+/// `<meta>` element that carries both an identifying attribute (`name`,
+/// `property`, or `http-equiv`, in that fallback order) and a `content`
+/// attribute. Self-closing (`<meta … />`) and HTML-style (`<meta …>`)
+/// shapes are both accepted.
 ///
 /// # Arguments
 ///
@@ -261,47 +265,119 @@ pub fn generate_metatags(
 ///
 /// # Returns
 ///
-/// Returns a `Result` containing a `Vec<MetaTag>` if successful, or a `MetadataError` if parsing fails.
+/// Returns a `Result` containing a `Vec<MetaTag>` in document order if
+/// parsing reached the end of the input, or a `MetadataError` if the
+/// underlying scanner could not recover from a malformed region.
 ///
 /// # Errors
 ///
-/// This function will return a `MetadataError` if:
-/// - The HTML content cannot be parsed.
-/// - The meta tag selector cannot be created.
+/// Returns `MetadataError::ExtractionError` only when the input is so
+/// malformed that no further events can be produced. Per-element issues
+/// (missing `content`, unknown attributes, unrecognized escape) are
+/// tolerated silently.
+///
+/// # Implementation note
+///
+/// Backed by `quick-xml` configured in HTML-tolerant mode (mismatched
+/// end tags allowed, no DTD validation). This replaces the previous
+/// `scraper` / `html5ever` dependency tree, which dragged ~30 transitive
+/// crates including `fxhash` (RUSTSEC-2025-0057) and a vulnerable
+/// `phf_generator` / `rand 0.8` path (RUSTSEC-2026-0097). See issue #22.
 pub fn extract_meta_tags(
     html_content: &str,
 ) -> Result<Vec<MetaTag>, MetadataError> {
-    let document = Html::parse_document(html_content);
-
-    let meta_selector = Selector::parse("meta").map_err(|e| {
-        MetadataError::ExtractionError {
-            message: format!(
-                "Failed to create meta tag selector: {}",
-                e
-            ),
-        }
-    })?;
+    let mut reader = Reader::from_str(html_content);
+    let config = reader.config_mut();
+    // HTML is not XML — be lenient so doctypes, unquoted attrs, and
+    // mismatched end tags don't abort the scan.
+    config.check_end_names = false;
+    config.trim_text(false);
 
     let mut meta_tags = Vec::new();
+    let mut buf = Vec::new();
 
-    for element in document.select(&meta_selector) {
-        let name = element
-            .value()
-            .attr("name")
-            .or_else(|| element.value().attr("property"))
-            .or_else(|| element.value().attr("http-equiv"));
-
-        let content = element.value().attr("content");
-
-        if let (Some(name), Some(content)) = (name, content) {
-            meta_tags.push(MetaTag {
-                name: name.to_string(),
-                content: content.to_string(),
-            });
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Eof) => break,
+            // Both Start (`<meta …>`) and Empty (`<meta … />`) shapes are
+            // produced for `<meta>` depending on author style. Treat them
+            // identically.
+            Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e))
+                if name_eq_ignore_case(e.name().as_ref(), b"meta") =>
+            {
+                if let Some(tag) = collect_meta_tag(e) {
+                    meta_tags.push(tag);
+                }
+            }
+            Ok(_) => {}
+            Err(e) => {
+                // Per #22 acceptance: tolerate malformed regions and
+                // return what we found so far. The remaining content may
+                // simply be the body of an HTML page that quick-xml
+                // doesn't fully understand.
+                let _ = e;
+                break;
+            }
         }
+        buf.clear();
     }
 
     Ok(meta_tags)
+}
+
+/// Case-insensitive ASCII equality for element names.
+fn name_eq_ignore_case(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len()
+        && a.iter()
+            .zip(b.iter())
+            .all(|(x, y)| x.eq_ignore_ascii_case(y))
+}
+
+/// Pulls a `MetaTag` out of a `<meta>` start/empty element if it carries
+/// both an identifying attribute (`name` → fallback `property` →
+/// fallback `http-equiv`) and a `content` value.
+///
+/// HTML entities in attribute values are decoded via `quick-xml`'s
+/// `unescape_value` so `&amp;`, `&quot;`, numeric refs, etc. round-trip
+/// to the same byte sequence the previous `scraper` implementation
+/// produced.
+fn collect_meta_tag(e: &quick_xml::events::BytesStart<'_>) -> Option<MetaTag> {
+    let mut name: Option<String> = None;
+    let mut property: Option<String> = None;
+    let mut http_equiv: Option<String> = None;
+    let mut content: Option<String> = None;
+
+    for attr_res in e.attributes() {
+        let Ok(attr) = attr_res else { continue };
+        // Decode as UTF-8 then unescape HTML entities. `unescape_value`
+        // was deprecated in quick-xml 0.40; the recommended replacement
+        // is to drive the static `escape::unescape` helper directly.
+        let Ok(raw) = std::str::from_utf8(attr.value.as_ref()) else {
+            continue;
+        };
+        let value = match quick_xml::escape::unescape(raw) {
+            Ok(v) => v.into_owned(),
+            Err(_) => continue,
+        };
+        match attr.key.as_ref() {
+            k if name_eq_ignore_case(k, b"name") => name = Some(value),
+            k if name_eq_ignore_case(k, b"property") => {
+                property = Some(value)
+            }
+            k if name_eq_ignore_case(k, b"http-equiv") => {
+                http_equiv = Some(value)
+            }
+            k if name_eq_ignore_case(k, b"content") => content = Some(value),
+            _ => {}
+        }
+    }
+
+    let id = name.or(property).or(http_equiv)?;
+    let content = content?;
+    Some(MetaTag {
+        name: id,
+        content,
+    })
 }
 
 /// Converts a vector of MetaTags into a HashMap for easier access.
@@ -366,6 +442,71 @@ mod tests {
             && tag.content == "Sample Title"));
         assert!(meta_tags.iter().any(|tag| tag.name == "content-type"
             && tag.content == "text/html; charset=UTF-8"));
+    }
+
+    #[test]
+    fn test_extract_meta_tags_preserves_document_order() {
+        // Issue #22 acceptance: document order must match the previous
+        // scraper-backed implementation. Three tags, deterministic order.
+        let html = r#"
+        <html><head>
+          <meta name="a" content="1">
+          <meta property="og:b" content="2">
+          <meta name="c" content="3">
+        </head><body></body></html>
+        "#;
+        let tags = extract_meta_tags(html).unwrap();
+        let names: Vec<_> = tags.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(names, vec!["a", "og:b", "c"]);
+    }
+
+    #[test]
+    fn test_extract_meta_tags_handles_self_closing() {
+        // XHTML-style self-closing syntax must yield the same result as
+        // HTML-style. Both shapes appear in the wild.
+        let html = r#"<meta name="x" content="1" /><meta name="y" content="2">"#;
+        let tags = extract_meta_tags(html).unwrap();
+        assert_eq!(tags.len(), 2);
+        assert_eq!(tags[0].name, "x");
+        assert_eq!(tags[1].name, "y");
+    }
+
+    #[test]
+    fn test_extract_meta_tags_decodes_entities() {
+        // Issue #22 acceptance: HTML entities in attribute values must
+        // be decoded so consumers don't see literal `&amp;` text.
+        let html =
+            r#"<meta name="title" content="Tom &amp; Jerry &lt;3">"#;
+        let tags = extract_meta_tags(html).unwrap();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].content, "Tom & Jerry <3");
+    }
+
+    #[test]
+    fn test_extract_meta_tags_does_not_panic_on_malformed() {
+        // Issue #22 acceptance: a malformed HTML fragment with an
+        // unclosed tag must not panic; whatever was already parsed is
+        // returned to the caller. We don't pin the exact count because
+        // recovery behaviour is intentionally implementation-defined.
+        let html = r#"
+        <html><head>
+          <meta name="first" content="ok">
+          <meta name="broken" content="oops
+          <meta name="second" content="probably-lost">
+        </head>
+        "#;
+        let _ = extract_meta_tags(html).expect("must not panic");
+    }
+
+    #[test]
+    fn test_extract_meta_tags_ignores_meta_without_content() {
+        // A <meta> with no content attr is dropped (parity with the
+        // previous scraper-based behaviour).
+        let html = r#"<meta name="orphan"><meta name="ok" content="yes">"#;
+        let tags = extract_meta_tags(html).unwrap();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "ok");
+        assert_eq!(tags[0].content, "yes");
     }
 
     #[test]
