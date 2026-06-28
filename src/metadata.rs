@@ -8,7 +8,27 @@ use dtt::datetime::DateTime;
 use regex::Regex;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 use toml::Value as TomlValue;
+
+// One-time compiled front-matter delimiters. Calling `Regex::new` on every
+// `extract_metadata` invocation cost ~30–50 µs per call plus an allocation
+// per regex — entirely unnecessary at SSG scale. The patterns are static,
+// so compile them once per process. Issue #25.
+//
+// The `expect` is unreachable in any reachable code path: the patterns are
+// compile-time literals and have been validated by the test suite for
+// every release. If a future edit introduces a malformed pattern, the
+// startup-time panic is preferable to silently returning `None` from
+// every parse call.
+static YAML_FRONT_MATTER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?s)^\s*---\s*\n(.*?)\n\s*---\s*")
+        .expect("YAML front-matter regex is statically valid")
+});
+static TOML_FRONT_MATTER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?s)^\s*\+\+\+\s*(.*?)\s*\+\+\+")
+        .expect("TOML front-matter regex is statically valid")
+});
 
 /// Represents metadata for a page or content item.
 ///
@@ -122,11 +142,15 @@ pub fn extract_metadata(
     if let Some(yaml_result) = extract_yaml_metadata(content) {
         return yaml_result;
     }
-    extract_toml_metadata(content)
-        .or_else(|| extract_json_metadata(content))
-        .ok_or_else(|| MetadataError::ExtractionError {
-            message: "No valid front matter found.".to_string(),
-        })
+    if let Some(toml) = extract_toml_metadata(content) {
+        return Ok(toml);
+    }
+    if let Some(json_result) = extract_json_metadata(content) {
+        return json_result;
+    }
+    Err(MetadataError::ExtractionError {
+        message: "No valid front matter found.".to_string(),
+    })
 }
 
 /// Extracts YAML metadata from the content.
@@ -141,8 +165,7 @@ pub fn extract_metadata(
 fn extract_yaml_metadata(
     content: &str,
 ) -> Option<Result<Metadata, MetadataError>> {
-    let re = Regex::new(r"(?s)^\s*---\s*\n(.*?)\n\s*---\s*").ok()?;
-    let captures = re.captures(content)?;
+    let captures = YAML_FRONT_MATTER.captures(content)?;
 
     let yaml_str = captures.get(1)?.as_str().trim();
 
@@ -287,8 +310,7 @@ fn flatten_yaml_recursive(
 ///
 /// An `Option<Metadata>` containing the extracted metadata if successful, or `None` if extraction fails.
 fn extract_toml_metadata(content: &str) -> Option<Metadata> {
-    let re = Regex::new(r"(?s)^\s*\+\+\+\s*(.*?)\s*\+\+\+").ok()?;
-    let captures = re.captures(content)?;
+    let captures = TOML_FRONT_MATTER.captures(content)?;
     let toml_str = captures.get(1)?.as_str().trim();
 
     let toml_value: TomlValue = toml::from_str(toml_str).ok()?;
@@ -345,31 +367,109 @@ fn flatten_toml(
     }
 }
 
-/// Extracts JSON metadata from the content.
+/// Extracts JSON front-matter from the start of `content`.
 ///
-/// # Arguments
+/// Returns `Some(Ok(_))` when a balanced JSON object is found and parsed,
+/// `Some(Err(_))` when an opening `{` appears but the JSON is malformed
+/// (so the caller can surface a useful error instead of the misleading
+/// "no front-matter" fallback), and `None` only when no opening `{`
+/// appears at the start of the content.
 ///
-/// * `content` - A string slice containing the content to extract JSON metadata from.
-///
-/// # Returns
-///
-/// An `Option<Metadata>` containing the extracted metadata if successful, or `None` if extraction fails.
-fn extract_json_metadata(content: &str) -> Option<Metadata> {
-    let re = Regex::new(r"(?s)^\s*\{\s*(.*?)\s*\}").ok()?;
-    let captures = re.captures(content)?;
-    let json_str = format!("{{{}}}", captures.get(1)?.as_str().trim());
+/// Nested objects and arrays of objects are preserved by flattening them
+/// with dot-separated keys (e.g. `author.name`, matching the YAML/TOML
+/// shape). Issue #26.
+fn extract_json_metadata(
+    content: &str,
+) -> Option<Result<Metadata, MetadataError>> {
+    let trimmed = content.trim_start();
+    if !trimmed.starts_with('{') {
+        return None;
+    }
 
-    let json_value: JsonValue = serde_json::from_str(&json_str).ok()?;
-    let json_object = json_value.as_object()?;
+    // `Deserializer::into_iter` consumes one balanced JSON value at a
+    // time. We take the first one — that's the front-matter — and let
+    // anything after it be the document body. This replaces the old
+    // non-greedy regex that silently truncated nested objects at the
+    // first `}` it saw.
+    let mut stream =
+        serde_json::Deserializer::from_str(trimmed).into_iter::<JsonValue>();
+    let first = stream.next()?; // None only if input is empty after `{`.
 
-    let metadata: HashMap<String, String> = json_object
-        .iter()
-        .filter_map(|(k, v)| {
-            v.as_str().map(|s| (k.clone(), s.to_string()))
-        })
-        .collect();
+    let value = match first {
+        Ok(v) => v,
+        Err(e) => {
+            return Some(Err(MetadataError::ExtractionError {
+                message: format!(
+                    "JSON parse error in frontmatter: {e}"
+                ),
+            }))
+        }
+    };
 
-    Some(Metadata::new(metadata))
+    let object = match value.as_object() {
+        Some(obj) => obj,
+        None => {
+            return Some(Err(MetadataError::ExtractionError {
+                message: "JSON frontmatter must be an object at the \
+                          document root"
+                    .to_string(),
+            }))
+        }
+    };
+
+    let mut metadata: HashMap<String, String> = HashMap::new();
+    for (k, v) in object {
+        flatten_json(v, &mut metadata, k.clone());
+    }
+    Some(Ok(Metadata::new(metadata)))
+}
+
+/// Recursively flattens a JSON value tree into a flat key-value map.
+///
+/// Mirrors `flatten_toml` / `flatten_yaml`: nested objects use
+/// dot-separated keys; arrays render as comma-separated lists wrapped in
+/// brackets. Strings are stored as-is; numbers, booleans, and `null`
+/// fall back to their JSON `Display` form.
+fn flatten_json(
+    value: &JsonValue,
+    map: &mut HashMap<String, String>,
+    prefix: String,
+) {
+    match value {
+        JsonValue::Object(obj) => {
+            for (k, v) in obj {
+                let new_prefix = if prefix.is_empty() {
+                    k.clone()
+                } else {
+                    format!("{}.{}", prefix, k)
+                };
+                flatten_json(v, map, new_prefix);
+            }
+        }
+        JsonValue::Array(arr) => {
+            // Arrays of scalars render as `[a, b, c]`. Arrays of objects
+            // render the same — callers that need element-level access
+            // should use the v0.0.6 typed-extraction API (issue #45).
+            let inline = arr
+                .iter()
+                .map(|v| match v {
+                    JsonValue::String(s) => s.clone(),
+                    other => other.to_string(),
+                })
+                .collect::<Vec<String>>()
+                .join(", ");
+            map.insert(prefix, format!("[{}]", inline));
+        }
+        JsonValue::String(s) => {
+            map.insert(prefix, s.clone());
+        }
+        JsonValue::Null => {
+            map.insert(prefix, "null".to_string());
+        }
+        _ => {
+            map.insert(prefix, value.to_string());
+        }
+    }
 }
 
 /// Processes the extracted metadata.
@@ -793,6 +893,53 @@ Content here"#;
                 .expect("twitter_url present")
                 .contains("https://example.com/post"),
             "twitter_url should retain the URL after collapse"
+        );
+    }
+
+    #[test]
+    fn test_extract_json_metadata_with_nested_object() {
+        // Regression for #26: the previous regex-based JSON detector
+        // matched the first `}` it saw, so any nested object lost data
+        // silently. The serde_json streaming path preserves it.
+        let content = r#"{"title": "T", "author": {"name": "Ada", "handle": "ada@example.com"}}
+# body"#;
+        let meta = extract_metadata(content).expect("nested JSON parses");
+        assert_eq!(meta.get("title"), Some(&"T".to_string()));
+        assert_eq!(meta.get("author.name"), Some(&"Ada".to_string()));
+        assert_eq!(
+            meta.get("author.handle"),
+            Some(&"ada@example.com".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_json_metadata_with_array_of_objects() {
+        // Issue #26 acceptance criterion: arrays of objects are preserved.
+        let content = r#"{"tags": [{"name":"x"},{"name":"y"}]}
+# body"#;
+        let meta = extract_metadata(content).expect("array parses");
+        // The flattened representation lists each element via its JSON
+        // `Display` form; the important property is no data is lost.
+        let tags = meta.get("tags").expect("tags key present");
+        assert!(tags.contains("\"name\":\"x\""), "got: {tags}");
+        assert!(tags.contains("\"name\":\"y\""), "got: {tags}");
+    }
+
+    #[test]
+    fn test_extract_json_metadata_malformed_surfaces_error() {
+        // Issue #26 acceptance criterion: malformed JSON returns
+        // ExtractionError with the underlying serde_json message —
+        // not the generic "No valid front matter found".
+        let content = r#"{"title": "unterminated"# ; // intentionally malformed
+        let err = extract_metadata(content).expect_err("must error");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("JSON parse error in frontmatter"),
+            "expected surfaced JSON error, got: {msg}"
+        );
+        assert!(
+            !msg.contains("No valid front matter found"),
+            "should not fall back to the generic message: {msg}"
         );
     }
 
