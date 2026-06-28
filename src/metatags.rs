@@ -341,7 +341,9 @@ fn name_eq_ignore_case(a: &[u8], b: &[u8]) -> bool {
 /// `unescape_value` so `&amp;`, `&quot;`, numeric refs, etc. round-trip
 /// to the same byte sequence the previous `scraper` implementation
 /// produced.
-fn collect_meta_tag(e: &quick_xml::events::BytesStart<'_>) -> Option<MetaTag> {
+fn collect_meta_tag(
+    e: &quick_xml::events::BytesStart<'_>,
+) -> Option<MetaTag> {
     let mut name: Option<String> = None;
     let mut property: Option<String> = None;
     let mut http_equiv: Option<String> = None;
@@ -367,17 +369,16 @@ fn collect_meta_tag(e: &quick_xml::events::BytesStart<'_>) -> Option<MetaTag> {
             k if name_eq_ignore_case(k, b"http-equiv") => {
                 http_equiv = Some(value)
             }
-            k if name_eq_ignore_case(k, b"content") => content = Some(value),
+            k if name_eq_ignore_case(k, b"content") => {
+                content = Some(value)
+            }
             _ => {}
         }
     }
 
     let id = name.or(property).or(http_equiv)?;
     let content = content?;
-    Some(MetaTag {
-        name: id,
-        content,
-    })
+    Some(MetaTag { name: id, content })
 }
 
 /// Converts a vector of MetaTags into a HashMap for easier access.
@@ -456,7 +457,8 @@ mod tests {
         </head><body></body></html>
         "#;
         let tags = extract_meta_tags(html).unwrap();
-        let names: Vec<_> = tags.iter().map(|t| t.name.as_str()).collect();
+        let names: Vec<_> =
+            tags.iter().map(|t| t.name.as_str()).collect();
         assert_eq!(names, vec!["a", "og:b", "c"]);
     }
 
@@ -502,7 +504,8 @@ mod tests {
     fn test_extract_meta_tags_ignores_meta_without_content() {
         // A <meta> with no content attr is dropped (parity with the
         // previous scraper-based behaviour).
-        let html = r#"<meta name="orphan"><meta name="ok" content="yes">"#;
+        let html =
+            r#"<meta name="orphan"><meta name="ok" content="yes">"#;
         let tags = extract_meta_tags(html).unwrap();
         assert_eq!(tags.len(), 1);
         assert_eq!(tags[0].name, "ok");

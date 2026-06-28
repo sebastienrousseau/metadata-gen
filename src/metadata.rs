@@ -391,8 +391,8 @@ fn extract_json_metadata(
     // anything after it be the document body. This replaces the old
     // non-greedy regex that silently truncated nested objects at the
     // first `}` it saw.
-    let mut stream =
-        serde_json::Deserializer::from_str(trimmed).into_iter::<JsonValue>();
+    let mut stream = serde_json::Deserializer::from_str(trimmed)
+        .into_iter::<JsonValue>();
     let first = stream.next()?; // None only if input is empty after `{`.
 
     let value = match first {
@@ -903,7 +903,8 @@ Content here"#;
         // silently. The serde_json streaming path preserves it.
         let content = r#"{"title": "T", "author": {"name": "Ada", "handle": "ada@example.com"}}
 # body"#;
-        let meta = extract_metadata(content).expect("nested JSON parses");
+        let meta =
+            extract_metadata(content).expect("nested JSON parses");
         assert_eq!(meta.get("title"), Some(&"T".to_string()));
         assert_eq!(meta.get("author.name"), Some(&"Ada".to_string()));
         assert_eq!(
@@ -930,7 +931,7 @@ Content here"#;
         // Issue #26 acceptance criterion: malformed JSON returns
         // ExtractionError with the underlying serde_json message —
         // not the generic "No valid front matter found".
-        let content = r#"{"title": "unterminated"# ; // intentionally malformed
+        let content = r#"{"title": "unterminated"#; // intentionally malformed
         let err = extract_metadata(content).expect_err("must error");
         let msg = err.to_string();
         assert!(

@@ -1,23 +1,59 @@
+# cargo-deny configuration. Mirrors the spirit of audit.toml: allow only
+# permissive OSI-approved licences and fail on any RUSTSEC advisory not
+# explicitly justified.
+
 [licenses]
-# List of allowed licenses for dependencies
-allow = ["MIT", "Apache-2.0", "Unicode-DFS-2016"]
+# Permissive licences whose terms are compatible with our Apache-2.0 /
+# MIT dual-licence. Each entry is a SPDX identifier.
+#
+# Why each one:
+# - MIT, Apache-2.0          our own licences; ubiquitous in the Rust tree.
+# - BSD-2-Clause / BSD-3-Clause / 0BSD / ISC / Zlib — short permissive
+#   licences used by `idna_adapter`, `untrusted`, `webpki-roots`, and
+#   compression helpers. All grant unrestricted commercial use with
+#   attribution.
+# - MPL-2.0                  weak-copyleft on file boundary only;
+#   compatible with library distribution (used by `webpki` and a few
+#   Mozilla-origin crates).
+# - Unicode-3.0 / Unicode-DFS-2016 — both apply to the `unicode-ident`
+#   crate at different points in its history; we accept both so
+#   resolver bumps don't trip CI.
+# - CC0-1.0                  public-domain dedication (used by `tiny-keccak`).
+# - CDLA-Permissive-2.0      Linux Foundation permissive licence used by
+#   the `webpki-roots` mozilla data package.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "ISC",
+    "Zlib",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+]
+
+# Don't warn when an allowed licence isn't currently used by the tree —
+# we keep the wider list intentionally so resolver bumps don't trip CI
+# the moment a new transitive dep with one of these licences appears.
+unused-allowed-license = "allow"
 
 [bans]
-# Lint level for when multiple versions of the same crate are detected
 multiple-versions = "warn"
-
-# The graph highlighting used when creating dotgraphs for crates with multiple versions
-# Options: "lowest-version", "simplest-path", "all"
 highlight = "all"
-
-# Certain crates/versions that will be skipped when doing duplicate detection.
 skip = []
-
-# Similarly to `skip` allows you to skip certain crates during duplicate detection, unlike skip, it also includes the entire tree of transitive dependencies starting at the specified crate, up to a certain depth, which is by default infinite
 skip-tree = []
 
 [advisories]
-# List of advisory IDs to ignore. Mirrors audit.toml.
-ignore = [
-    "RUSTSEC-2024-0436", # paste — unmaintained, build-time only via dtt
-]
+# Advisory IDs we explicitly accept. Each must carry a rationale.
+#
+# When an entry is removed: `cargo deny check advisories` will fail if
+# the affected crate ever re-enters the dependency tree. That is the
+# desired behaviour — RUSTSEC-2025-0057 (fxhash) and RUSTSEC-2026-0097
+# (rand 0.8 via phf_generator) were retired in v0.0.5 (issue #22) when
+# the `scraper` chain was replaced with `quick-xml`.
+ignore = []
