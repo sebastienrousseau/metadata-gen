@@ -1,6 +1,8 @@
 [advisories]
-ignore = [
-    "RUSTSEC-2025-0057", # fxhash — unmaintained, transitive dep via scraper/selectors
-    "RUSTSEC-2024-0436", # paste — unmaintained, transitive dep via dtt
-    "RUSTSEC-2026-0097", # rand 0.8 — unsound with custom logger, transitive dep via phf_generator
-]
+# Mirrors deny.toml. The previously-silenced RUSTSEC-2025-0057 (fxhash),
+# RUSTSEC-2026-0097 (rand 0.8 via phf_generator), and RUSTSEC-2024-0436
+# (paste) advisories are all no longer reachable from the dependency
+# graph as of v0.0.5: `scraper` was replaced with `quick-xml` (#22) and
+# `dtt 0.0.10` migrated from `paste` to `pastey`. CI will fail if any
+# of those crates re-enter the tree.
+ignore = []

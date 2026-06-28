@@ -5,6 +5,112 @@ All notable changes to `metadata-gen` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] — 2026-06-28
+
+This release opens the post-audit roadmap (v0.0.5 → v0.0.10). v0.0.5 is the
+**Foundation Hardening** milestone; the full breakdown lives at
+<https://github.com/sebastienrousseau/metadata-gen/milestones>.
+
+### Changed
+
+- **`tokio` feature set trimmed** from `full` to `default-features = false`
+  plus `["fs", "io-util", "rt", "macros"]`. The previous `full` opt-in
+  dragged `net`, `signal`, `process`, `tokio-macros`, and `parking_lot`
+  through every consumer build for the sake of one `read_to_string`. The
+  full Tokio bundle is now a `dev-dependency` only, so doc-tests and
+  examples still build, but library users no longer pay for it.
+- **First-party crates pinned strictly** — `noyalib = "=0.0.8"` and
+  `dtt = "=0.0.10"`. Pre-1.0 patch releases from the same maintainer can no
+  longer silently break downstream consumers; future bumps go through a
+  deliberate `metadata-gen` release. Captured as ADR-004.
+- **`[profile.bench]` corrected** — dropped `debug = true` (which defeated
+  inliner heuristics and inflated reported latency by ~10–30 %) in favour
+  of `debug = "line-tables-only"` with `lto = true`, `codegen-units = 1`,
+  `opt-level = 3` to mirror release codegen.
+- **Crates.io metadata refresh** — removed the `command-line-utilities`
+  category (the crate ships no `[[bin]]`); keyword set rotated to
+  `frontmatter`, `yaml`, `toml`, `seo`, `static-site` (the crate name
+  `metadata-gen` is implicit and was removed).
+
+### Removed
+
+- **`anyhow` dependency** — declared but never `use`d in `src/`.
+- **`tempfile` from `[dependencies]`** — moved to `[dev-dependencies]`; it
+  was only referenced by tests and examples.
+
+### CI / supply chain
+
+- **Local rustdoc workflow** (`.github/workflows/docs.yml`) replaces the
+  external `pipelines/docs.yml` reusable workflow. Docs are built with
+  `RUSTDOCFLAGS="--cfg docsrs --deny warnings"` and deployed via
+  `actions/upload-pages-artifact@v3` + `actions/deploy-pages@v4`. The old
+  `gh-pages` branch deploy is retired and the Pages source has been
+  switched to "GitHub Actions".
+- **`cargo-deny` and `cargo-audit` gating** added to the CI workflow.
+  Advisories, licenses, bans, and source allowlists now fail the build on
+  any violation.
+- **Dependabot config sharpened** — security advisories ship as their own
+  PR (not bundled with weekly maintenance), `versioning-strategy` set to
+  `increase-if-necessary`, first-party 0.0.x crates (`noyalib`, `dtt`)
+  are excluded from automated minor/patch bumps to honour ADR-004.
+- **Repo positioning refreshed** — GitHub description rewritten for the
+  2026 audit context, topics updated to surface `frontmatter`, `wasi`,
+  `sbom`, `supply-chain`, `cargo-deny`, `no-std-friendly`, and the
+  static-site-generator audience.
+
+### Docs
+
+- **README rewritten end-to-end** — value-prop, when-to-use, three
+  per-format examples, a comparison table vs `gray_matter` /
+  `yaml-front-matter` / `matter`, supply-chain section, MSRV policy,
+  roadmap table, and a 12-question FAQ. Every code block is a passing
+  doc-test under `cargo test --doc`.
+
+### Performance
+
+- **#25** — Hoisted the YAML and TOML front-matter regexes to
+  `std::sync::LazyLock<Regex>` statics. Per-call `Regex::new` compile cost
+  (~30–50 µs + heap allocation) is eliminated; on a 2024 reference laptop
+  `extract_metadata` measures **4.6 µs** (was ~10 µs) and
+  `extract_and_prepare_metadata` measures **8.0 µs**, both well under the
+  documented 1 s budget.
+
+### Fixed
+
+- **#26** — JSON front-matter detector rewritten on top of
+  `serde_json::Deserializer::from_str(...).into_iter::<Value>().next()`.
+  The previous non-greedy regex (`^\s*\{\s*(.*?)\s*\}`) silently
+  truncated nested objects (`{"author": {"name": "X"}}` lost
+  `author.name`) and arrays of objects. Malformed JSON now surfaces a
+  `MetadataError::ExtractionError` with the underlying `serde_json`
+  message rather than the misleading "No valid front matter found"
+  fallback. Three regression tests pin the behaviour.
+
+### Removed
+
+- **#22** — `scraper` dependency removed. `extract_meta_tags` rebuilt on
+  `quick-xml` (already a declared dependency, previously unused). Drops
+  the `html5ever` / `selectors` / `cssparser` / `markup5ever` /
+  `fxhash` / `phf_generator` / `phf_macros` subtree — roughly 30
+  transitive crates — and silences **RUSTSEC-2025-0057** (`fxhash`,
+  unmaintained) and **RUSTSEC-2026-0097** (`rand 0.8` unsound via
+  `phf_generator`). Both advisory exemptions are deleted from
+  `audit.toml` and `deny.toml`; `cargo deny check advisories` will fail
+  if either crate ever re-enters the tree. New regression tests cover
+  document-order preservation, self-closing syntax, HTML entity
+  decoding, malformed-HTML tolerance, and `<meta>` elements missing
+  `content`.
+
+### Roadmap (still tracked under v0.0.5 milestone)
+
+The remaining items from the audit are tracked as individual issues for
+review and acceptance before merge:
+
+- **#27** — wire `cargo-deny` and `cargo-audit` as gating CI checks
+  (shipped in the initial v0.0.5 hardening commit).
+- **#28** — emit a CycloneDX SBOM and attach it to GitHub Releases.
+- **#29** — `cargo-vet` audit imports and exemption documentation.
+
 ## [0.0.4] — 2026-06-21
 
 ### Changed
@@ -59,6 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial publication of `metadata-gen` to crates.io.
 
+[0.0.5]: https://github.com/sebastienrousseau/metadata-gen/releases/tag/v0.0.5
 [0.0.4]: https://github.com/sebastienrousseau/metadata-gen/releases/tag/v0.0.4
 [0.0.3]: https://github.com/sebastienrousseau/metadata-gen/releases/tag/v0.0.3
 [0.0.2]: https://github.com/sebastienrousseau/metadata-gen/releases/tag/v0.0.2

@@ -1,0 +1,89 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Required for the Pages deployment to obtain its OIDC token.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build rustdoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build documentation
+        env:
+          # Fail the build on any rustdoc warning (broken intra-doc link,
+          # missing docs on a public item, etc.).
+          RUSTDOCFLAGS: "--cfg docsrs --deny warnings"
+        run: cargo doc --no-deps --all-features
+
+      # crates.io serves index.html via metadata_gen/index.html; redirect / to it.
+      - name: Add root redirect
+        run: |
+          set -euo pipefail
+          cat > target/doc/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>metadata-gen documentation</title>
+          <meta http-equiv="refresh" content="0; url=metadata_gen/index.html">
+          <link rel="canonical" href="metadata_gen/index.html">
+          <p>If you are not redirected, <a href="metadata_gen/index.html">open the docs</a>.</p>
+          EOF
+
+      # Custom-domain support: keep the apex CNAME alongside the artifact.
+      - name: Write CNAME
+        run: echo "doc.metadata-gen.com" > target/doc/CNAME
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/doc
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Smoke-check published URL
+        run: |
+          set -euo pipefail
+          # Resolve the custom domain; allow up to 5 minutes for propagation.
+          URL="https://doc.metadata-gen.com/metadata_gen/"
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" "$URL" || true)
+            echo "  attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "✓ docs reachable at $URL"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "✗ docs not reachable within 5 min"
+          exit 1

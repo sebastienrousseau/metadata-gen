@@ -4,7 +4,7 @@
 
 [package]
 name = "metadata-gen"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2021"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -28,7 +28,7 @@ categories = [
     "development-tools"
 ]
 
-keywords = ["metadata", "yaml", "toml", "json", "metadata-gen"]
+keywords = ["frontmatter", "yaml", "toml", "seo", "static-site"]
 
 [lib]
 name = "metadata_gen"
@@ -40,18 +40,23 @@ path = "src/lib.rs"
 
 [dependencies]
 # Dependencies required for building and running the project.
-anyhow = "1.0"
-dtt = "0.0.10"
+#
+# Notes:
+# - `noyalib` and `dtt` are first-party (same maintainer). They are pinned
+#   strictly until they reach 1.0 so a 0.0.x patch upstream cannot silently
+#   break every downstream consumer of `metadata-gen`. See ADR-004.
+# - `tokio` is intentionally feature-trimmed to `fs` + `io-util` for the
+#   single `async_extract_metadata_from_file` helper. We do not need `net`,
+#   `signal`, `process`, or `parking_lot`. See ADR-008 in v0.0.6.
+dtt = "=0.0.10"
 quick-xml = "0.40"
 regex = "1.12"
-scraper = "0.27"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
-noyalib = { version = "0.0.8", default-features = false, features = ["std"] }
-tempfile = "3.27"
+noyalib = { version = "=0.0.8", default-features = false, features = ["std"] }
 thiserror = "2.0"
 time = { version = "0.3", features = ["parsing"] }
-tokio = { version = "1.50", features = ["full"] }
+tokio = { version = "1.50", default-features = false, features = ["fs", "io-util", "rt", "macros"] }
 toml = "1.1"
 yaml-rust2 = "0.11"
 
@@ -72,6 +77,12 @@ version_check = "0.9.4"
 assert_fs = "1.1"
 criterion = "0.8"
 predicates = "3.1"
+# `tempfile` is only needed for tests + examples; not part of the runtime
+# dependency surface.
+tempfile = "3.27"
+# Doc-tests / examples that use `#[tokio::main]` need the full Tokio runtime
+# bundle, but library consumers must not pay for that.
+tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "fs", "io-util"] }
 serde = { version = "1.0", features = ["derive"] }
 
 # -----------------------------------------------------------------------------
@@ -108,7 +119,13 @@ name = "metadata_benchmark"
 harness = false
 
 [profile.bench]
-debug = true
+# Match release codegen so reported numbers reflect what users will see.
+# `line-tables-only` keeps just enough debug info for flamegraphs without
+# defeating the inliner. See the v0.0.5 bench-profile correction.
+debug = "line-tables-only"
+lto = true
+codegen-units = 1
+opt-level = 3
 
 # -----------------------------------------------------------------------------
 # Features
