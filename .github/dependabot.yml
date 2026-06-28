@@ -8,12 +8,28 @@ updates:
       time: "09:00"
       timezone: "UTC"
     open-pull-requests-limit: 10
+    versioning-strategy: increase-if-necessary
     groups:
+      # Routine maintenance: bundle minor/patch bumps into a single PR per week.
       minor-and-patch:
         update-types: [minor, patch]
+      # Security advisories ship as their own PR — never bundled — so they
+      # can be reviewed and merged ahead of routine maintenance.
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
     labels: ["dependencies", "rust"]
     commit-message:
       prefix: "chore(deps)"
+      include: "scope"
+    # First-party 0.0.x crates are pinned strictly in Cargo.toml; ignore
+    # automated bumps for them until they reach 1.0. See ADR-004.
+    ignore:
+      - dependency-name: "noyalib"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
+      - dependency-name: "dtt"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
@@ -22,6 +38,10 @@ updates:
       time: "09:00"
       timezone: "UTC"
     open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]
     labels: ["dependencies", "github-actions"]
     commit-message:
       prefix: "chore(deps)"
+      include: "scope"

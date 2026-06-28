@@ -5,6 +5,81 @@ All notable changes to `metadata-gen` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] — Unreleased
+
+This release opens the post-audit roadmap (v0.0.5 → v0.0.10). v0.0.5 is the
+**Foundation Hardening** milestone; the full breakdown lives at
+<https://github.com/sebastienrousseau/metadata-gen/milestones>.
+
+### Changed
+
+- **`tokio` feature set trimmed** from `full` to `default-features = false`
+  plus `["fs", "io-util", "rt", "macros"]`. The previous `full` opt-in
+  dragged `net`, `signal`, `process`, `tokio-macros`, and `parking_lot`
+  through every consumer build for the sake of one `read_to_string`. The
+  full Tokio bundle is now a `dev-dependency` only, so doc-tests and
+  examples still build, but library users no longer pay for it.
+- **First-party crates pinned strictly** — `noyalib = "=0.0.8"` and
+  `dtt = "=0.0.10"`. Pre-1.0 patch releases from the same maintainer can no
+  longer silently break downstream consumers; future bumps go through a
+  deliberate `metadata-gen` release. Captured as ADR-004.
+- **`[profile.bench]` corrected** — dropped `debug = true` (which defeated
+  inliner heuristics and inflated reported latency by ~10–30 %) in favour
+  of `debug = "line-tables-only"` with `lto = true`, `codegen-units = 1`,
+  `opt-level = 3` to mirror release codegen.
+- **Crates.io metadata refresh** — removed the `command-line-utilities`
+  category (the crate ships no `[[bin]]`); keyword set rotated to
+  `frontmatter`, `yaml`, `toml`, `seo`, `static-site` (the crate name
+  `metadata-gen` is implicit and was removed).
+
+### Removed
+
+- **`anyhow` dependency** — declared but never `use`d in `src/`.
+- **`tempfile` from `[dependencies]`** — moved to `[dev-dependencies]`; it
+  was only referenced by tests and examples.
+
+### CI / supply chain
+
+- **Local rustdoc workflow** (`.github/workflows/docs.yml`) replaces the
+  external `pipelines/docs.yml` reusable workflow. Docs are built with
+  `RUSTDOCFLAGS="--cfg docsrs --deny warnings"` and deployed via
+  `actions/upload-pages-artifact@v3` + `actions/deploy-pages@v4`. The old
+  `gh-pages` branch deploy is retired and the Pages source has been
+  switched to "GitHub Actions".
+- **`cargo-deny` and `cargo-audit` gating** added to the CI workflow.
+  Advisories, licenses, bans, and source allowlists now fail the build on
+  any violation.
+- **Dependabot config sharpened** — security advisories ship as their own
+  PR (not bundled with weekly maintenance), `versioning-strategy` set to
+  `increase-if-necessary`, first-party 0.0.x crates (`noyalib`, `dtt`)
+  are excluded from automated minor/patch bumps to honour ADR-004.
+- **Repo positioning refreshed** — GitHub description rewritten for the
+  2026 audit context, topics updated to surface `frontmatter`, `wasi`,
+  `sbom`, `supply-chain`, `cargo-deny`, `no-std-friendly`, and the
+  static-site-generator audience.
+
+### Docs
+
+- **README rewritten end-to-end** — value-prop, when-to-use, three
+  per-format examples, a comparison table vs `gray_matter` /
+  `yaml-front-matter` / `matter`, supply-chain section, MSRV policy,
+  roadmap table, and a 12-question FAQ. Every code block is a passing
+  doc-test under `cargo test --doc`.
+
+### Roadmap (planned / tracked under v0.0.5 milestone)
+
+The structural items from the audit are tracked as individual issues for
+review and acceptance before merge. Highlights:
+
+- **#22** — replace `scraper` with `quick-xml`-based meta extractor
+  (silences RUSTSEC-2025-0057, RUSTSEC-2026-0097).
+- **#25** — hoist YAML/TOML/JSON regexes to `LazyLock<Regex>` statics
+  (expected 3–10× throughput on cold path).
+- **#26** — fix the JSON front-matter detector to handle nested objects
+  (the current non-greedy regex truncates at the first `}`).
+- **#27** — wire `cargo-deny` and `cargo-audit` as gating CI checks.
+- **#28** — emit a CycloneDX SBOM and attach it to GitHub Releases.
+
 ## [0.0.4] — 2026-06-21
 
 ### Changed

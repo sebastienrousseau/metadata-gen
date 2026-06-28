@@ -23,11 +23,28 @@ jobs:
     uses: sebastienrousseau/pipelines/.github/workflows/security.yml@main
     with:
       language: rust
-      fail-on-vulnerability: false
+      fail-on-vulnerability: true
 
-  docs:
-    if: github.ref == 'refs/heads/main'
-    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@main
-    with:
-      type: rust
-      redirect-crate: metadata_gen
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check all
+          arguments: --all-features
+
+  audit:
+    name: cargo-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install --locked cargo-audit
+      - run: cargo audit --deny warnings
+
+  # Docs are built and deployed by .github/workflows/docs.yml on push to main.
+  # The previous external `pipelines/docs.yml` reusable workflow wrote to a
+  # gh-pages branch; the new local workflow uses the Pages-from-Actions deploy.
