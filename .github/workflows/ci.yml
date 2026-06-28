@@ -10,17 +10,24 @@ concurrency:
 
 jobs:
   ci:
-    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@main
+    # Pinned to a SHA (immutable) rather than @main (mutable). Bump
+    # deliberately when upstream rust-ci.yml changes are worth absorbing.
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@3b0c5ce38f72e1b765265a172ac7407daad7f244 # tracks main 2026-06-28
     with:
       rust-version: 'stable'
       run-coverage: true
+      # Local cargo-audit + cargo-deny jobs supersede the reusable audit.
       run-audit: false
-      coverage-exclude: 'crates/*'
+      # Validate the README's "Linux, macOS, Windows" claim. Matrix is
+      # macos-latest + windows-latest; needs the linux check to pass.
+      run-cross-platform: true
+      # `coverage-exclude: 'crates/*'` removed — no `crates/` directory
+      # exists in the repo since the v0.0.3 noyalib migration.
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   security:
-    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@main
+    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@3b0c5ce38f72e1b765265a172ac7407daad7f244 # tracks main 2026-06-28
     with:
       language: rust
       fail-on-vulnerability: true
