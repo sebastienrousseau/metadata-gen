@@ -89,7 +89,7 @@ Or add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-metadata-gen = "0.0.5"
+metadata-gen = "0.0.6"
 ```
 
 Minimum Supported Rust Version: **1.88.0** — see the
