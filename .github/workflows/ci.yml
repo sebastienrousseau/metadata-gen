@@ -27,7 +27,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   security:
-    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@3b0c5ce38f72e1b765265a172ac7407daad7f244 # tracks main 2026-06-28
+    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@d9cb8b34257036b6ed44a0333d4093f447c1b8cc # tracks main 2026-06-28
     with:
       language: rust
       fail-on-vulnerability: true
