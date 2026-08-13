@@ -12,7 +12,7 @@ jobs:
   ci:
     # Pinned to a SHA (immutable) rather than @main (mutable). Bump
     # deliberately when upstream rust-ci.yml changes are worth absorbing.
-    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@d9cb8b34257036b6ed44a0333d4093f447c1b8cc # tracks main 2026-06-28
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@d3d082405a06d3ec471e6f6b7a1bbc8f1137d386 # tracks main 2026-06-28
     with:
       rust-version: 'stable'
       run-coverage: true
