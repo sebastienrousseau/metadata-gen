@@ -13,7 +13,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  # Keyed by ref: the Pages deployment must still serialise on `main`,
+  # but a pull request must not share a queue with it. A shared group
+  # let unrelated runs cancel a pull request's `Build rustdoc`, and a
+  # cancelled run never satisfies a required status check — so the
+  # pull request could not be merged.
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
