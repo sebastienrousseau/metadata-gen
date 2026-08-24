@@ -58,7 +58,7 @@ thiserror = "2.0"
 time = { version = "0.3", features = ["parsing"] }
 tokio = { version = "1.50", default-features = false, features = ["fs", "io-util", "rt", "macros"] }
 toml = "1.1"
-yaml-rust2 = "0.11"
+yaml-rust2 = "0.12"
 
 # -----------------------------------------------------------------------------
 # Build Dependencies
