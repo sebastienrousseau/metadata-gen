@@ -193,7 +193,10 @@ fn typed_and_body_example() -> Result<(), metadata_gen::MetadataError> {
     let doc = "---\ntitle: Typed\ntags: [rust, seo]\ndraft: false\n---\n# Heading\n\nBody text";
 
     let front: Front = extract_typed(doc)?;
-    println!("typed:   title={:?} tags={:?} draft={}", front.title, front.tags, front.draft);
+    println!(
+        "typed:   title={:?} tags={:?} draft={}",
+        front.title, front.tags, front.draft
+    );
 
     let (meta, body) = extract_metadata_with_body(doc)?;
     println!("flat:    title={:?}", meta.get("title"));

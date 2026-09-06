@@ -47,25 +47,28 @@ make            # check + clippy + test — the default gate
 
 ## Reproducing the CI gates
 
-CI is composed from the shared workflows in
+CI has two workflows. [`ci.yml`](.github/workflows/ci.yml) calls the
+shared pipelines from
 [`sebastienrousseau/pipelines`](https://github.com/sebastienrousseau/pipelines)
-plus repo-local jobs in [`ci.yml`](.github/workflows/ci.yml). Every gate
-has a local equivalent:
+plus cargo-deny and cargo-audit;
+[`quality.yml`](.github/workflows/quality.yml) holds the gates the
+repository standard requires that the shared pipeline does not cover.
+Every gate has a local equivalent:
 
 | CI job | Local reproduction | Gotcha |
 | :--- | :--- | :--- |
 | `ci` (rust-ci: fmt, clippy, test, coverage, cross-platform) | `make` then `make coverage` | coverage needs nightly; threshold is 98 % lines |
 | `security` (pipelines security.yml) | `make audit` | fails on any advisory, ignores are in `audit.toml` and must mirror `deny.toml` |
 | `cargo-deny` | `make deny` | licences, advisories, sources |
-| `cargo-audit` | `make audit` | |
-| `cargo-vet` | `make vet` | after a dep change: `cargo vet regenerate exemptions`; the exemption count must not exceed `supply-chain/exemptions-baseline.txt` |
+| `cargo-audit` | `make audit` | if a local cargo alias named `audit` shadows the subcommand, run `cargo-audit audit` |
+| `coverage-gate` (quality.yml) | `make coverage` | needs nightly; threshold is 98 % lines |
+| `miri` (quality.yml) | `make miri` | filesystem tests are skipped by `#[cfg_attr(miri, ignore)]` |
+| `fuzz-replay` (quality.yml) | `make fuzz` | builds every target, replays corpus + regressions with `-runs=0` |
+| `cargo-vet` (quality.yml) | `make vet` | the exemption count must not exceed `supply-chain/exemptions-baseline.txt` |
+| `release-hygiene` (quality.yml) | `make versions && make examples && make bench-smoke && make doc` | |
 | `docs-lint` | `make lint` | British spellings are house style; see `.codespellrc` |
 | `reuse-lint` | `uvx --with chardet reuse lint` | files without an inline header are covered by `REUSE.toml` |
 | `docs-strict` | `make doc` | warnings are errors; every public item is documented |
-| `miri` | `make miri` | lib tests only; the async file helper is exercised by integration tests, not under Miri |
-| `fuzz-regression` | `make fuzz` | builds every target and replays `fuzz/corpus/<target>` and `fuzz/regressions/<target>` with `-runs=0` |
-| `examples` | `make examples` | every example must run to completion |
-| `bench-smoke` | `make bench-smoke` | compiles and runs each bench once, no measurement |
 
 ## Coverage: the threshold and why
 

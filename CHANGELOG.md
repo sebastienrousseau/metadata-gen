@@ -51,6 +51,13 @@ one copy of `noyalib`.
 - Crates.io metadata: categories are `parsing`, `text-processing`,
   `web-programming`, `data-structures`; `command-line-utilities` is
   gone, the crate ships no binary (#33).
+- **`quality.yml`**, a second CI workflow holding the gates the shared
+  pipeline does not cover: the 98 % coverage threshold, Miri, the fuzz
+  build and corpus replay, the docs lint (markdownlint, codespell,
+  REUSE), cargo-vet with an exemption ratchet, and release hygiene
+  (version consistency, examples, bench smoke, rustdoc with warnings
+  denied). Nothing in this release is enforced only by a local `make`
+  target (#56, #52, #53).
 - **README rewritten** to the family's structural template (the same
   section order, tone and honesty sections noyalib uses): install,
   requirements, quick start, the two APIs, usage, configuration,
