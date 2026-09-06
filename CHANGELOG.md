@@ -51,6 +51,15 @@ one copy of `noyalib`.
 - Crates.io metadata: categories are `parsing`, `text-processing`,
   `web-programming`, `data-structures`; `command-line-utilities` is
   gone, the crate ships no binary (#33).
+- **README rewritten** to the family's structural template (the same
+  section order, tone and honesty sections noyalib uses): install,
+  requirements, quick start, the two APIs, usage, configuration,
+  comparison, measured benchmarks with the host stated, examples, when
+  *not* to use it, development, security, documentation, stability
+  guarantees and a minimum-toolchain policy rather than a bare number
+  (#32, #98 in the family tracker). Every code block in it is a doctest
+  that runs in CI; the roadmap tables and unshipped-feature claims are
+  gone.
 - Repository standard layout: `DEVELOPMENT.md`, `docs/ARCHITECTURE.md`,
   `docs/adr/` with the four decisions the 0.0.5 notes already cited,
   `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`, `SECURITY.md`, `SUPPORT.md`,
