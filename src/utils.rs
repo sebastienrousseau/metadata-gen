@@ -410,7 +410,15 @@ mod escape_single_pass_tests {
                 .replace('"', "&quot;")
                 .replace('\'', "&#x27;")
         };
-        for s in ["", "plain", "a<b>c&d\"e'f", "&&&", "<<>>", "ünïcödé <tag> & 'q'", "&amp;"] {
+        for s in [
+            "",
+            "plain",
+            "a<b>c&d\"e'f",
+            "&&&",
+            "<<>>",
+            "ünïcödé <tag> & 'q'",
+            "&amp;",
+        ] {
             assert_eq!(escape_html(s), reference(s), "{s:?}");
         }
     }

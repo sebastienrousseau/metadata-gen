@@ -1,10 +1,12 @@
 // benches/metadata_benchmark.rs
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{
+    criterion_group, criterion_main, BenchmarkId, Criterion, Throughput,
+};
 use metadata_gen::{
     extract_and_prepare_metadata,
     metadata::{extract_metadata, process_metadata, Metadata},
-    metatags::generate_metatags,
+    metatags::{extract_meta_tags, generate_metatags},
     utils::{escape_html, unescape_html},
 };
 use std::collections::HashMap;
@@ -91,8 +93,84 @@ fn benchmark_unescape_html(c: &mut Criterion) {
     });
 }
 
+/// A YAML front-matter document of roughly `bytes` bytes: a fixed header
+/// plus as many `key_N: value N` lines as fit, then a short body.
+fn yaml_document(bytes: usize) -> String {
+    let mut doc = String::with_capacity(bytes + 64);
+    doc.push_str("---\ntitle: Throughput\ndate: 2024-01-02\n");
+    let mut i = 0;
+    while doc.len() + 40 < bytes {
+        doc.push_str(&format!(
+            "key_{i}: value number {i} with some text\n"
+        ));
+        i += 1;
+    }
+    doc.push_str("---\n# Body\n");
+    doc
+}
+
+/// An HTML head with as many `<meta>` elements as fit in roughly `bytes`.
+fn html_document(bytes: usize) -> String {
+    let mut doc = String::with_capacity(bytes + 64);
+    doc.push_str("<html><head>");
+    let mut i = 0;
+    while doc.len() + 80 < bytes {
+        doc.push_str(&format!(
+            "<meta name=\"field{i}\" content=\"value &amp; number {i}\">"
+        ));
+        i += 1;
+    }
+    doc.push_str("</head><body></body></html>");
+    doc
+}
+
+/// Throughput at 1 KB, 10 KB and 1 MB (#49). The point is the slope: a
+/// regression that only shows at scale is invisible on the 200-byte
+/// fixtures above.
+fn benchmark_throughput(c: &mut Criterion) {
+    let sizes = [1 << 10, 10 << 10, 1 << 20];
+
+    let mut group = c.benchmark_group("throughput/extract_metadata");
+    for &size in &sizes {
+        let doc = yaml_document(size);
+        group.throughput(Throughput::Bytes(doc.len() as u64));
+        group.bench_with_input(
+            BenchmarkId::from_parameter(size),
+            &doc,
+            |b, d| b.iter(|| extract_metadata(black_box(d))),
+        );
+    }
+    group.finish();
+
+    let mut group = c.benchmark_group("throughput/extract_meta_tags");
+    for &size in &sizes {
+        let doc = html_document(size);
+        group.throughput(Throughput::Bytes(doc.len() as u64));
+        group.bench_with_input(
+            BenchmarkId::from_parameter(size),
+            &doc,
+            |b, d| b.iter(|| extract_meta_tags(black_box(d))),
+        );
+    }
+    group.finish();
+
+    let mut group = c.benchmark_group("throughput/escape_html");
+    for &size in &sizes {
+        let text: String =
+            "a <b> & \"c\" 'd' plain text ".repeat(size / 28 + 1);
+        group.throughput(Throughput::Bytes(text.len() as u64));
+        group.bench_with_input(
+            BenchmarkId::from_parameter(size),
+            &text,
+            |b, d| b.iter(|| escape_html(black_box(d))),
+        );
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
+    benchmark_throughput,
     benchmark_extract_and_prepare_metadata,
     benchmark_extract_metadata,
     benchmark_process_metadata,

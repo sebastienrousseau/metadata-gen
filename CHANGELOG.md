@@ -68,6 +68,10 @@ one copy of `noyalib`.
 
 ### Changed (performance)
 
+- **Throughput benchmarks** at 1 KB, 10 KB and 1 MB for
+  `extract_metadata`, `extract_meta_tags` and `escape_html`, reported in
+  bytes per second so a regression that only shows at scale is visible
+  (#49).
 - `escape_html` is a single pass with one allocation instead of five
   `replace` walks; output is byte-identical, pinned by a test against
   the old chain (#47).

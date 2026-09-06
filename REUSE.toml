@@ -9,10 +9,8 @@ version = 1
 [[annotations]]
 path = [
     ".editorconfig",
-    ".deepsource.toml",
     "audit.toml",
     "AUTHORS.md",
-    "TEMPLATE.md",
     ".codespellrc",
     ".pre-commit-config.yaml",
     ".devcontainer/devcontainer.json",
