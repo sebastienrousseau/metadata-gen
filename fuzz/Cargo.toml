@@ -1,0 +1,41 @@
+[package]
+name = "metadata-gen-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.metadata-gen]
+path = ".."
+features = ["advanced_parsing"]
+
+# The harness is its own workspace so nightly + sanitizer flags never
+# leak into the main build.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "fuzz_extract_metadata"
+path = "fuzz_targets/fuzz_extract_metadata.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_extract_meta_tags"
+path = "fuzz_targets/fuzz_extract_meta_tags.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_html_escape"
+path = "fuzz_targets/fuzz_html_escape.rs"
+test = false
+doc = false
+bench = false
