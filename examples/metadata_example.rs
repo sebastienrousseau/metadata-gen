@@ -1,3 +1,7 @@
+//! Per-format extraction (YAML, TOML, JSON), nested tables, typed extraction and the body.
+//!
+//! Run with `cargo run --example metadata_example`.
+
 // examples/metadata_example.rs
 #![allow(missing_docs)]
 
@@ -8,6 +12,8 @@ use metadata_gen::{
 use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    typed_and_body_example().expect("typed extraction example");
+
     println!("\n🧪 metadata-gen Metadata Extraction and Processing Examples\n");
 
     yaml_metadata_example()?;
@@ -171,4 +177,26 @@ fn print_metadata(metadata: &Metadata) {
     for (key, value) in metadata.clone().into_inner().iter() {
         println!("       {}: {}", key, value);
     }
+}
+
+/// Typed extraction and the document body (v0.0.7).
+fn typed_and_body_example() -> Result<(), metadata_gen::MetadataError> {
+    use metadata_gen::{extract_metadata_with_body, extract_typed};
+
+    #[derive(Debug, serde::Deserialize)]
+    struct Front {
+        title: String,
+        tags: Vec<String>,
+        draft: bool,
+    }
+
+    let doc = "---\ntitle: Typed\ntags: [rust, seo]\ndraft: false\n---\n# Heading\n\nBody text";
+
+    let front: Front = extract_typed(doc)?;
+    println!("typed:   title={:?} tags={:?} draft={}", front.title, front.tags, front.draft);
+
+    let (meta, body) = extract_metadata_with_body(doc)?;
+    println!("flat:    title={:?}", meta.get("title"));
+    println!("body:    {body:?}");
+    Ok(())
 }

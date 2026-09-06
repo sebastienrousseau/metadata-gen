@@ -1,3 +1,7 @@
+//! The high-level flow: `extract_and_prepare_metadata` and the meta-tag groups it returns.
+//!
+//! Run with `cargo run --example lib_example`.
+
 // examples/lib_example.rs
 #![allow(missing_docs)]
 

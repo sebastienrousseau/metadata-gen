@@ -1,3 +1,7 @@
+//! Every `MetadataError` variant a caller can meet, and how to recover from each.
+//!
+//! Run with `cargo run --example error_example`.
+
 // src/examples/error_example.rs
 #![allow(missing_docs)]
 
