@@ -153,6 +153,238 @@ pub fn extract_metadata(
     })
 }
 
+/// Which front-matter shape a document carries, and where its body starts.
+///
+/// Returned by [`detect_front_matter`]; the byte offset is the first byte
+/// after the closing delimiter, so `&content[body_start..]` is the body.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum FrontMatterFormat {
+    /// `---` fenced YAML.
+    Yaml,
+    /// `+++` fenced TOML.
+    Toml,
+    /// A JSON object at the top of the document.
+    Json,
+}
+
+/// Locates the front-matter block without parsing it.
+///
+/// Returns the format, the raw block, and the byte offset at which the
+/// document body begins. Detection order is YAML, TOML, JSON, the same
+/// order [`extract_metadata`] uses; `None` means no shape matched.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metadata::{detect_front_matter, FrontMatterFormat};
+///
+/// let doc = "---\ntitle: T\n---\nBody";
+/// let (format, raw, body_start) = detect_front_matter(doc).unwrap();
+/// assert_eq!(format, FrontMatterFormat::Yaml);
+/// assert_eq!(raw, "title: T");
+/// assert_eq!(&doc[body_start..], "Body");
+/// ```
+pub fn detect_front_matter(
+    content: &str,
+) -> Option<(FrontMatterFormat, &str, usize)> {
+    if let Some(caps) = YAML_FRONT_MATTER.captures(content) {
+        let whole = caps.get(0)?;
+        let raw = caps.get(1)?.as_str().trim();
+        return Some((FrontMatterFormat::Yaml, raw, whole.end()));
+    }
+    if let Some(caps) = TOML_FRONT_MATTER.captures(content) {
+        let whole = caps.get(0)?;
+        let raw = caps.get(1)?.as_str().trim();
+        return Some((FrontMatterFormat::Toml, raw, whole.end()));
+    }
+    let trimmed = content.trim_start();
+    if trimmed.starts_with('{') {
+        let lead = content.len() - trimmed.len();
+        let mut stream = serde_json::Deserializer::from_str(trimmed)
+            .into_iter::<serde_json::Map<String, JsonValue>>(
+        );
+        // A syntax error still identifies the shape; the caller's parse
+        // reports it. The offset then covers the text the parser consumed.
+        let _ = stream.next()?;
+        let end = lead + stream.byte_offset();
+        return Some((
+            FrontMatterFormat::Json,
+            &content[lead..end],
+            end,
+        ));
+    }
+    None
+}
+
+/// Extracts metadata and returns the document body alongside it.
+///
+/// The body is the text after the closing delimiter, with one leading
+/// newline removed so a `---` fence on its own line does not leave an
+/// empty first line. [`extract_metadata`] is this without the body.
+///
+/// # Errors
+///
+/// The same errors as [`extract_metadata`].
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metadata::extract_metadata_with_body;
+///
+/// let doc = "---\ntitle: T\n---\n# Heading\n\nText";
+/// let (meta, body) = extract_metadata_with_body(doc).unwrap();
+/// assert_eq!(meta.get("title").map(String::as_str), Some("T"));
+/// assert_eq!(body, "# Heading\n\nText");
+/// ```
+pub fn extract_metadata_with_body(
+    content: &str,
+) -> Result<(Metadata, &str), MetadataError> {
+    let metadata = extract_metadata(content)?;
+    let body_start = detect_front_matter(content)
+        .map_or(content.len(), |(_, _, start)| start);
+    let body = content[body_start..]
+        .strip_prefix("\r\n")
+        .or_else(|| content[body_start..].strip_prefix('\n'))
+        .unwrap_or(&content[body_start..]);
+    Ok((metadata, body))
+}
+
+/// Deserialises the front matter into a typed value.
+///
+/// Where [`extract_metadata`] flattens everything to strings, this hands
+/// the raw block to the format's own `serde` deserialiser, so integers
+/// stay integers, sequences stay sequences and nested tables become
+/// nested structs. The document body is ignored.
+///
+/// # Errors
+///
+/// [`MetadataError::ExtractionError`] when no front matter is found;
+/// the format's parse error (`YamlError`, `TomlError`, `JsonError`) when
+/// the block does not deserialise into `T`.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metadata::extract_typed;
+///
+/// #[derive(serde::Deserialize)]
+/// struct Front { title: String, tags: Vec<String>, draft: bool }
+///
+/// let doc = "---\ntitle: T\ntags: [a, b]\ndraft: false\n---\nBody";
+/// let front: Front = extract_typed(doc).unwrap();
+/// assert_eq!(front.tags, ["a", "b"]);
+/// assert!(!front.draft);
+/// ```
+pub fn extract_typed<T: serde::de::DeserializeOwned + 'static>(
+    content: &str,
+) -> Result<T, MetadataError> {
+    let (format, raw, _) =
+        detect_front_matter(content).ok_or_else(|| {
+            MetadataError::ExtractionError {
+                message: "No valid front matter found.".to_string(),
+            }
+        })?;
+    match format {
+        FrontMatterFormat::Yaml => {
+            let collapsed = collapse_multiline_quoted_scalars(raw);
+            noyalib::from_str::<T>(&collapsed)
+                .map_err(MetadataError::from)
+        }
+        FrontMatterFormat::Toml => {
+            toml::from_str::<T>(raw).map_err(MetadataError::from)
+        }
+        FrontMatterFormat::Json => {
+            serde_json::from_str::<T>(raw).map_err(MetadataError::from)
+        }
+    }
+}
+
+/// Options for [`process_metadata_with`].
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metadata::{process_metadata_with, Metadata, ProcessOptions};
+/// use std::collections::HashMap;
+///
+/// let opts = ProcessOptions::default().required_fields(["title"]);
+/// let mut m = HashMap::new();
+/// m.insert("title".to_string(), "Hello".to_string());
+/// let out = process_metadata_with(&Metadata::new(m), &opts).unwrap();
+/// assert_eq!(out.get("slug").map(String::as_str), Some("hello"));
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct ProcessOptions {
+    /// Keys that must be present after processing. Default: `title`, `date`.
+    pub required_fields: Vec<String>,
+    /// Derive `slug` from `title` when absent. Default: `true`.
+    pub derive_slug: bool,
+}
+
+impl Default for ProcessOptions {
+    fn default() -> Self {
+        Self {
+            required_fields: vec![
+                "title".to_string(),
+                "date".to_string(),
+            ],
+            derive_slug: true,
+        }
+    }
+}
+
+impl ProcessOptions {
+    /// Replaces the required-field list.
+    #[must_use]
+    pub fn required_fields<I, S>(mut self, fields: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.required_fields =
+            fields.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// Turns slug derivation on or off.
+    #[must_use]
+    pub const fn derive_slug(mut self, on: bool) -> Self {
+        self.derive_slug = on;
+        self
+    }
+}
+
+/// [`process_metadata`] with caller-chosen required fields and derivations.
+///
+/// # Errors
+///
+/// [`MetadataError::DateParseError`] for an unparseable `date`;
+/// [`MetadataError::MissingFieldError`] naming the first required field
+/// that is absent.
+pub fn process_metadata_with(
+    metadata: &Metadata,
+    options: &ProcessOptions,
+) -> Result<Metadata, MetadataError> {
+    let mut processed = metadata.clone();
+    if let Some(date) = processed.get("date").cloned() {
+        let standardized_date = standardize_date(&date)?;
+        processed.insert("date".to_string(), standardized_date);
+    }
+    for field in &options.required_fields {
+        if !processed.contains_key(field) {
+            return Err(MetadataError::MissingFieldError(
+                field.clone(),
+            ));
+        }
+    }
+    if options.derive_slug {
+        generate_derived_fields(&mut processed);
+    }
+    Ok(processed)
+}
+
 /// Extracts YAML metadata from the content.
 ///
 /// # Arguments
@@ -1120,5 +1352,133 @@ mod coverage_tests {
         assert!(
             matches!(err, MetadataError::MissingFieldError(ref f) if f == "date")
         );
+    }
+}
+
+#[cfg(test)]
+mod typed_api_tests {
+    use super::*;
+
+    #[derive(Debug, serde::Deserialize, PartialEq)]
+    struct Front {
+        title: String,
+        count: u32,
+        tags: Vec<String>,
+    }
+
+    #[test]
+    fn typed_extraction_covers_all_three_formats() {
+        let yaml = "---\ntitle: T\ncount: 3\ntags: [a, b]\n---\nbody";
+        let toml = "+++\ntitle = \"T\"\ncount = 3\ntags = [\"a\", \"b\"]\n+++\nbody";
+        let json = "{\"title\": \"T\", \"count\": 3, \"tags\": [\"a\", \"b\"]}\nbody";
+        let want = Front {
+            title: "T".into(),
+            count: 3,
+            tags: vec!["a".into(), "b".into()],
+        };
+        for doc in [yaml, toml, json] {
+            assert_eq!(
+                extract_typed::<Front>(doc).unwrap(),
+                want,
+                "{doc:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn typed_extraction_reports_the_format_error() {
+        assert!(matches!(
+            extract_typed::<Front>("---\ntitle: [\n---\n"),
+            Err(MetadataError::YamlError(_))
+        ));
+        assert!(matches!(
+            extract_typed::<Front>("+++\ntitle = \n+++\n"),
+            Err(MetadataError::TomlError(_))
+        ));
+        assert!(
+            matches!(
+                extract_typed::<Front>("{\"title\": \"T\"}"),
+                Err(MetadataError::JsonError(_))
+            ),
+            "missing fields"
+        );
+        assert!(matches!(
+            extract_typed::<Front>("no front matter"),
+            Err(MetadataError::ExtractionError { .. })
+        ));
+    }
+
+    #[test]
+    fn body_follows_each_delimiter_shape() {
+        let (_, body) =
+            extract_metadata_with_body("---\ntitle: T\n---\nBody")
+                .unwrap();
+        assert_eq!(body, "Body");
+        let (_, body) = extract_metadata_with_body(
+            "+++\ntitle = \"T\"\n+++\r\nBody",
+        )
+        .unwrap();
+        assert_eq!(body, "Body");
+        let (_, body) =
+            extract_metadata_with_body("  {\"title\": \"T\"}\n\nBody")
+                .unwrap();
+        assert_eq!(body, "\nBody");
+        let (_, body) =
+            extract_metadata_with_body("{\"title\": \"T\"}").unwrap();
+        assert_eq!(body, "");
+    }
+
+    #[test]
+    fn detection_reports_the_raw_block_and_offset() {
+        let (f, raw, at) =
+            detect_front_matter("+++\nx = 1\n+++\nrest").unwrap();
+        assert_eq!((f, raw), (FrontMatterFormat::Toml, "x = 1"));
+        assert_eq!(at, "+++\nx = 1\n+++".len());
+        assert!(detect_front_matter("plain").is_none());
+        // A lone `{` is JSON-shaped with a syntax error: the shape is
+        // reported so the caller's parse can report the error, exactly
+        // as extract_metadata does.
+        assert!(matches!(
+            detect_front_matter("{"),
+            Some((FrontMatterFormat::Json, _, _))
+        ));
+        assert!(matches!(
+            extract_metadata("{"),
+            Err(MetadataError::ExtractionError { .. })
+        ));
+    }
+
+    #[test]
+    fn process_options_control_required_fields_and_slug() {
+        let mut m = HashMap::new();
+        m.insert("title".to_string(), "Hello World".to_string());
+        let meta = Metadata::new(m);
+        let err = process_metadata(&meta).unwrap_err();
+        assert!(
+            matches!(err, MetadataError::MissingFieldError(ref f) if f == "date")
+        );
+
+        let opts = ProcessOptions::default()
+            .required_fields(["title"])
+            .derive_slug(false);
+        let out = process_metadata_with(&meta, &opts).unwrap();
+        assert!(!out.contains_key("slug"));
+
+        let opts = ProcessOptions::default()
+            .required_fields(["title", "author"]);
+        let err = process_metadata_with(&meta, &opts).unwrap_err();
+        assert!(
+            matches!(err, MetadataError::MissingFieldError(ref f) if f == "author")
+        );
+
+        let mut m = HashMap::new();
+        m.insert("title".to_string(), "T".to_string());
+        m.insert("date".to_string(), "not a date".to_string());
+        let err = process_metadata_with(
+            &Metadata::new(m),
+            &ProcessOptions::default(),
+        )
+        .unwrap_err();
+        assert!(matches!(err, MetadataError::DateParseError(_)));
     }
 }

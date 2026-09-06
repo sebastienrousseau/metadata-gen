@@ -26,6 +26,20 @@ one copy of `noyalib`.
 
 ### Added
 
+- **Typed extraction**: `extract_typed::<T: Deserialize>(content)` hands
+  the front-matter block to the format's own serde deserialiser, so
+  integers stay integers, sequences stay sequences and nested tables
+  become nested structs (#40).
+- **The body comes back**: `extract_metadata_with_body` returns
+  `(Metadata, &str)` with the text after the closing delimiter;
+  `detect_front_matter` exposes the format, raw block and body offset
+  without parsing (#39). `extract_metadata` is unchanged.
+- **Configurable processing**: `ProcessOptions` (required fields, slug
+  derivation) and `process_metadata_with`; `process_metadata` keeps the
+  `title` + `date` default (#45). The new types are `#[non_exhaustive]`
+  so fields can be added without a breaking release (#43, partially:
+  the existing `MetadataError` enum is left as is until the consumers in
+  the family have moved to this release).
 - **Fuzz harness** (`fuzz/`): `fuzz_extract_metadata`,
   `fuzz_extract_meta_tags` and `fuzz_html_escape`, a committed seed
   corpus and a `regressions/` directory replayed on every run. Two

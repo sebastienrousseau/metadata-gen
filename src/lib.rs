@@ -21,7 +21,11 @@ pub mod metatags;
 pub mod utils;
 
 pub use error::MetadataError;
-pub use metadata::{extract_metadata, process_metadata, Metadata};
+pub use metadata::{
+    detect_front_matter, extract_metadata, extract_metadata_with_body,
+    extract_typed, process_metadata, process_metadata_with,
+    FrontMatterFormat, Metadata, ProcessOptions,
+};
 pub use metatags::{generate_metatags, MetaTagGroups};
 pub use utils::{async_extract_metadata_from_file, escape_html};
 
