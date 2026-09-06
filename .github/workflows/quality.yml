@@ -93,8 +93,9 @@ jobs:
           cargo +nightly fuzz build
           for target in $(cargo +nightly fuzz list); do
             echo "== $target"
-            cargo +nightly fuzz run "$target" -- -runs=0 \
-              "corpus/$target" "regressions/$target"
+            dirs=("corpus/$target")
+            [ -d "regressions/$target" ] && dirs+=("regressions/$target")
+            cargo +nightly fuzz run "$target" -- -runs=0 "${dirs[@]}"
           done
 
   docs-lint:
@@ -124,9 +125,12 @@ jobs:
           # ref, so it is named here.
           toolchain: stable
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+      # Pinned: releases before 0.10 reject a `[[trusted.*]]` entry that
+      # names a `trusted-publisher` instead of a `user-id`, which is how
+      # a crates.io Trusted Publishing release is attested.
       - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4, installs cargo-vet
         with:
-          tool: cargo-vet
+          tool: cargo-vet@0.10.2
       - run: cargo vet --locked
       # Exemptions may shrink, never grow. A new dependency arrives with
       # an audit or a trust entry, not with another exemption.
