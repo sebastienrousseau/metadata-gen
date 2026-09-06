@@ -27,9 +27,7 @@ path = [
     "codecov.yml",
     "rust-toolchain.toml",
     "REUSE.toml",
-    "supply-chain/audits.toml",
-    "supply-chain/config.toml",
-    "supply-chain/imports.lock",
+    "supply-chain/**",
     "fuzz/Cargo.toml",
     "fuzz/Cargo.lock",
 ]
