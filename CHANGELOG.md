@@ -98,6 +98,19 @@ This release opens the post-audit roadmap (v0.0.5 → v0.0.10). v0.0.5 is the
 - **`tempfile` from `[dependencies]`** — moved to `[dev-dependencies]`; it
   was only referenced by tests and examples.
 
+- **#22** — `scraper` dependency removed. `extract_meta_tags` rebuilt on
+  `quick-xml` (already a declared dependency, previously unused). Drops
+  the `html5ever` / `selectors` / `cssparser` / `markup5ever` /
+  `fxhash` / `phf_generator` / `phf_macros` subtree — roughly 30
+  transitive crates — and silences **RUSTSEC-2025-0057** (`fxhash`,
+  unmaintained) and **RUSTSEC-2026-0097** (`rand 0.8` unsound via
+  `phf_generator`). Both advisory exemptions are deleted from
+  `audit.toml` and `deny.toml`; `cargo deny check advisories` will fail
+  if either crate ever re-enters the tree. New regression tests cover
+  document-order preservation, self-closing syntax, HTML entity
+  decoding, malformed-HTML tolerance, and `<meta>` elements missing
+  `content`.
+
 ### CI / supply chain
 
 - **Local rustdoc workflow** (`.github/workflows/docs.yml`) replaces the
@@ -145,21 +158,6 @@ This release opens the post-audit roadmap (v0.0.5 → v0.0.10). v0.0.5 is the
   `MetadataError::ExtractionError` with the underlying `serde_json`
   message rather than the misleading "No valid front matter found"
   fallback. Three regression tests pin the behaviour.
-
-### Removed
-
-- **#22** — `scraper` dependency removed. `extract_meta_tags` rebuilt on
-  `quick-xml` (already a declared dependency, previously unused). Drops
-  the `html5ever` / `selectors` / `cssparser` / `markup5ever` /
-  `fxhash` / `phf_generator` / `phf_macros` subtree — roughly 30
-  transitive crates — and silences **RUSTSEC-2025-0057** (`fxhash`,
-  unmaintained) and **RUSTSEC-2026-0097** (`rand 0.8` unsound via
-  `phf_generator`). Both advisory exemptions are deleted from
-  `audit.toml` and `deny.toml`; `cargo deny check advisories` will fail
-  if either crate ever re-enters the tree. New regression tests cover
-  document-order preservation, self-closing syntax, HTML entity
-  decoding, malformed-HTML tolerance, and `<meta>` elements missing
-  `content`.
 
 ### Roadmap (still tracked under v0.0.5 milestone)
 
