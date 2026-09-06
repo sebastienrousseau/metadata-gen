@@ -4,7 +4,7 @@
 
 [package]
 name = "metadata-gen"
-version = "0.0.6"
+version = "0.0.7"
 edition = "2021"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -15,20 +15,18 @@ homepage = "https://metadata-gen.com/"
 documentation = "https://doc.metadata-gen.com/metadata_gen/"
 repository = "https://github.com/sebastienrousseau/metadata-gen"
 readme = "README.md"
-build = "build.rs"
 
 # -----------------------------------------------------------------------------
 # Crate Configuration
 # -----------------------------------------------------------------------------
 categories = [
-    "command-line-utilities",
-    "data-structures",
-    "text-processing",
     "parsing",
-    "development-tools"
+    "text-processing",
+    "web-programming",
+    "data-structures",
 ]
 
-keywords = ["frontmatter", "yaml", "toml", "seo", "static-site"]
+keywords = ["frontmatter", "metadata", "seo", "opengraph", "static-site"]
 
 [lib]
 name = "metadata_gen"
@@ -49,11 +47,11 @@ path = "src/lib.rs"
 #   single `async_extract_metadata_from_file` helper. We do not need `net`,
 #   `signal`, `process`, or `parking_lot`. See ADR-008 in v0.0.6.
 dtt = "=0.0.11"
-quick-xml = "0.41"
+quick-xml = "0.42"
 regex = "1.12"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0"
-noyalib = { version = "=0.0.28", default-features = false, features = ["std"] }
+noyalib = { version = "=0.0.37", default-features = false, features = ["std"] }
 thiserror = "2.0"
 time = { version = "0.3", features = ["parsing"] }
 tokio = { version = "1.50", default-features = false, features = ["fs", "io-util", "rt", "macros"] }
@@ -63,9 +61,6 @@ toml = "1.1"
 # Build Dependencies
 # -----------------------------------------------------------------------------
 
-[build-dependencies]
-# Dependencies for build scripts.
-version_check = "0.9.4"
 
 # -----------------------------------------------------------------------------
 # Development Dependencies
@@ -132,7 +127,6 @@ opt-level = 3
 
 [features]
 default = []
-advanced_parsing = []
 
 # -----------------------------------------------------------------------------
 # Release Profile

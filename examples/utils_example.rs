@@ -1,3 +1,7 @@
+//! HTML escape/unescape and the async file helper.
+//!
+//! Run with `cargo run --example utils_example`.
+
 // examples/utils_example.rs
 #![allow(missing_docs)]
 

@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use metadata-gen in your work, please cite it as below."
+title: metadata-gen
+type: software
+authors:
+  - family-names: Rousseau
+    given-names: Sebastien
+    email: sebastian.rousseau@gmail.com
+repository-code: "https://github.com/sebastienrousseau/metadata-gen"
+url: "https://github.com/sebastienrousseau/metadata-gen"
+license: "Apache-2.0 OR MIT"
+version: 0.0.7
+date-released: "2026-09-06"
+abstract: >-
+  A Rust library for extracting, validating, and processing front
+  matter in YAML, TOML, and JSON, and for generating and extracting
+  HTML meta tags. Pure safe code.

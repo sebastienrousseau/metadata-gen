@@ -1,0 +1,85 @@
+# REUSE 3.3 annotations: blanket licensing for files that don't carry an
+# inline SPDX header (config, fixtures, generated artefacts). Source
+# files keep their inline SPDX headers — this file only fills the gaps.
+#
+# Documented at https://reuse.software/spec-3.3/
+version = 1
+
+# ── Project meta / config files ───────────────────────────────────
+[[annotations]]
+path = [
+    ".editorconfig",
+    "audit.toml",
+    "AUTHORS.md",
+    ".codespellrc",
+    ".pre-commit-config.yaml",
+    ".devcontainer/devcontainer.json",
+    "CITATION.cff",
+    ".markdownlint.yaml",
+    ".gitattributes",
+    ".gitignore",
+    ".rustfmt.toml",
+    "rustfmt.toml",
+    "Cargo.toml",
+    "Cargo.lock",
+    "Makefile",
+    "deny.toml",
+    "codecov.yml",
+    "rust-toolchain.toml",
+    "REUSE.toml",
+    "supply-chain/**",
+    "fuzz/Cargo.toml",
+    "fuzz/Cargo.lock",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# ── CI workflows ──────────────────────────────────────────────────
+[[annotations]]
+path = ".github/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# ── Documentation ─────────────────────────────────────────────────
+[[annotations]]
+path = [
+    "README.md",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "AGENTS.md",
+    "GOVERNANCE.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+    "DEVELOPMENT.md",
+    "docs/**",
+    "examples/**/*.md",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# ── Source, tests, examples, benches, fuzz ────────────────────────
+# Rust sources carry inline headers where they exist; this annotation
+# covers the ones that predate the convention and every fixture.
+[[annotations]]
+path = [
+    "src/**",
+    "tests/**",
+    "examples/**",
+    "benches/**",
+    "fuzz/**",
+    "scripts/**",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# ── Generated / binary artefacts ─────────────────────────────────
+[[annotations]]
+path = ["KEYS.asc", "LICENSES/**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"

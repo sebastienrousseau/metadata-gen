@@ -42,6 +42,6 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no"
 
 ---
 
-# Metadata Gen (metadata-gen)
+## Metadata Gen (metadata-gen)
 
 A powerful Rust library for extracting, validating, and processing metadata in YAML, TOML, and JSON formats from any content or data file.

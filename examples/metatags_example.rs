@@ -1,3 +1,7 @@
+//! Generating `<meta>` groups from a metadata map and extracting them back from HTML.
+//!
+//! Run with `cargo run --example metatags_example`.
+
 // examples/metatags_example.rs
 #![allow(missing_docs)]
 

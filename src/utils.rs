@@ -44,12 +44,21 @@ use tokio::io::AsyncReadExt;
 /// potentially dangerous characters. However, it should not be relied upon as the sole
 /// method of sanitizing user input for use in HTML contexts.
 pub fn escape_html(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#x27;")
+    // One pass, one allocation. The five-`replace` chain this replaces
+    // walked the string five times and allocated up to five
+    // intermediates; the output is byte-identical.
+    let mut out = String::with_capacity(value.len() + value.len() / 8);
+    for ch in value.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#x27;"),
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 /// Unescapes HTML entities in a string.
@@ -87,15 +96,38 @@ pub fn escape_html(value: &str) -> String {
 /// as it can potentially introduce security vulnerabilities if the unescaped content
 /// is then rendered as HTML.
 pub fn unescape_html(value: &str) -> String {
-    value
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&#x27;", "'")
-        .replace("&#39;", "'")
-        .replace("&#x2F;", "/")
-        .replace("&#x2f;", "/")
+    // One left-to-right pass. Each entity is decoded exactly once and the
+    // decoded text is never rescanned, so `&amp;lt;` yields `&lt;`, not
+    // `<`. A chain of `replace` calls did rescan, and the fuzz target
+    // caught it on its seed corpus: escape/unescape was not an identity.
+    const ENTITIES: [(&str, &str); 8] = [
+        ("&amp;", "&"),
+        ("&lt;", "<"),
+        ("&gt;", ">"),
+        ("&quot;", "\""),
+        ("&#x27;", "'"),
+        ("&#39;", "'"),
+        ("&#x2F;", "/"),
+        ("&#x2f;", "/"),
+    ];
+    let mut out = String::with_capacity(value.len());
+    let mut rest = value;
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        let tail = &rest[amp..];
+        match ENTITIES.iter().find(|(name, _)| tail.starts_with(name)) {
+            Some((name, decoded)) => {
+                out.push_str(decoded);
+                rest = &tail[name.len()..];
+            }
+            None => {
+                out.push('&');
+                rest = &tail[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Asynchronously reads a file and extracts metadata from its content.
@@ -180,6 +212,10 @@ mod tests {
     use tokio::fs::File;
     use tokio::io::AsyncWriteExt;
 
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[test]
     fn test_escape_html() {
         let input = "Hello, <world> & \"friends\"!";
@@ -188,6 +224,10 @@ mod tests {
         assert_eq!(escape_html(input), expected);
     }
 
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[test]
     fn test_escape_html_special_characters() {
         let input = "It's <b>bold</b> & it's <i>italic</i>";
@@ -195,6 +235,10 @@ mod tests {
         assert_eq!(escape_html(input), expected);
     }
 
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[test]
     fn test_unescape_html() {
         let input = "Hello, &lt;world&gt; &amp; &quot;friends&quot;!";
@@ -202,6 +246,10 @@ mod tests {
         assert_eq!(unescape_html(input), expected);
     }
 
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[test]
     fn test_unescape_html_edge_cases() {
         let input = "&lt;&amp;&gt;&quot;&#x27;&#39;&#x2F;";
@@ -209,6 +257,10 @@ mod tests {
         assert_eq!(unescape_html(input), expected);
     }
 
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[test]
     fn test_escape_unescape_roundtrip() {
         let original = "Test <script>alert('XSS');</script> & other \"special\" chars";
@@ -217,6 +269,10 @@ mod tests {
         assert_eq!(original, unescaped);
     }
 
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[tokio::test]
     async fn test_async_extract_metadata_from_file() {
         // Create a temporary directory and file
@@ -257,6 +313,10 @@ This is a test file for metadata extraction."#;
         assert!(!meta_tags.primary.is_empty());
     }
 
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[tokio::test]
     async fn test_async_extract_metadata_from_empty_file() {
         let temp_dir = tempdir().unwrap();
@@ -281,6 +341,10 @@ This is a test file for metadata extraction."#;
         assert!(meta_tags.primary.is_empty());
     }
 
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[tokio::test]
     async fn test_async_extract_metadata_from_nonexistent_file() {
         let result =
@@ -291,5 +355,71 @@ This is a test file for metadata extraction."#;
             result.unwrap_err(),
             MetadataError::IoError(_)
         ));
+    }
+}
+
+#[cfg(test)]
+mod unescape_single_pass_tests {
+    //! Found by `fuzz_html_escape` on its seed corpus: unescaping was a
+    //! chain of `replace` calls, so `&amp;lt;` decoded to `<` — the
+    //! output of one replacement was re-read by the next. A decoder
+    //! that can turn an escaped `&lt;` back into a raw `<` undoes the
+    //! escaping that `escape_html` exists to provide.
+
+    use super::*;
+
+    #[test]
+    fn unescape_does_not_rescan_its_own_output() {
+        assert_eq!(unescape_html("&amp;lt;"), "&lt;");
+        assert_eq!(unescape_html("&amp;amp;"), "&amp;");
+        assert_eq!(unescape_html("&amp;#39;"), "&#39;");
+    }
+
+    #[test]
+    fn escape_then_unescape_is_the_identity() {
+        for s in [
+            "&amp;&lt;&#39;&#x27;",
+            "a < b && c > \"d\" 'e'",
+            "&",
+            "&&amp;",
+            "plain",
+        ] {
+            assert_eq!(unescape_html(&escape_html(s)), s, "{s:?}");
+        }
+    }
+
+    #[test]
+    fn unknown_and_unterminated_entities_pass_through() {
+        assert_eq!(unescape_html("&unknown;"), "&unknown;");
+        assert_eq!(unescape_html("&amp"), "&amp");
+        assert_eq!(unescape_html("& x"), "& x");
+        assert_eq!(unescape_html("&#x2F;&#x2f;&#39;"), "//'");
+    }
+}
+
+#[cfg(test)]
+mod escape_single_pass_tests {
+    use super::*;
+
+    #[test]
+    fn escape_matches_the_replace_chain_it_replaced() {
+        let reference = |v: &str| {
+            v.replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;")
+                .replace('"', "&quot;")
+                .replace('\'', "&#x27;")
+        };
+        for s in [
+            "",
+            "plain",
+            "a<b>c&d\"e'f",
+            "&&&",
+            "<<>>",
+            "ünïcödé <tag> & 'q'",
+            "&amp;",
+        ] {
+            assert_eq!(escape_html(s), reference(s), "{s:?}");
+        }
     }
 }
