@@ -26,6 +26,17 @@ one copy of `noyalib`.
 
 ### Added
 
+- **Fuzz harness** (`fuzz/`): `fuzz_extract_metadata`,
+  `fuzz_extract_meta_tags` and `fuzz_html_escape`, a committed seed
+  corpus and a `regressions/` directory replayed on every run. Two
+  minutes per target found nothing further after the unescape fix (#52).
+- **Miri** runs the lib test suite (`make miri`); the eight tests that
+  touch the filesystem are skipped under isolation (#53).
+- `#![deny(missing_docs)]`: a public item without documentation is now a
+  compile error, and `cargo doc` runs with warnings denied (#34).
+- Crates.io metadata: categories are `parsing`, `text-processing`,
+  `web-programming`, `data-structures`; `command-line-utilities` is
+  gone, the crate ships no binary (#33).
 - Repository standard layout: `DEVELOPMENT.md`, `docs/ARCHITECTURE.md`,
   `docs/adr/` with the four decisions the 0.0.5 notes already cited,
   `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`, `SECURITY.md`, `SUPPORT.md`,
@@ -40,6 +51,12 @@ one copy of `noyalib`.
   quote path, non-string leaves in the YAML, TOML and JSON flatteners,
   the DD/MM/YYYY shape checks and slug derivation. Line coverage 94.1% →
   99.2%; what remains uncovered is unreachable by construction.
+
+### Changed (performance)
+
+- `escape_html` is a single pass with one allocation instead of five
+  `replace` walks; output is byte-identical, pinned by a test against
+  the old chain (#47).
 
 ### Fixed
 

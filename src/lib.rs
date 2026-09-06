@@ -1,5 +1,5 @@
 #![forbid(unsafe_code)]
-#![warn(missing_docs)]
+#![deny(missing_docs)]
 #![doc = include_str!("../README.md")]
 #![doc(
     html_favicon_url = "https://cloudcdn.pro/metadata-gen/v1/favicon.ico",

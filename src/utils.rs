@@ -44,12 +44,21 @@ use tokio::io::AsyncReadExt;
 /// potentially dangerous characters. However, it should not be relied upon as the sole
 /// method of sanitizing user input for use in HTML contexts.
 pub fn escape_html(value: &str) -> String {
-    value
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#x27;")
+    // One pass, one allocation. The five-`replace` chain this replaces
+    // walked the string five times and allocated up to five
+    // intermediates; the output is byte-identical.
+    let mut out = String::with_capacity(value.len() + value.len() / 8);
+    for ch in value.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#x27;"),
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 /// Unescapes HTML entities in a string.
@@ -385,5 +394,24 @@ mod unescape_single_pass_tests {
         assert_eq!(unescape_html("&amp"), "&amp");
         assert_eq!(unescape_html("& x"), "& x");
         assert_eq!(unescape_html("&#x2F;&#x2f;&#39;"), "//'");
+    }
+}
+
+#[cfg(test)]
+mod escape_single_pass_tests {
+    use super::*;
+
+    #[test]
+    fn escape_matches_the_replace_chain_it_replaced() {
+        let reference = |v: &str| {
+            v.replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;")
+                .replace('"', "&quot;")
+                .replace('\'', "&#x27;")
+        };
+        for s in ["", "plain", "a<b>c&d\"e'f", "&&&", "<<>>", "ünïcödé <tag> & 'q'", "&amp;"] {
+            assert_eq!(escape_html(s), reference(s), "{s:?}");
+        }
     }
 }

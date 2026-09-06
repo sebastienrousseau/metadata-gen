@@ -20,14 +20,13 @@ readme = "README.md"
 # Crate Configuration
 # -----------------------------------------------------------------------------
 categories = [
-    "command-line-utilities",
-    "data-structures",
-    "text-processing",
     "parsing",
-    "development-tools"
+    "text-processing",
+    "web-programming",
+    "data-structures",
 ]
 
-keywords = ["frontmatter", "yaml", "toml", "seo", "static-site"]
+keywords = ["frontmatter", "metadata", "seo", "opengraph", "static-site"]
 
 [lib]
 name = "metadata_gen"
