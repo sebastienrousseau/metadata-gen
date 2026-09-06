@@ -16,7 +16,7 @@ toolchain, tasks, and reproducing every CI gate locally.
 | Rust nightly | any recent | Miri, cargo-fuzz, coverage (`cargo-llvm-cov`) |
 | cargo-deny, cargo-vet, cargo-audit | latest | supply-chain gates |
 | cargo-llvm-cov | latest | coverage gate |
-| cargo-fuzz | latest (`cargo install --locked cargo-fuzz`) | fuzz targets |
+| cargo-fuzz | latest, **installed from source** (`cargo install --locked cargo-fuzz`) | the prebuilt musl binary infers its own build triple as the fuzz target and dies on "sanitizer is incompatible with statically linked libc" |
 | uv (`uvx`) and npx | any | `reuse`, `codespell`, `markdownlint` for the docs lint |
 
 ```bash
