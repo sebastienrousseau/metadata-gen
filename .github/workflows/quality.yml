@@ -39,7 +39,7 @@ jobs:
           toolchain: nightly
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
-      - uses: taiki-e/install-action@2e870b8be03a1c25207dfd1de52e29e69dfae2a6 # cargo-llvm-cov
+      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4, installs cargo-llvm-cov
         with:
           tool: cargo-llvm-cov
       # The threshold and its rationale live in DEVELOPMENT.md. A number
@@ -78,7 +78,7 @@ jobs:
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
           workspaces: fuzz
-      - uses: taiki-e/install-action@2e870b8be03a1c25207dfd1de52e29e69dfae2a6 # cargo-fuzz
+      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4, installs cargo-fuzz
         with:
           tool: cargo-fuzz
       # -runs=0 replays the committed inputs without generating new
@@ -103,7 +103,7 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@e92bafb6253dcd438e0100976411208d24c39e7b # v6
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       - run: npx --yes markdownlint-cli2 "**/*.md" "!target/**" "!fuzz/target/**"
       - run: uvx codespell
       - run: uvx --with chardet reuse lint
@@ -118,7 +118,7 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b # stable
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
-      - uses: taiki-e/install-action@2e870b8be03a1c25207dfd1de52e29e69dfae2a6 # cargo-vet
+      - uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b # v2.87.4, installs cargo-vet
         with:
           tool: cargo-vet
       - run: cargo vet --locked
