@@ -88,6 +88,12 @@ one copy of `noyalib`.
   text starts with `{`, so "root is not an object" could only be a
   syntax error; the branch that reported it separately was unreachable.
 
+### Removed
+
+- The `advanced_parsing` Cargo feature. It was declared empty and gated
+  nothing; enabling it changed no code path. Dropping it is not a
+  behaviour change for any consumer.
+
 ## [0.0.6] — 2026-07-25
 
 A CI release. No library change.
