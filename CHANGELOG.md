@@ -5,6 +5,66 @@ All notable changes to `metadata-gen` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] — 2026-09-06
+
+The repository-standard release: the layout, gates and documents every
+crate in the family shares, plus the dependency moves that let ssg carry
+one copy of `noyalib`.
+
+### Changed
+
+- **`noyalib` pinned at `=0.0.37`** (from `=0.0.28`). The pin stays exact;
+  the version is the one the whole family converges on.
+- **`quick-xml` 0.42.** Attribute names and values now arrive as `str`;
+  the `<meta>` collector matches them with `eq_ignore_ascii_case` and the
+  byte-comparison helper is gone. Behaviour is unchanged.
+- **`build.rs` removed.** It enforced a Rust floor of 1.56 with a
+  copy-pasted error message while `Cargo.toml` says 1.88; `rust-version`
+  is the MSRV gate and Cargo enforces it without a build script.
+- **`Cargo.lock` is committed** and CI builds `--locked`, per the
+  repository standard.
+
+### Added
+
+- Repository standard layout: `DEVELOPMENT.md`, `docs/ARCHITECTURE.md`,
+  `docs/adr/` with the four decisions the 0.0.5 notes already cited,
+  `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`, `SECURITY.md`, `SUPPORT.md`,
+  `AGENTS.md`, `CITATION.cff`, `KEYS.asc`, `REUSE.toml` (REUSE 3.3
+  compliant, linted), `rust-toolchain.toml`, `.devcontainer/`,
+  `.pre-commit-config.yaml`, `.codespellrc`, `.markdownlint.yaml`.
+- `scripts/verify-release-versions.sh`: every version-bearing file is
+  checked against `Cargo.toml` before a tag exists.
+- `supply-chain/`: cargo-vet with trust entries for the same-author
+  crates and an exemption baseline the CI ratchet cannot exceed.
+- Tests for every `MetadataError::context` arm, the unclosed multi-line
+  quote path, non-string leaves in the YAML, TOML and JSON flatteners,
+  the DD/MM/YYYY shape checks and slug derivation. Line coverage 94.1% →
+  99.2%; what remains uncovered is unreachable by construction.
+
+### Fixed
+
+- **`unescape_html` decoded its own output.** It was a chain of
+  `replace` calls, so `&amp;lt;` became `<`: the text `escape_html` had
+  just protected was unprotected again by the reverse function. It is
+  now a single left-to-right pass that decodes each entity once. Found by
+  the new `fuzz_html_escape` target on its seed corpus; the input is kept
+  in `fuzz/regressions/`.
+- `extract_json_metadata` deserialises straight into a JSON map. The
+  text starts with `{`, so "root is not an object" could only be a
+  syntax error; the branch that reported it separately was unreachable.
+
+## [0.0.6] — 2026-07-25
+
+A CI release. No library change.
+
+### Changed
+
+- CI runs the cross-platform matrix (Linux, macOS, Windows) and pins the
+  reusable workflows from `sebastienrousseau/pipelines` by commit SHA
+  (#68).
+- GitHub Actions bumped: `actions/checkout` 7, `upload-pages-artifact`
+  5, `deploy-pages` 5.
+
 ## [0.0.5] — 2026-06-28
 
 This release opens the post-audit roadmap (v0.0.5 → v0.0.10). v0.0.5 is the

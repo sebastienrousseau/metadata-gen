@@ -4,7 +4,7 @@
 
 [package]
 name = "metadata-gen"
-version = "0.0.6"
+version = "0.0.7"
 edition = "2021"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -15,7 +15,6 @@ homepage = "https://metadata-gen.com/"
 documentation = "https://doc.metadata-gen.com/metadata_gen/"
 repository = "https://github.com/sebastienrousseau/metadata-gen"
 readme = "README.md"
-build = "build.rs"
 
 # -----------------------------------------------------------------------------
 # Crate Configuration
@@ -63,9 +62,6 @@ toml = "1.1"
 # Build Dependencies
 # -----------------------------------------------------------------------------
 
-[build-dependencies]
-# Dependencies for build scripts.
-version_check = "0.9.4"
 
 # -----------------------------------------------------------------------------
 # Development Dependencies
