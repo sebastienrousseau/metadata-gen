@@ -303,7 +303,7 @@ pub fn extract_meta_tags(
             // produced for `<meta>` depending on author style. Treat them
             // identically.
             Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e))
-                if name_eq_ignore_case(e.name().as_ref(), b"meta") =>
+                if e.name().as_ref().eq_ignore_ascii_case("meta") =>
             {
                 if let Some(tag) = collect_meta_tag(e) {
                     meta_tags.push(tag);
@@ -325,14 +325,6 @@ pub fn extract_meta_tags(
     Ok(meta_tags)
 }
 
-/// Case-insensitive ASCII equality for element names.
-fn name_eq_ignore_case(a: &[u8], b: &[u8]) -> bool {
-    a.len() == b.len()
-        && a.iter()
-            .zip(b.iter())
-            .all(|(x, y)| x.eq_ignore_ascii_case(y))
-}
-
 /// Pulls a `MetaTag` out of a `<meta>` start/empty element if it carries
 /// both an identifying attribute (`name` → fallback `property` →
 /// fallback `http-equiv`) and a `content` value.
@@ -351,28 +343,25 @@ fn collect_meta_tag(
 
     for attr_res in e.attributes() {
         let Ok(attr) = attr_res else { continue };
-        // Decode as UTF-8 then unescape HTML entities. `unescape_value`
-        // was deprecated in quick-xml 0.40; the recommended replacement
-        // is to drive the static `escape::unescape` helper directly.
-        let Ok(raw) = std::str::from_utf8(attr.value.as_ref()) else {
-            continue;
-        };
+        // quick-xml 0.42 hands attribute names and values out as `str`
+        // (its reader validates UTF-8 up front), so there is no decode
+        // step here any more: unescape HTML entities and match the name.
+        // `unescape_value` was deprecated in quick-xml 0.40; driving the
+        // static `escape::unescape` helper directly is the replacement.
+        let raw: &str = attr.value.as_ref();
         let value = match quick_xml::escape::unescape(raw) {
             Ok(v) => v.into_owned(),
             Err(_) => continue,
         };
-        match attr.key.as_ref() {
-            k if name_eq_ignore_case(k, b"name") => name = Some(value),
-            k if name_eq_ignore_case(k, b"property") => {
-                property = Some(value)
-            }
-            k if name_eq_ignore_case(k, b"http-equiv") => {
-                http_equiv = Some(value)
-            }
-            k if name_eq_ignore_case(k, b"content") => {
-                content = Some(value)
-            }
-            _ => {}
+        let key: &str = attr.key.as_ref();
+        if key.eq_ignore_ascii_case("name") {
+            name = Some(value);
+        } else if key.eq_ignore_ascii_case("property") {
+            property = Some(value);
+        } else if key.eq_ignore_ascii_case("http-equiv") {
+            http_equiv = Some(value);
+        } else if key.eq_ignore_ascii_case("content") {
+            content = Some(value);
         }
     }
 
