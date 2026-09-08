@@ -17,6 +17,7 @@
   <a href="https://docs.rs/metadata-gen"><img src="https://img.shields.io/badge/docs.rs-metadata--gen-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="API docs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/metadata-gen"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/metadata-gen?style=for-the-badge&token=hidden&logo=codecov" alt="Coverage" /></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/metadata-gen"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/metadata-gen?style=for-the-badge&label=scorecard" alt="OpenSSF Scorecard" /></a>
+  <a href="https://www.bestpractices.dev/projects/14536"><img src="https://img.shields.io/cii/level/14536?style=for-the-badge&label=OpenSSF%20Best%20Practices&logo=openssf" alt="OpenSSF Best Practices" /></a>
   <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg?style=for-the-badge" alt="License" /></a>
   <a href="#minimum-toolchain-policy"><img src="https://img.shields.io/badge/MSRV-1.88.0-orange.svg?style=for-the-badge" alt="MSRV 1.88.0" /></a>
 </p>
