@@ -5,6 +5,20 @@ All notable changes to `metadata-gen` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8] - 2026-10-05
+
+### Fixed
+
+- **TOML front matter in `extract_and_prepare_metadata`**: allow key-value
+  pairs separated by `=` without requiring colons (`:`). Valid TOML front
+  matter without colons is now accepted and correctly extracted.
+
+### Changed
+
+- Bumped `noyalib` requirement to `=0.0.43` (#102).
+- Bumped `thiserror` to 2.0.21 and `toml` to 1.1.6 (#107).
+- Updated GitHub Actions workflow dependencies (`dtolnay/rust-toolchain` #109, `taiki-e/install-action` #108, `astral-sh/setup-uv` #105).
+
 ## [0.0.7] — 2026-09-06
 
 The repository-standard release: the layout, gates and documents every

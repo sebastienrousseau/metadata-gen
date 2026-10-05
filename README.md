@@ -60,7 +60,7 @@
 
 ```toml
 [dependencies]
-metadata-gen = "0.0.7"
+metadata-gen = "0.0.8"
 ```
 
 Or from the command line:
