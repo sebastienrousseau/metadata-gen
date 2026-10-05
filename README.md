@@ -7,19 +7,17 @@
 <h1 align="center">metadata-gen</h1>
 
 <p align="center">
-  Front matter in, metadata and SEO meta tags out. YAML, TOML and JSON,
-  with zero <code>unsafe</code> code.
+  Front matter in, metadata and SEO meta tags out. YAML, TOML and JSON, with zero <code>unsafe</code> code.
 </p>
 
 <p align="center">
-  <a href="https://github.com/sebastienrousseau/metadata-gen/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/metadata-gen/ci.yml?branch=main&style=for-the-badge&label=build" alt="Build status" /></a>
-  <a href="https://crates.io/crates/metadata-gen"><img src="https://img.shields.io/crates/v/metadata-gen.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="crates.io version" /></a>
-  <a href="https://docs.rs/metadata-gen"><img src="https://img.shields.io/badge/docs.rs-metadata--gen-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="API docs" /></a>
-  <a href="https://codecov.io/gh/sebastienrousseau/metadata-gen"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/metadata-gen?style=for-the-badge&token=hidden&logo=codecov" alt="Coverage" /></a>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/metadata-gen"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/metadata-gen?style=for-the-badge&label=scorecard" alt="OpenSSF Scorecard" /></a>
+  <a href="https://github.com/sebastienrousseau/metadata-gen/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/metadata-gen/ci.yml?branch=main&style=for-the-badge&label=build" alt="Build" /></a>
+  <a href="https://crates.io/crates/metadata-gen"><img src="https://img.shields.io/crates/v/metadata-gen.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Registry" /></a>
+  <a href="https://docs.rs/metadata-gen"><img src="https://img.shields.io/badge/docs.rs-metadata--gen-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/metadata-gen"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/metadata-gen?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" /></a>
   <a href="https://www.bestpractices.dev/projects/14536"><img src="https://img.shields.io/cii/level/14536?style=for-the-badge&label=OpenSSF%20Best%20Practices&logo=openssf" alt="OpenSSF Best Practices" /></a>
-  <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg?style=for-the-badge" alt="License" /></a>
-  <a href="#minimum-toolchain-policy"><img src="https://img.shields.io/badge/MSRV-1.88.0-orange.svg?style=for-the-badge" alt="MSRV 1.88.0" /></a>
+  <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg?style=for-the-badge" alt="License: Apache-2.0 OR MIT" /></a>
+  <a href="https://github.com/sebastienrousseau/metadata-gen/blob/main/docs/POLICIES.md"><img src="https://img.shields.io/badge/MSRV-1.88.0-93450a.svg?style=for-the-badge&logo=rust" alt="MSRV 1.88.0" /></a>
 </p>
 
 ---
@@ -32,31 +30,33 @@
 - [Requirements](#requirements) — toolchain floor, platforms
 - [Quick Start](#quick-start) — front matter to meta tags in ten lines
 
+**The metadata-gen ecosystem**
+
+- [The metadata-gen ecosystem](#the-metadata-gen-ecosystem) — front-matter and content generation companion crates
+
 **Library reference**
 
-- [What it does](#what-it-does) — the three formats and the flat map
-- [Two APIs, one parser](#two-apis-one-parser) — flat map vs. typed
-- [Library Usage](#library-usage) — extraction, the body, processing, meta tags
-- [Configuration](#configuration) — `ProcessOptions`
-- [Ecosystem comparison](#ecosystem-comparison) — where this sits
-- [Benchmarks](#benchmarks) — measured numbers with the host stated
+- [Capabilities at a glance](#capabilities-at-a-glance) — the current surface by theme
+- [Ecosystem comparison](#ecosystem-comparison) — short matrix; full table at [`docs/COMPARISON.md`](docs/COMPARISON.md)
+- [Benchmarks](#benchmarks) — headline numbers; full table at [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)
+- [Features](#features) — module-level capability list
+- [Configuration](#configuration) — core options
 - [Examples](#examples) — runnable example index
 
 **Operational**
 
 - [When not to use metadata-gen](#when-not-to-use-metadata-gen) — limitations
-- [Development](#development) — make targets, fuzzing, Miri, CI
-- [Security](#security) — hardening, fuzzing, supply chain
+- [Development](#development) — make targets, fuzzing, CI
+- [Security](#security) — guarantees and compliance
 - [Documentation](#documentation) — all reference docs
-- [Stability guarantees](#stability-guarantees) — SemVer axis, output stability
-- [Minimum-toolchain policy](#minimum-toolchain-policy)
+- [Stability guarantees](#stability-guarantees) — SemVer axis, output stability, minimum toolchain discipline
 - [License](#license)
 
 ---
 
 ## Install
 
-### As a Rust library (crates.io)
+### As a Rust library
 
 ```toml
 [dependencies]
@@ -69,9 +69,7 @@ Or from the command line:
 cargo add metadata-gen
 ```
 
-There is no CLI. `metadata-gen` is a library crate and ships no
-`[[bin]]`; the `command-line-utilities` category was removed in v0.0.7
-because it advertised something that does not exist.
+There is no CLI binary. `metadata-gen` is a library crate and ships no `[[bin]]`.
 
 ### Build from source
 
@@ -83,26 +81,15 @@ make          # check + clippy + test
 
 ### Cargo features
 
-None. Every capability is on by default, and the manifest declares no
-optional features — the previous `advanced_parsing` flag gated no code
-and was removed in v0.0.7 rather than left as a claim the crate did not
-keep. Per-format feature gates are on the roadmap; when they land they
-will be additive and documented here.
+None. Every capability is active by default, and the manifest declares no optional features.
 
 ---
 
 ## Requirements
 
-- **Rust 1.88.0 or newer.** `rust-version` in `Cargo.toml` is the floor
-  and Cargo enforces it; CI builds on stable across Linux, macOS and
-  Windows. See the [minimum-toolchain policy](#minimum-toolchain-policy)
-  for when and why the floor may move.
-- **A `std` platform.** The crate uses `std` unconditionally today. A
-  `no_std + alloc` core is roadmap work, not a current capability.
-- **No async runtime is required.** Every synchronous entry point works
-  without one. `async_extract_metadata_from_file` is a convenience for
-  callers who already run Tokio; the dependency is trimmed to `fs`,
-  `io-util`, `rt` and `macros`.
+- **Rust 1.88.0 or newer.** `rust-version` in `Cargo.toml` is the floor and Cargo enforces it; CI builds on stable across Linux, macOS and Windows.
+- **A `std` platform.** The crate uses `std` unconditionally today. A `no_std + alloc` core is roadmap work.
+- **No async runtime is required.** Every synchronous entry point works without one. `async_extract_metadata_from_file` is a convenience for callers who run Tokio; the dependency is trimmed to `fs`, `io-util`, `rt` and `macros`.
 
 ---
 
@@ -126,205 +113,89 @@ assert_eq!(keywords, vec!["rust", "frontmatter", "seo"]);
 assert!(tags.primary.contains("description"));
 ```
 
----
-
-## What it does
-
-`metadata-gen` reads the structured block at the top of a content file
-and turns it into two things: a metadata map your templates can index,
-and the `<meta>` element groups a page needs for search engines and
-social cards.
-
-Three front-matter shapes are recognised, in this order:
-
-| Format | Delimiters | Opening line |
-|---|---|---|
-| YAML | `---` … `---` | `title: Hello` |
-| TOML | `+++` … `+++` | `title = "Hello"` |
-| JSON | a `{ … }` object at the top of the file | `{"title": "Hello"}` |
-
-The first shape whose opening delimiter matches wins. A shape that
-matches but fails to parse reports that parser's error rather than
-falling through to the next, so a broken YAML block never silently
-becomes "no front matter".
-
-The crate also runs in reverse: `extract_meta_tags` pulls `<meta>`
-elements back out of an HTML document in a single streaming pass.
+`extract_and_prepare_metadata` detects the format, flattens the metadata into a map, extracts keywords, and generates formatted meta tags in one call.
 
 ---
 
-## Two APIs, one parser
+## The metadata-gen ecosystem
 
-The same detection front-ends two shapes of result, and which one you
-want depends on whether your consumer is a template or a struct.
+The family releases along the `0.0.x` line, with each repository owning a focused role in static site and content pipelines.
 
-| | `extract_metadata` | `extract_typed::<T>` |
-|---|---|---|
-| Returns | `Metadata`, a flat `HashMap<String, String>` | your `T: Deserialize` |
-| Nested tables | dotted keys: `author.name` | nested structs |
-| Sequences | `"[a, b]"` | `Vec<T>` |
-| Numbers, booleans | their `Display` form | typed |
-| Best for | templates, meta-tag generation | typed config, validation |
-
-Both accept the same three formats. Pick the flat map when the
-destination is a template that will stringify everything anyway; pick
-the typed form when a wrong type should be an error rather than a
-surprise later. [ADR-0002](docs/adr/0002-flat-string-metadata.md)
-records why the flat map exists at all.
+| Component | Purpose | Use case |
+| :--- | :--- | :--- |
+| [`metadata-gen`](https://github.com/sebastienrousseau/metadata-gen) | Extract and process front matter in YAML, TOML, JSON; generate meta tags | Content pipelines, documentation, static site generators |
+| [`frontmatter-gen`](https://github.com/sebastienrousseau/frontmatter-gen) | Front-matter validation and schema generation | Build-time front-matter validation |
+| [`mdx-gen`](https://github.com/sebastienrousseau/mdx-gen) | MDX compiler and component renderer | Embedded interactive components in Markdown |
+| [`sitemap-gen`](https://github.com/sebastienrousseau/sitemap-gen) | XML sitemap generator conforming to sitemaps.org | Search engine index generation |
+| [`rssgen`](https://github.com/sebastienrousseau/rssgen) | RSS, Atom, and JSON feed generator | Content syndication feeds |
+| [`staticdatagen`](https://github.com/sebastienrousseau/staticdatagen) | Static data engine for template processing | Template data hydration |
 
 ---
 
-## Library Usage
+## Capabilities at a glance
 
-### Extract front matter
+| Area | Capability | Status |
+| :--- | :--- | :--- |
+| Front-matter extraction | YAML, TOML, and JSON delimited headers | Stable |
+| Document separation | Split front-matter block and document body in one call | Stable |
+| Typed extraction | Deserialise front matter into user-defined structs | Stable |
+| Flat metadata | Flatten nested structures to dot-separated string maps | Stable |
+| Meta tag generation | Open Graph, Twitter, Apple, Microsoft, and primary tags | Stable |
+| Meta tag extraction | Single streaming pass over HTML documents with `quick-xml` | Stable |
+| Utilities | Single-pass HTML entity escaping and async file loading | Stable |
 
-```rust
-use metadata_gen::metadata::extract_metadata;
+---
 
-let content = "---\n\
-title: My Post\n\
-date: 2026-06-28\n\
-author:\n  name: Ada\n\
-tags:\n  - rust\n  - parsing\n---\n";
+## Ecosystem comparison
 
-let meta = extract_metadata(content).unwrap();
-assert_eq!(meta.get("title"),       Some(&"My Post".to_string()));
-assert_eq!(meta.get("author.name"), Some(&"Ada".to_string()));
-assert_eq!(meta.get("tags"),        Some(&"[rust, parsing]".to_string()));
-```
+This summary identifies API shape, not a universal winner. Workload-specific trade-offs and the evidence behind each cell are documented separately.
 
-TOML and JSON work identically:
+| Project | YAML | TOML | JSON | Typed | Body returned | Meta tags |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`metadata-gen`** | Yes | Yes | Yes | Yes | Yes | Yes |
+| `gray_matter` | Yes | Yes | Yes | Yes | Yes | No |
+| `yaml-front-matter` | Yes | No | No | Yes | Yes | No |
+| `matter` | Yes | No | No | No | Yes | No |
 
-```rust
-use metadata_gen::metadata::extract_metadata;
+See [`docs/COMPARISON.md`](docs/COMPARISON.md) for the evidence and complete matrix.
 
-let toml = "+++\ntitle = \"My Post\"\n[author]\nname = \"Ada\"\n+++\n";
-assert_eq!(
-    extract_metadata(toml).unwrap().get("author.name"),
-    Some(&"Ada".to_string())
-);
+---
 
-let json = "{\"title\": \"My Post\", \"author\": {\"name\": \"Ada\"}}\n# Body";
-assert_eq!(
-    extract_metadata(json).unwrap().get("author.name"),
-    Some(&"Ada".to_string())
-);
-```
+## Benchmarks
 
-### Typed extraction
+Measured with Criterion on an Apple A18 Pro, rustc 1.98.0, single thread. Middle estimate of the confidence interval; run `cargo bench` to reproduce on your own hardware.
 
-```rust
-use metadata_gen::extract_typed;
+| Scenario | Result | Environment |
+| :--- | ---: | :--- |
+| `extract_metadata` (YAML, 1 KB) | 631 µs (1.5 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
+| `extract_metadata` (YAML, 10 KB) | 1.81 ms (5.4 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
+| `extract_metadata` (YAML, 1 MB) | 181 ms (5.5 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
+| `extract_meta_tags` (1 KB) | 50 µs (18.7 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
+| `extract_meta_tags` (1 MB) | 34.9 ms (28.7 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
+| `escape_html` (10 KB) | 31.9 µs (295 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
+| `extract_and_prepare_metadata` (~250 B) | 23 µs | Apple A18 Pro, rustc 1.98.0 |
 
-#[derive(serde::Deserialize)]
-struct Front {
-    title: String,
-    tags: Vec<String>,
-    draft: bool,
-}
+See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for methodology and full results.
 
-let doc = "---\ntitle: Typed\ntags: [rust, seo]\ndraft: false\n---\nBody";
-let front: Front = extract_typed(doc).unwrap();
+---
 
-assert_eq!(front.tags, ["rust", "seo"]);
-assert!(!front.draft);
-```
+## Features
 
-### Keep the document body
-
-```rust
-use metadata_gen::extract_metadata_with_body;
-
-let doc = "---\ntitle: T\n---\n# Heading\n\nText";
-let (meta, body) = extract_metadata_with_body(doc).unwrap();
-
-assert_eq!(meta.get("title").map(String::as_str), Some("T"));
-assert_eq!(body, "# Heading\n\nText");
-```
-
-`detect_front_matter` exposes the same information without parsing: the
-format, the raw block, and the byte offset where the body begins.
-
-### Process and validate
-
-`process_metadata` normalises dates to `YYYY-MM-DD`, checks that the
-required fields are present, and derives a `slug` from the title when
-one is absent.
-
-```rust
-use metadata_gen::{process_metadata, Metadata};
-use std::collections::HashMap;
-
-let mut map = HashMap::new();
-map.insert("title".to_string(), "Hello World".to_string());
-map.insert("date".to_string(), "01/02/2024".to_string());
-
-let processed = process_metadata(&Metadata::new(map)).unwrap();
-assert_eq!(processed.get("date").map(String::as_str), Some("2024-02-01"));
-assert_eq!(processed.get("slug").map(String::as_str), Some("hello-world"));
-```
-
-### Generate meta tags
-
-```rust
-use metadata_gen::generate_metatags;
-use std::collections::HashMap;
-
-let mut map = HashMap::new();
-map.insert("description".to_string(), "About the page".to_string());
-map.insert("og:title".to_string(), "Page Title".to_string());
-map.insert("twitter:card".to_string(), "summary_large_image".to_string());
-
-let groups = generate_metatags(&map);
-assert!(groups.primary.contains("description"));
-assert!(groups.og.contains("og:title"));
-assert!(groups.twitter.contains("twitter:card"));
-```
-
-Five groups are produced: `primary`, `og`, `twitter`, `apple` and `ms`.
-Attribute values pass through `escape_html`, so a title containing `<`
-or `"` cannot break out of the element.
-
-### Read tags back from HTML
-
-```rust
-use metadata_gen::metatags::extract_meta_tags;
-
-let html = r#"<html><head>
-  <meta name="description" content="A &amp; B">
-  <meta property="og:title" content="T" />
-</head></html>"#;
-
-let tags = extract_meta_tags(html).unwrap();
-assert_eq!(tags.len(), 2);
-assert_eq!(tags[0].content, "A & B");
-```
-
-Extraction is deliberately tolerant: malformed markup ends the scan and
-returns what was found so far, because the usual input is a whole HTML
-page that a strict XML reader will not accept end to end
-([ADR-0003](docs/adr/0003-streaming-meta-extraction.md)).
-
-### Read from a file, asynchronously
-
-```rust,no_run
-use metadata_gen::utils::async_extract_metadata_from_file;
-
-# async fn run() -> Result<(), Box<dyn std::error::Error>> {
-let (metadata, keywords, tags) =
-    async_extract_metadata_from_file("post.md").await?;
-println!("title = {:?}", metadata.get("title"));
-# Ok(())
-# }
-```
+- **Three front-matter shapes**: YAML (`---` ... `---`), TOML (`+++` ... `+++`), and JSON (`{ ... }` at top of file).
+- **Dual extraction APIs**:
+  - `extract_metadata`: returns flat `Metadata` (`HashMap<String, String>`) with dot-separated keys (`author.name`), ideal for templates.
+  - `extract_typed::<T>`: hands the raw block to serde, returning your strongly typed struct.
+- **Document body access**: `extract_metadata_with_body` returns `(Metadata, &str)` with the body following the closing delimiter. `detect_front_matter` exposes format, raw block, and byte offset without parsing.
+- **Processing and normalization**: `process_metadata` and `process_metadata_with` normalize dates to `YYYY-MM-DD`, verify required fields, and derive URL slugs from titles.
+- **Meta tag synthesis**: `generate_metatags` creates grouped tags (`primary`, `og`, `twitter`, `apple`, `ms`) with attribute values passed through `escape_html`.
+- **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `quick-xml` without full DOM allocation.
+- **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, plus Tokio-backed `async_extract_metadata_from_file`.
 
 ---
 
 ## Configuration
 
-`process_metadata` uses a fixed policy: `title` and `date` are required,
-and `slug` is derived. `process_metadata_with` takes a `ProcessOptions`
-when that policy does not fit.
+`process_metadata` uses a default policy: `title` and `date` are required, and `slug` is derived from `title`. `process_metadata_with` accepts caller-configured `ProcessOptions`:
 
 ```rust
 use metadata_gen::{process_metadata_with, Metadata, ProcessOptions};
@@ -343,94 +214,36 @@ assert!(!processed.contains_key("slug"));
 ```
 
 | Option | Default | Effect |
-|---|---|---|
-| `required_fields` | `["title", "date"]` | a missing field is `MissingFieldError`, naming it |
-| `derive_slug` | `true` | derive `slug` from `title` when absent |
+| :--- | :--- | :--- |
+| `required_fields` | `["title", "date"]` | Missing field returns `MissingFieldError` naming it |
+| `derive_slug` | `true` | Derives `slug` from `title` when absent |
 
-`ProcessOptions` is `#[non_exhaustive]`, so options can be added without
-a breaking release.
-
----
-
-## Ecosystem comparison
-
-| Crate | YAML | TOML | JSON | Typed | Body returned | Meta tags |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| **`metadata-gen`** | yes | yes | yes | yes | yes | yes |
-| `gray_matter` | yes | yes | yes | yes | yes | no |
-| `yaml-front-matter` | yes | no | no | yes | yes | no |
-| `matter` | yes | no | no | no | yes | no |
-
-`gray_matter` is the closest incumbent and the honest recommendation if
-all you need is front matter: it is older, more widely used, and does
-the same job. What this crate adds is the meta-tag half — generation and
-extraction against the same metadata map — and the supply-chain posture
-described under [Security](#security).
-
----
-
-## Benchmarks
-
-Measured with Criterion on an Apple A18 Pro, rustc 1.98.0, single
-thread. Middle estimate of the confidence interval; run
-`cargo bench` to reproduce on your own hardware, because these numbers
-are worth nothing without the host they came from.
-
-| Workload | Input | Time | Throughput |
-|---|---:|---:|---:|
-| `extract_metadata` (YAML) | 1 KB | 631 µs | 1.5 MiB/s |
-| `extract_metadata` (YAML) | 10 KB | 1.81 ms | 5.4 MiB/s |
-| `extract_metadata` (YAML) | 1 MB | 181 ms | 5.5 MiB/s |
-| `extract_meta_tags` | 1 KB | 50 µs | 18.7 MiB/s |
-| `extract_meta_tags` | 1 MB | 34.9 ms | 28.7 MiB/s |
-| `escape_html` | 10 KB | 31.9 µs | 295 MiB/s |
-| `extract_and_prepare_metadata` | ~250 B | 23 µs | — |
-
-The shape to note is that extraction is dominated by the underlying
-format parser, not by this crate's flattening: throughput is flat from
-10 KB to 1 MB. Typical front matter is a few hundred bytes, where the
-whole pipeline costs tens of microseconds.
+`ProcessOptions` is `#[non_exhaustive]`, so options can be added without breaking releases.
 
 ---
 
 ## Examples
 
-Run any of these with `cargo run --example <name>`:
+Run any example with `cargo run --example <name>`:
 
 | Example | Shows |
-|---|---|
-| `lib_example` | the high-level `extract_and_prepare_metadata` flow |
-| `metadata_example` | per-format extraction, nested tables, typed extraction, the body |
-| `metatags_example` | generating `<meta>` groups and reading them back |
+| :--- | :--- |
+| `lib_example` | The high-level `extract_and_prepare_metadata` flow |
+| `metadata_example` | Per-format extraction, nested tables, typed extraction, the body |
+| `metatags_example` | Generating `<meta>` groups and reading them back |
 | `utils_example` | HTML escape/unescape and the async file helper |
-| `error_example` | every `MetadataError` variant and how to recover |
+| `error_example` | Every `MetadataError` variant and how to recover |
 
-`make examples` runs all of them; CI does the same on every push, so an
-example that stops working fails the build.
+`make examples` runs all examples; CI executes the same suite on every push.
 
 ---
 
 ## When not to use metadata-gen
 
-Cases where something else fits better, listed because the honest answer
-is "not yet" rather than a disagreement about priorities.
-
-- **You need `no_std` or a WASM component today.** The crate uses `std`
-  unconditionally and pulls `tokio` for the async file helper. A
-  `no_std + alloc` core is roadmap work.
-- **You need element-level access to arrays of objects from the flat
-  map.** `[a, b]` is a rendered string there by design. Use
-  `extract_typed::<T>` instead, which keeps the structure.
-- **You need to round-trip front matter byte-for-byte.** The crate
-  parses; it does not preserve comments, key order or quoting style, and
-  there is no serialiser back to a fenced block.
-- **You need every `<meta>` element from arbitrary broken HTML.**
-  Extraction stops at the first unrecoverable reader error and returns
-  what it has. A real HTML parser (`html5ever`, `scraper`) is the right
-  tool if you need error recovery over whole pages.
-
-If you hit a case that should be on this list, please open an issue —
-that is how it gets fixed or moved into the supported set.
+- **You need `no_std` or a WASM component today.** The crate uses `std` unconditionally and pulls `tokio` for the async file helper. A `no_std + alloc` core is roadmap work.
+- **You need element-level access to arrays of objects from the flat map.** `[a, b]` is rendered as a string in the flat map by design. Use `extract_typed::<T>` instead, which preserves structure.
+- **You need to round-trip front matter byte-for-byte.** The crate parses; it does not preserve comments, key order or quoting style, and there is no serialiser back to a fenced block.
+- **You need every `<meta>` element from arbitrary broken HTML.** Extraction stops at the first unrecoverable reader error and returns what was found so far. A full HTML5 parser (`html5ever`, `scraper`) is the right tool if you need error recovery over broken whole pages.
 
 ---
 
@@ -452,168 +265,72 @@ make versions     # every version-bearing file agrees
 make deny / vet / audit   # supply chain
 ```
 
-[`DEVELOPMENT.md`](DEVELOPMENT.md) maps each CI job to its local
-equivalent and explains the gotchas.
-
-### Fuzzing
-
-Three `cargo-fuzz` targets live under `fuzz/fuzz_targets/`:
-
-```bash
-cargo +nightly fuzz run fuzz_extract_metadata   # all three front-matter shapes
-cargo +nightly fuzz run fuzz_extract_meta_tags  # the streaming <meta> reader
-cargo +nightly fuzz run fuzz_html_escape        # escape/unescape identity
-```
-
-`fuzz/corpus/<target>` holds the committed seeds and
-`fuzz/regressions/<target>` every fixed-bug input; both replay on each
-push, so a fixed crash cannot silently return. The first target that ran
-found one: `unescape_html` decoded its own output, so `&amp;lt;` came
-back as `<`. That input is now the first regression.
-
-### Miri (UB / aliasing verification)
-
-The crate is `#![forbid(unsafe_code)]`, so Miri does not police its own
-code. The job exists to check the interaction with dependencies that do
-use `unsafe` internally.
-
-```bash
-make miri     # cargo +nightly miri test --lib
-```
-
-The eight tests that touch the filesystem are skipped under Miri, whose
-isolation forbids `open` and `mkdir`.
-
-### CI
-
-| Workflow | Trigger | Purpose |
-|---|---|---|
-| `ci.yml` | push, PR | fmt, clippy, tests across three OSes, coverage, cargo-deny, cargo-audit |
-| `docs.yml` | push to main | build and deploy rustdoc to GitHub Pages |
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for signed commits and PR
-guidelines.
+[`DEVELOPMENT.md`](DEVELOPMENT.md) maps each CI job to its local equivalent and explains reproduction steps.
 
 ---
 
 ## Security
 
-**Reporting:** never open a public issue for a vulnerability. See
-[`SECURITY.md`](SECURITY.md) for the private channel and disclosure
-policy.
+**Reporting:** never open a public issue for a vulnerability. See [`SECURITY.md`](SECURITY.md) for disclosure instructions.
 
-### Architectural posture
-
-- `#![forbid(unsafe_code)]` — the compiler proves the absence of unsafe
-  blocks ([ADR-0001](docs/adr/0001-zero-unsafe-policy.md)).
-- No C dependencies, no FFI, no network I/O, no environment reads. The
-  only file access is the explicit async helper, which reads the path
-  its caller names.
-- Meta-tag values are escaped on generation, so metadata cannot inject
-  markup into a page.
-
-### Resource limits, stated plainly
-
-Front matter is parsed by `noyalib`, `toml` and `serde_json`, each with
-its own bounds on nesting and size. This crate adds no recursion of its
-own beyond flattening the parsed tree. It also adds **no configurable
-limits of its own**: callers handling untrusted input of unbounded size
-should cap it before calling `extract_metadata`. That is documented
-rather than silently assumed.
-
-### Fuzzing
-
-Three targets, a committed seed corpus, and a regression corpus replayed
-per push (see [Development](#development)). Not yet on OSS-Fuzz.
-
-### Supply chain
-
-- `cargo-deny` (licences, advisories, sources) and `cargo-audit` in CI.
-- `cargo-vet` provenance in `supply-chain/`, with an exemption baseline
-  the CI ratchet cannot exceed.
-- First-party crates `noyalib` and `dtt` pinned exactly
-  ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)); a bump is a
-  deliberate release of this crate.
-- `Cargo.lock` committed; CI builds `--locked`. Actions pinned by SHA.
-- REUSE 3.3 compliant, linted in CI.
-- Ten direct runtime dependencies, 43 crates in the resolved runtime
-  tree.
-
-### Commit integrity
-
-Commits on `main` are signed and releases are signed tags; the key is in
-[`KEYS.asc`](KEYS.asc).
+- `#![forbid(unsafe_code)]` proves the absence of unsafe code ([ADR-0001](docs/adr/0001-zero-unsafe-policy.md)).
+- No C dependencies, no FFI, no network I/O, no environment reads.
+- Meta-tag attribute values are escaped on generation, preventing markup injection.
+- Supply chain audited via `cargo-audit`, `cargo-deny`, and `cargo-vet` with a locked exemption baseline.
+- First-party dependencies `noyalib` and `dtt` are pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)).
+- Three fuzz targets replaying seed and regression corpora per push.
 
 ---
 
 ## Documentation
 
-The four entry points, identical across every repo in the family:
+The canonical entry points across the repository family:
 
 - **[API reference](https://docs.rs/metadata-gen)** — rustdoc on docs.rs
-- **[Developer docs](DEVELOPMENT.md)** — toolchain, task map, reproducing
-  every CI gate locally
-- **[Architecture](docs/ARCHITECTURE.md)** — module map, pipeline,
-  design decisions
-- **[Decision records](docs/adr/README.md)** — the choices that would be
-  expensive to reverse
+- **[Developer docs](DEVELOPMENT.md)** — toolchain, task map, reproducing CI gates
+- **[Architecture](docs/ARCHITECTURE.md)** — module map, pipeline, design decisions
+- **[Engineering policies](docs/POLICIES.md)** — MSRV, SemVer, security, concurrency
+- **[Decision records](docs/adr/README.md)** — irreversible architectural decisions
 
 | Document | Covers |
-|---|---|
-| [`CHANGELOG.md`](CHANGELOG.md) | per-release notes, Keep a Changelog format |
-| [`SECURITY.md`](SECURITY.md) | disclosure policy, supported versions, security design |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | branch and commit conventions, PR expectations, code standards |
-| [`GOVERNANCE.md`](GOVERNANCE.md) | who decides what, how changes land |
-| [`SUPPORT.md`](SUPPORT.md) | where to ask, what to expect |
-| [`AGENTS.md`](AGENTS.md) | invariants for AI-assisted contributions |
+| :--- | :--- |
+| [`CHANGELOG.md`](CHANGELOG.md) | Per-release notes, Keep a Changelog format |
+| [`SECURITY.md`](SECURITY.md) | Disclosure policy, supported versions, security design |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Branch and commit conventions, PR expectations |
+| [`GOVERNANCE.md`](GOVERNANCE.md) | Project stewardship, how changes land |
+| [`SUPPORT.md`](SUPPORT.md) | Support channels and expectations |
+| [`AGENTS.md`](AGENTS.md) | Invariants for AI-assisted contributions |
 
 ---
 
 ## Stability guarantees
 
-- **Versioning.** [SemVer](https://semver.org), with the pre-1.0 posture
-  that the patch number is the breaking axis during `0.0.x`. Releases
-  increment by `+0.0.1`. Every breaking change is called out in
-  [`CHANGELOG.md`](CHANGELOG.md).
-- **Output stability.** What the crate *produces* is part of the API: a
-  change to how a document flattens, which key a value lands under, or
-  what a meta-tag group renders is treated as breaking even when no Rust
-  signature moves.
-- **Deprecations** live for at least two releases with a `#[deprecated]`
-  note naming the replacement before removal.
-- **Version-bearing files** are checked against the manifest by
-  `scripts/verify-release-versions.sh` before a tag exists, so an install
-  snippet cannot go stale.
+### Versioning
 
----
+[SemVer 2.0.0](https://semver.org) is followed, with the pre-1.0 posture that releases increment strictly by `+0.0.1` along the `0.0.x` line. Every breaking change is documented in [`CHANGELOG.md`](CHANGELOG.md).
 
-## Minimum-toolchain policy
+### Output stability
 
-The floor is **Rust 1.88.0**, declared as `rust-version` in
-`Cargo.toml` so Cargo refuses older toolchains with a clear message.
+What the crate produces is part of the API: a change to how a document flattens, which key a value lands under, or what a meta-tag group renders is treated as a breaking change even when no Rust signature moves.
 
-- **When it may rise:** only on a release, never silently, and always
-  with the reason in the changelog entry.
-- **Why it is where it is:** the floor is pulled by the transitive
-  `time` crate through `dtt`, which requires edition 2024. Lowering it
-  would mean pinning an older `time` that carries a stack-exhaustion
-  advisory.
-- **What is verified:** CI builds and tests on stable. The floor is the
-  version Cargo enforces from the manifest.
+### Deprecations
 
-No claim is made about distro-LTS toolchains. Making one would require a
-table mapping current distro versions to this floor, and an
-aspirational claim there is worse than none.
+Deprecations live for at least two releases with a `#[deprecated]` attribute naming the replacement before removal.
+
+### Minimum-toolchain discipline
+
+The floor is **Rust 1.88.0**, declared as `rust-version` in `Cargo.toml`. Raising it is a breaking change and occurs only on releases with rationale documented in the changelog. See [`docs/POLICIES.md`](docs/POLICIES.md) for the complete policy.
+
+### Version-bearing files
+
+Checked against the manifest by `scripts/verify-release-versions.sh` before a tag exists, ensuring install snippets and metadata stay synchronised.
 
 ---
 
 ## License
 
-Dual-licensed under [Apache 2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT),
-at your option.
+Dual-licensed under [Apache 2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT), at your option.
 
-Unless you explicitly state otherwise, any contribution intentionally
-submitted for inclusion in this crate by you shall be dual-licensed as
-above, without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this crate by you shall be dual-licensed as above, without any additional terms or conditions.
 
 <p align="right"><a href="#metadata-gen">Back to top</a></p>
