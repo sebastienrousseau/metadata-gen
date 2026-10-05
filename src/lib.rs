@@ -106,8 +106,8 @@ pub type MetadataResult =
 /// assert!(result.is_ok());
 /// ```
 pub fn extract_and_prepare_metadata(content: &str) -> MetadataResult {
-    // Ensure the front matter format is correct
-    if !content.contains(':') {
+    // Ensure the front matter format contains key-value separators
+    if !content.contains(':') && !content.contains('=') {
         return Err(MetadataError::ExtractionError {
             message: "No valid front matter found".to_string(),
         });

@@ -113,4 +113,35 @@ description A sample page
             panic!("Expected ExtractionError, got {:?}", result);
         }
     }
+
+    /// Test the `extract_and_prepare_metadata` function with valid TOML front matter.
+    #[test]
+    fn test_extract_and_prepare_metadata_toml() {
+        let content = r#"+++
+title = "TOML Page"
+description = "A TOML front matter page"
+keywords = "toml, rust, metadata"
++++
+# Content goes here
+"#;
+
+        let result = extract_and_prepare_metadata(content);
+        assert!(
+            result.is_ok(),
+            "Metadata extraction should succeed for valid TOML front matter"
+        );
+
+        let (metadata_map, keywords, meta_tags) = result.unwrap();
+
+        assert_eq!(
+            metadata_map.get("title"),
+            Some(&"TOML Page".to_string())
+        );
+        assert_eq!(
+            metadata_map.get("description"),
+            Some(&"A TOML front matter page".to_string())
+        );
+        assert_eq!(keywords, vec!["toml", "rust", "metadata"]);
+        assert!(meta_tags.primary.contains("description"));
+    }
 }
