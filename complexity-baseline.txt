@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Functions over the complexity ceilings when the gate was added.
+# Regenerated only by scripts/complexity_check.py --update, and
+# only when the list shrinks. Empty means every function complies.
