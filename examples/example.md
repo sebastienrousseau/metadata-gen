@@ -6,7 +6,7 @@ banner:
   alt: "Metadata Gen Library Banner"
   height: 66
   width: 66
-cdn: "https://cdn.metadata-gen.com"
+cdn: "https://cdn.example.com"
 changefreq: "monthly"
 charset: "utf-8"
 date: "2024-10-05"

@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TOML front matter in `extract_and_prepare_metadata`**: allow key-value
   pairs separated by `=` without requiring colons (`:`). Valid TOML front
   matter without colons is now accepted and correctly extracted.
+- README linked `docs/COMPARISON.md` and `docs/BENCHMARKS.md`, which did
+  not exist, and the MSRV badge pointed at the `main` copy of
+  `docs/POLICIES.md`. The links now resolve.
+- `examples/example.md` used a `cdn:` fixture URL that does not resolve;
+  it now uses `cdn.example.com`.
 
 ### Added
 
@@ -23,6 +28,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   totality and ASCII round-trip involution (#55).
 - **Mutation testing configuration**: `.cargo/mutants.toml` configuration
   for cargo-mutants targeting >= 85% mutation kill rate (#54).
+- **Release workflow** (`release.yml`): a signed `vX.Y.Z` tag produces
+  the GitHub release with the packaged crate, a CycloneDX SBOM, build
+  provenance attestations for both, and notes composed from
+  `docs/releases/vX.Y.Z.md`. `scripts/release-preflight.sh` is the
+  blocking local check before the tag is pushed.
+- **OpenSSF Scorecard** (`scorecard.yml`), published weekly and on every
+  push to `main`.
+- **New CI gates** in `quality.yml`: MSRV build on 1.88.0,
+  `cargo-semver-checks` against the last crates.io release, the
+  `cargo-hack` feature powerset, a per-function complexity gate
+  (`scripts/complexity_check.py` with an empty `complexity-baseline.txt`
+  that may only shrink), and a lychee link check over every Markdown file.
+- `GNUmakefile` targets for each new gate plus `dist`, `distcheck`,
+  `sbom` (CycloneDX) and `tools`.
+- `docs/MIGRATION.md`: what changes for consumers between releases.
+- `.compliance.yml` declaring the L3 target.
 
 ### Changed
 
@@ -30,6 +51,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bumped `thiserror` to 2.0.21 and `toml` to 1.1.6 (#107).
 - Updated GitHub Actions workflow dependencies (`dtolnay/rust-toolchain` #109, `taiki-e/install-action` #108, `astral-sh/setup-uv` #105).
 - Ratcheted cargo-vet exemption baseline down from 103 to 89.
+- Every GitHub Action in `ci.yml` and `docs.yml` is pinned by commit SHA.
+- Source layout: inline test modules moved to child files
+  (`src/<module>/tests.rs`), and `metadata.rs` split into
+  `metadata/front_matter.rs` and `metadata/date.rs`. Six functions were
+  refactored under the complexity ceilings. No public API or behaviour
+  change; the test suite is unchanged.
+- `Makefile` renamed `GNUmakefile`; `make sbom` now writes CycloneDX JSON
+  instead of a `cargo tree` listing.
+- The devcontainer installs only `rustfmt` and `clippy` on create;
+  `make tools` installs the rest.
 
 ## [0.0.7] — 2026-09-06
 

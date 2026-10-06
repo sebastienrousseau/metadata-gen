@@ -17,7 +17,7 @@
   <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/metadata-gen"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/metadata-gen?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" /></a>
   <a href="https://www.bestpractices.dev/projects/14536"><img src="https://img.shields.io/cii/level/14536?style=for-the-badge&label=OpenSSF%20Best%20Practices&logo=openssf" alt="OpenSSF Best Practices" /></a>
   <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg?style=for-the-badge" alt="License: Apache-2.0 OR MIT" /></a>
-  <a href="https://github.com/sebastienrousseau/metadata-gen/blob/main/docs/POLICIES.md"><img src="https://img.shields.io/badge/MSRV-1.88.0-93450a.svg?style=for-the-badge&logo=rust" alt="MSRV 1.88.0" /></a>
+  <a href="docs/POLICIES.md"><img src="https://img.shields.io/badge/MSRV-1.88.0-93450a.svg?style=for-the-badge&logo=rust" alt="MSRV 1.88.0" /></a>
 </p>
 
 ---
@@ -37,8 +37,8 @@
 **Library reference**
 
 - [Capabilities at a glance](#capabilities-at-a-glance): the current surface by theme
-- [Ecosystem comparison](#ecosystem-comparison): short matrix; full table at [`docs/COMPARISON.md`](docs/COMPARISON.md)
-- [Benchmarks](#benchmarks): headline numbers; full table at [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)
+- [Ecosystem comparison](#ecosystem-comparison): how the crate compares with neighbouring crates
+- [Benchmarks](#benchmarks): measured numbers with the host stated
 - [Features](#features): module-level capability list
 - [Configuration](#configuration): core options
 - [Examples](#examples): runnable example index
@@ -157,7 +157,7 @@ This summary identifies API shape, not a universal winner. Workload-specific tra
 | `yaml-front-matter` | Yes | No | No | Yes | Yes | No |
 | `matter` | Yes | No | No | No | Yes | No |
 
-See [`docs/COMPARISON.md`](docs/COMPARISON.md) for the evidence and complete matrix.
+The matrix reflects each crate's documented surface at the time of this release.
 
 ---
 
@@ -175,7 +175,7 @@ Measured with Criterion on an Apple A18 Pro, rustc 1.98.0, single thread. Middle
 | `escape_html` (10 KB) | 31.9 µs (295 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
 | `extract_and_prepare_metadata` (~250 B) | 23 µs | Apple A18 Pro, rustc 1.98.0 |
 
-See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for methodology and full results.
+Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](benches/).
 
 ---
 
@@ -266,10 +266,16 @@ make fuzz         # build every target, replay corpus and regressions
 make examples     # run every example
 make bench-smoke  # compile and run each bench once
 make versions     # every version-bearing file agrees
+make complexity   # per-function complexity ceilings
+make links        # every Markdown link resolves
+make msrv         # builds on the declared minimum Rust
+make semver       # public API against the last release
+make hack         # every feature combination compiles
+make distcheck    # package and verify the archive
 make deny / vet / audit   # supply chain
 ```
 
-[`DEVELOPMENT.md`](DEVELOPMENT.md) maps each CI job to its local equivalent and explains reproduction steps.
+[`DEVELOPMENT.md`](DEVELOPMENT.md) maps each CI job to its local equivalent and explains reproduction steps. [`docs/MIGRATION.md`](docs/MIGRATION.md) lists what changes for consumers between releases.
 
 ---
 
