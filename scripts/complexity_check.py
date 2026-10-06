@@ -110,8 +110,9 @@ def load_baseline() -> dict[str, dict[str, float]]:
 
 def write_baseline(found: dict[str, dict[str, float]]) -> None:
     lines = [
-        "# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors",
-        "# SPDX-License-Identifier: Apache-2.0 OR MIT",
+        # Split so REUSE's scanner reads the file's own header, not these.
+        "# SPDX-FileCopyrightText" + ": 2024 - 2026 metadata-gen contributors",
+        "# SPDX-License-Identifier" + ": Apache-2.0 OR MIT",
         "#",
         "# Functions over the complexity ceilings when the gate was added.",
         "# Regenerated only by scripts/complexity_check.py --update, and",
