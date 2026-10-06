@@ -1,4 +1,5 @@
-# POSIX-compatible Makefile for metadata-gen
+# GNUmakefile for metadata-gen: the Unix task contract (all, check, test,
+# clean, dist, distcheck) plus every CI gate as a local target.
 # Works on macOS, Linux, and WSL without modification.
 #
 # Usage:
@@ -17,10 +18,19 @@
 #   make examples  — run every example to completion
 #   make bench-smoke — compile and run each bench once, no measurement
 #   make versions  — every version-bearing file agrees with Cargo.toml
-#   make sbom      — generate a software bill of materials
+#   make sbom      — CycloneDX software bill of materials (cargo-cyclonedx)
+#   make complexity — per-function complexity gate against the baseline
+#   make links     — link check every Markdown file (lychee)
+#   make msrv      — the crate builds on the declared minimum Rust
+#   make semver    — public API against the last crates.io release
+#   make hack      — every feature combination compiles
+#   make dist      — package the crate as crates.io would receive it
+#   make distcheck — package, then verify the archive's contents
+#   make preflight TAG=vX.Y.Z — blocking release preflight for a local tag
+#   make tools     — install the cargo tools the gates above need
 #   make clean     — remove build artifacts
 
-.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri fuzz examples bench-smoke versions sbom clean
+.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke versions sbom complexity links msrv semver hack dist distcheck preflight tools clean
 
 all: check clippy test
 
@@ -97,9 +107,54 @@ bench-smoke:
 versions:
 	./scripts/verify-release-versions.sh
 
+# CycloneDX 1.5 JSON, the format the release workflow attaches and
+# attests. Written next to Cargo.toml as metadata-gen.cdx.json.
 sbom:
-	cargo tree --edges normal --prefix depth --format '{p} {l}' > SBOM.txt
-	@echo "SBOM written to SBOM.txt"
+	cargo cyclonedx --format json --all-features
+
+# Ceilings: cyclomatic <= 10, cognitive <= 15, Halstead difficulty <= 30,
+# <= 60 lines per function, <= 500 per file. The baseline may only shrink.
+complexity:
+	python3 -I scripts/complexity_check.py
+
+links:
+	lychee --config lychee.toml './**/*.md'
+
+msrv:
+	cargo +1.88.0 check --all-features --all-targets --locked
+
+# While the crate is 0.0.x every release is a major bump under semver,
+# so this proves the version moved; the lints bite from 0.1.0.
+semver:
+	cargo semver-checks check-release --all-features
+
+hack:
+	cargo hack check --feature-powerset --all-targets --locked
+
+dist:
+	cargo package --locked
+
+# What crates.io would receive: the archive must carry the current
+# README, CHANGELOG and manifest, not a stale copy.
+distcheck: dist
+	@v=$$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2); \
+	  f="target/package/metadata-gen-$$v.crate"; \
+	  for want in Cargo.toml README.md CHANGELOG.md LICENSE-APACHE LICENSE-MIT; do \
+	    tar tzf "$$f" | grep -q "^metadata-gen-$$v/$$want$$" || { echo "missing $$want in $$f"; exit 1; }; \
+	  done; \
+	  tar xzOf "$$f" "metadata-gen-$$v/CHANGELOG.md" | grep -q "^## \[$$v\]" || { echo "packaged CHANGELOG has no [$$v] section"; exit 1; }; \
+	  echo "distcheck ok: $$f"
+
+preflight:
+	./scripts/release-preflight.sh $(TAG)
+
+# Everything the gates need beyond rustup. The devcontainer runs only
+# `rustup component add` on create so it boots fast; run this next.
+tools:
+	rustup toolchain install nightly --component miri,llvm-tools-preview
+	cargo install --locked cargo-hack cargo-deny cargo-vet cargo-llvm-cov \
+	  cargo-fuzz cargo-audit cargo-semver-checks cargo-cyclonedx \
+	  rust-code-analysis-cli
 
 clean:
 	cargo clean

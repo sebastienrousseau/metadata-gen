@@ -9,3 +9,9 @@ build
 Icon?
 src/.DS_Store
 tarpaulin-report.html
+
+# Release artefacts produced by `make sbom`, `make dist` and the release workflow
+*.cdx.json
+SBOM.txt
+SHA256SUMS
+release-notes.md
