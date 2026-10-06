@@ -3,11 +3,17 @@
 //! This module provides various utility functions for tasks such as HTML escaping,
 //! asynchronous file reading, and metadata extraction from files.
 
+#[cfg(not(loom))]
 use crate::error::MetadataError;
+#[cfg(not(loom))]
 use crate::extract_and_prepare_metadata;
+#[cfg(not(loom))]
 use crate::metatags::MetaTagGroups;
+#[cfg(not(loom))]
 use std::collections::HashMap;
+#[cfg(not(loom))]
 use tokio::fs::File;
+#[cfg(not(loom))]
 use tokio::io::AsyncReadExt;
 
 /// Escapes special HTML characters in a string.
@@ -172,6 +178,7 @@ pub fn unescape_html(value: &str) -> String {
 /// This function reads files from the file system. Ensure that the `file_path`
 /// is properly sanitized and validated to prevent potential security issues like
 /// path traversal attacks.
+#[cfg(not(loom))]
 pub async fn async_extract_metadata_from_file(
     file_path: &str,
 ) -> Result<
@@ -209,7 +216,9 @@ pub async fn async_extract_metadata_from_file(
 mod tests {
     use super::*;
     use tempfile::tempdir;
+    #[cfg(not(loom))]
     use tokio::fs::File;
+    #[cfg(not(loom))]
     use tokio::io::AsyncWriteExt;
 
     #[cfg_attr(
@@ -269,6 +278,7 @@ mod tests {
         assert_eq!(original, unescaped);
     }
 
+    #[cfg(not(loom))]
     #[cfg_attr(
         miri,
         ignore = "touches the filesystem; Miri isolation forbids it"
@@ -313,6 +323,7 @@ This is a test file for metadata extraction."#;
         assert!(!meta_tags.primary.is_empty());
     }
 
+    #[cfg(not(loom))]
     #[cfg_attr(
         miri,
         ignore = "touches the filesystem; Miri isolation forbids it"
@@ -341,6 +352,7 @@ This is a test file for metadata extraction."#;
         assert!(meta_tags.primary.is_empty());
     }
 
+    #[cfg(not(loom))]
     #[cfg_attr(
         miri,
         ignore = "touches the filesystem; Miri isolation forbids it"

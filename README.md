@@ -26,30 +26,30 @@
 
 **Getting started**
 
-- [Install](#install) — Cargo, source
-- [Requirements](#requirements) — toolchain floor, platforms
-- [Quick Start](#quick-start) — front matter to meta tags in ten lines
+- [Install](#install): Cargo, source
+- [Requirements](#requirements): toolchain floor, platforms
+- [Quick Start](#quick-start): front matter to meta tags in ten lines
 
 **The metadata-gen ecosystem**
 
-- [The metadata-gen ecosystem](#the-metadata-gen-ecosystem) — front-matter and content generation companion crates
+- [The metadata-gen ecosystem](#the-metadata-gen-ecosystem): front-matter and content generation companion crates
 
 **Library reference**
 
-- [Capabilities at a glance](#capabilities-at-a-glance) — the current surface by theme
-- [Ecosystem comparison](#ecosystem-comparison) — short matrix; full table at [`docs/COMPARISON.md`](docs/COMPARISON.md)
-- [Benchmarks](#benchmarks) — headline numbers; full table at [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)
-- [Features](#features) — module-level capability list
-- [Configuration](#configuration) — core options
-- [Examples](#examples) — runnable example index
+- [Capabilities at a glance](#capabilities-at-a-glance): the current surface by theme
+- [Ecosystem comparison](#ecosystem-comparison): short matrix; full table at [`docs/COMPARISON.md`](docs/COMPARISON.md)
+- [Benchmarks](#benchmarks): headline numbers; full table at [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)
+- [Features](#features): module-level capability list
+- [Configuration](#configuration): core options
+- [Examples](#examples): runnable example index
 
 **Operational**
 
-- [When not to use metadata-gen](#when-not-to-use-metadata-gen) — limitations
-- [Development](#development) — make targets, fuzzing, CI
-- [Security](#security) — guarantees and compliance
-- [Documentation](#documentation) — all reference docs
-- [Stability guarantees](#stability-guarantees) — SemVer axis, output stability, minimum toolchain discipline
+- [When not to use metadata-gen](#when-not-to-use-metadata-gen): limitations
+- [Development](#development): make targets, fuzzing, CI
+- [Security](#security): guarantees and compliance
+- [Documentation](#documentation): all reference docs
+- [Stability guarantees](#stability-guarantees): SemVer axis, output stability, minimum toolchain discipline
 - [License](#license)
 
 ---
@@ -258,6 +258,10 @@ make lint         # markdownlint + codespell + REUSE
 make doc          # rustdoc with warnings denied
 make coverage     # line coverage gate (98%)
 make miri         # lib tests under Miri
+make proptest     # property-based tests (involution + round-trip)
+make loom         # concurrency testing via Loom model checker
+make kani         # formal verification proofs via Kani
+make mutants      # mutation testing kill rate (cargo-mutants)
 make fuzz         # build every target, replay corpus and regressions
 make examples     # run every example
 make bench-smoke  # compile and run each bench once
@@ -278,6 +282,10 @@ make deny / vet / audit   # supply chain
 - Meta-tag attribute values are escaped on generation, preventing markup injection.
 - Supply chain audited via `cargo-audit`, `cargo-deny`, and `cargo-vet` with a locked exemption baseline.
 - First-party dependencies `noyalib` and `dtt` are pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)).
+- Property-based testing via Proptest for parser round-trips and HTML escape involution.
+- Concurrency testing scaffold via Loom (`tests/loom_smoke.rs`) for thread schedule exploration.
+- Formal verification via Kani (`tests/kani/`) proving HTML escape totality and ASCII round-trip.
+- Mutation testing via `cargo-mutants` configured with `.cargo/mutants.toml`.
 - Three fuzz targets replaying seed and regression corpora per push.
 
 ---
@@ -286,11 +294,11 @@ make deny / vet / audit   # supply chain
 
 The canonical entry points across the repository family:
 
-- **[API reference](https://docs.rs/metadata-gen)** — rustdoc on docs.rs
-- **[Developer docs](DEVELOPMENT.md)** — toolchain, task map, reproducing CI gates
-- **[Architecture](docs/ARCHITECTURE.md)** — module map, pipeline, design decisions
-- **[Engineering policies](docs/POLICIES.md)** — MSRV, SemVer, security, concurrency
-- **[Decision records](docs/adr/README.md)** — irreversible architectural decisions
+- **[API reference](https://docs.rs/metadata-gen)**: rustdoc on docs.rs
+- **[Developer docs](DEVELOPMENT.md)**: toolchain, task map, reproducing CI gates
+- **[Architecture](docs/ARCHITECTURE.md)**: module map, pipeline, design decisions
+- **[Engineering policies](docs/POLICIES.md)**: MSRV, SemVer, security, concurrency
+- **[Decision records](docs/adr/README.md)**: irreversible architectural decisions
 
 | Document | Covers |
 | :--- | :--- |

@@ -1,7 +1,71 @@
 
 # cargo-vet audits file
 
-[audits]
+[[audits.generator]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.8.10"
+notes = "Concurrency testing via loom per issue #57"
+
+[[audits.lazy_static]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "1.5.1"
+notes = "Concurrency testing via loom per issue #57"
+
+[[audits.loom]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.7.2"
+notes = "Concurrency testing via loom per issue #57"
+
+[[audits.proptest]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "1.11.0"
+notes = "Property-based testing suite per issue #51"
+
+[[audits.r-efi]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "5.3.0"
+notes = "Transitive dev-dependency via getrandom for property testing"
+
+[[audits.rand]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.9.5"
+notes = "Transitive dev-dependency for proptest"
+
+[[audits.thread_local]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "1.1.10"
+notes = "Concurrency testing via loom per issue #57"
+
+[[audits.tracing]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.1.44"
+notes = "Concurrency testing via loom per issue #57"
+
+[[audits.tracing-core]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.1.36"
+notes = "Concurrency testing via loom per issue #57"
+
+[[audits.tracing-subscriber]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.3.23"
+notes = "Concurrency testing via loom per issue #57"
+
+[[audits.windows-result]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.4.1"
+notes = "Concurrency testing via loom per issue #57"
 
 [[trusted.dtt]]
 criteria = "safe-to-deploy"

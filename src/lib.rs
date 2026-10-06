@@ -27,7 +27,9 @@ pub use metadata::{
     FrontMatterFormat, Metadata, ProcessOptions,
 };
 pub use metatags::{generate_metatags, MetaTagGroups};
-pub use utils::{async_extract_metadata_from_file, escape_html};
+#[cfg(not(loom))]
+pub use utils::async_extract_metadata_from_file;
+pub use utils::escape_html;
 
 /// Type alias for a map of metadata key-value pairs.
 ///

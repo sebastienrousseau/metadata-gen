@@ -7,11 +7,20 @@ version = "0.10"
 [imports.bytecodealliance]
 url = "https://raw.githubusercontent.com/bytecodealliance/wasmtime/main/supply-chain/audits.toml"
 
+[imports.embark-studios]
+url = "https://raw.githubusercontent.com/EmbarkStudios/rust-ecosystem/main/audits.toml"
+
 [imports.google]
 url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
 
+[imports.isrg]
+url = "https://raw.githubusercontent.com/divviup/libprio-rs/main/supply-chain/audits.toml"
+
 [imports.mozilla]
 url = "https://raw.githubusercontent.com/mozilla-firefox/firefox/main/supply-chain/audits.toml"
+
+[imports.zcash]
+url = "https://raw.githubusercontent.com/zcash/rust-ecosystem/main/supply-chain/audits.toml"
 
 [policy.metadata-gen]
 audit-as-crates-io = true
@@ -19,10 +28,6 @@ audit-as-crates-io = true
 [[exemptions.aho-corasick]]
 version = "1.1.4"
 criteria = "safe-to-deploy"
-
-[[exemptions.alloca]]
-version = "0.4.0"
-criteria = "safe-to-run"
 
 [[exemptions.anstyle]]
 version = "1.0.14"
@@ -52,10 +57,6 @@ criteria = "safe-to-deploy"
 version = "1.4.0"
 criteria = "safe-to-run"
 
-[[exemptions.cfg-if]]
-version = "1.0.4"
-criteria = "safe-to-run"
-
 [[exemptions.clap]]
 version = "4.6.4"
 criteria = "safe-to-run"
@@ -72,10 +73,6 @@ criteria = "safe-to-run"
 version = "0.8.2"
 criteria = "safe-to-run"
 
-[[exemptions.criterion-plot]]
-version = "0.8.2"
-criteria = "safe-to-run"
-
 [[exemptions.crossbeam-deque]]
 version = "0.8.7"
 criteria = "safe-to-run"
@@ -84,20 +81,12 @@ criteria = "safe-to-run"
 version = "0.8.22"
 criteria = "safe-to-run"
 
-[[exemptions.crunchy]]
-version = "0.2.4"
-criteria = "safe-to-run"
-
 [[exemptions.deranged]]
 version = "0.5.8"
 criteria = "safe-to-deploy"
 
 [[exemptions.either]]
 version = "1.17.0"
-criteria = "safe-to-run"
-
-[[exemptions.errno]]
-version = "0.3.14"
 criteria = "safe-to-run"
 
 [[exemptions.fastrand]]
@@ -148,10 +137,6 @@ criteria = "safe-to-deploy"
 version = "0.4.31"
 criteria = "safe-to-run"
 
-[[exemptions.itertools]]
-version = "0.13.0"
-criteria = "safe-to-run"
-
 [[exemptions.itoa]]
 version = "1.0.18"
 criteria = "safe-to-deploy"
@@ -184,25 +169,9 @@ criteria = "safe-to-deploy"
 version = "0.0.6"
 criteria = "safe-to-deploy"
 
-[[exemptions.num-conv]]
-version = "0.2.2"
-criteria = "safe-to-deploy"
-
-[[exemptions.once_cell]]
-version = "1.21.4"
-criteria = "safe-to-run"
-
 [[exemptions.oorandom]]
 version = "11.1.5"
 criteria = "safe-to-run"
-
-[[exemptions.page_size]]
-version = "0.6.0"
-criteria = "safe-to-run"
-
-[[exemptions.pastey]]
-version = "0.2.3"
-criteria = "safe-to-deploy"
 
 [[exemptions.pin-project-lite]]
 version = "0.2.17"
@@ -252,10 +221,6 @@ criteria = "safe-to-run"
 version = "1.12.0"
 criteria = "safe-to-run"
 
-[[exemptions.rayon-core]]
-version = "1.13.0"
-criteria = "safe-to-run"
-
 [[exemptions.regex]]
 version = "1.13.1"
 criteria = "safe-to-deploy"
@@ -295,10 +260,6 @@ criteria = "safe-to-deploy"
 [[exemptions.serde_json]]
 version = "1.0.151"
 criteria = "safe-to-deploy"
-
-[[exemptions.shlex]]
-version = "2.0.1"
-criteria = "safe-to-run"
 
 [[exemptions.slab]]
 version = "0.4.12"
@@ -396,16 +357,8 @@ criteria = "safe-to-run"
 version = "0.4.0"
 criteria = "safe-to-run"
 
-[[exemptions.winapi-util]]
-version = "0.1.11"
-criteria = "safe-to-run"
-
 [[exemptions.winapi-x86_64-pc-windows-gnu]]
 version = "0.4.0"
-criteria = "safe-to-run"
-
-[[exemptions.windows-link]]
-version = "0.2.1"
 criteria = "safe-to-run"
 
 [[exemptions.windows-sys]]

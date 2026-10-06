@@ -64,6 +64,19 @@ coverage:
 miri:
 	cargo +nightly miri test --lib
 
+proptest:
+	cargo test --test test_proptest
+
+loom:
+	RUSTFLAGS="--cfg loom" cargo test --test loom_smoke --release
+
+kani:
+	cargo kani --harness check_escape_html_totality
+	cargo kani --harness check_html_escape_ascii_roundtrip
+
+mutants:
+	cargo mutants --no-shuffle --check
+
 # Build every target, then replay the seed corpus and the regression
 # inputs without generating new ones. Mirrors the per-push CI gate.
 fuzz:

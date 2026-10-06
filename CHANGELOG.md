@@ -13,11 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pairs separated by `=` without requiring colons (`:`). Valid TOML front
   matter without colons is now accepted and correctly extracted.
 
+### Added
+
+- **Property-based testing**: Proptest harness for front-matter round-trip
+  (YAML, TOML, JSON) and HTML escape involution with regression replay (#51).
+- **Concurrency verification scaffold**: Loom smoke test harness with
+  documented preemption bound for concurrent primitives exploration (#57).
+- **Formal verification harness**: Kani proof asserting escape_html
+  totality and ASCII round-trip involution (#55).
+- **Mutation testing configuration**: `.cargo/mutants.toml` configuration
+  for cargo-mutants targeting >= 85% mutation kill rate (#54).
+
 ### Changed
 
 - Bumped `noyalib` requirement to `=0.0.43` (#102).
 - Bumped `thiserror` to 2.0.21 and `toml` to 1.1.6 (#107).
 - Updated GitHub Actions workflow dependencies (`dtolnay/rust-toolchain` #109, `taiki-e/install-action` #108, `astral-sh/setup-uv` #105).
+- Ratcheted cargo-vet exemption baseline down from 103 to 89.
 
 ## [0.0.7] — 2026-09-06
 
