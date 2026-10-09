@@ -252,6 +252,25 @@ jobs:
           tool: cargo-hack
       - run: cargo hack check --feature-powerset --all-targets --locked
 
+  no-std:
+    name: no_std + alloc (thumbv7em-none-eabihf)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+        with:
+          toolchain: stable
+          targets: thumbv7em-none-eabihf
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+      # A target with no `std` at all: the build fails if anything in the
+      # tree names `std` without the `std` feature (ADR-0005).
+      - run: cargo build --lib --locked --no-default-features --features yaml,toml,json --target thumbv7em-none-eabihf
+      # A format that is compiled out must report UnsupportedFormatError.
+      - run: cargo test --lib --locked --no-default-features --features yaml
+
   complexity:
     name: complexity (per-function ceilings)
     runs-on: ubuntu-latest

@@ -24,13 +24,14 @@
 #   make msrv      — the crate builds on the declared minimum Rust
 #   make semver    — public API against the last crates.io release
 #   make hack      — every feature combination compiles
+#   make no-std    — no_std + alloc build on a bare-metal target
 #   make dist      — package the crate as crates.io would receive it
 #   make distcheck — package, then verify the archive's contents
 #   make preflight TAG=vX.Y.Z — blocking release preflight for a local tag
 #   make tools     — install the cargo tools the gates above need
 #   make clean     — remove build artifacts
 
-.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke versions sbom complexity links msrv semver hack dist distcheck preflight tools clean
+.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke versions sbom complexity links msrv semver hack no-std dist distcheck preflight tools clean
 
 all: check clippy test
 
@@ -130,6 +131,11 @@ semver:
 
 hack:
 	cargo hack check --feature-powerset --all-targets --locked
+
+# `rustup target add thumbv7em-none-eabihf` once. Mirrors the CI job.
+no-std:
+	cargo build --lib --locked --no-default-features --features yaml,toml,json --target thumbv7em-none-eabihf
+	cargo test --lib --locked --no-default-features --features yaml
 
 dist:
 	cargo package --locked
