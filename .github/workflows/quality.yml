@@ -198,3 +198,88 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --no-deps --all-features --locked
+
+  msrv:
+    name: MSRV (1.88.0)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+        with:
+          # `rust-version` in Cargo.toml. A dependency or syntax that
+          # needs a newer compiler fails here, not on a user's machine.
+          toolchain: 1.88.0
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+      - run: cargo check --all-features --all-targets --locked
+
+  semver-checks:
+    name: API breakage (cargo-semver-checks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22, installs cargo-semver-checks
+        with:
+          tool: cargo-semver-checks
+      # Compares the public API against the last crates.io release. While
+      # the crate is 0.0.x every release is a major bump under semver, so
+      # today this proves the version moved; the lints bite from 0.1.0.
+      - run: cargo semver-checks check-release --all-features
+
+  feature-powerset:
+    name: feature powerset (cargo-hack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22, installs cargo-hack
+        with:
+          tool: cargo-hack
+      - run: cargo hack check --feature-powerset --all-targets --locked
+
+  complexity:
+    name: complexity (per-function ceilings)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+        with:
+          toolchain: stable
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: rust-code-analysis-cli@0.0.25
+      # Ceilings and the (empty) baseline are in scripts/complexity_check.py
+      # and complexity-baseline.txt. The baseline may only shrink.
+      - run: python3 -I scripts/complexity_check.py
+
+  links:
+    name: links (lychee)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --config lychee.toml './**/*.md'
+          fail: true
+          token: ${{ secrets.GITHUB_TOKEN }}
