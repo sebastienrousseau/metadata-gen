@@ -324,3 +324,21 @@ fn test_extract_metadata_surfaces_yaml_parse_error() {
         "should not fall back to the generic message: {msg}"
     );
 }
+
+#[test]
+fn empty_front_matter_is_empty_metadata() {
+    // An empty block is an empty map in every format, not a single
+    // entry under the empty key.
+    for doc in [
+        "---\n---\nbody",
+        "---\n\n---\nbody",
+        "+++\n+++\nbody",
+        "{}\nbody",
+    ] {
+        let metadata = extract_metadata(doc).expect(doc);
+        assert!(
+            metadata.clone().into_inner().is_empty(),
+            "{doc:?} gave {metadata:?}"
+        );
+    }
+}

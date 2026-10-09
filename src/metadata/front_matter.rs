@@ -292,7 +292,10 @@ pub(super) mod yaml {
         value: &noyalib::Value,
     ) -> MetadataMap {
         let mut map = MetadataMap::new();
-        flatten_yaml_recursive(value, String::new(), &mut map);
+        // An empty block parses as null: no keys, as for TOML and JSON.
+        if !value.is_null() {
+            flatten_yaml_recursive(value, String::new(), &mut map);
+        }
         map
     }
 
