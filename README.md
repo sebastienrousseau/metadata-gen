@@ -81,15 +81,31 @@ make          # check + clippy + test
 
 ### Cargo features
 
-None. Every capability is active by default, and the manifest declares no optional features.
+Every format and integration is a feature, and all of them are on by default, so a default build offers everything 0.0.7 did. Turn off what you do not parse with `default-features = false`.
+
+| Feature | Default | Enables |
+| :--- | :--- | :--- |
+| `std` | yes | File helpers in `metadata_gen::io`, `std::io::Error` in `MetadataError`, `HashMap`-backed `MetadataMap` |
+| `yaml` | yes | `---` front matter (`noyalib`) |
+| `toml` | yes | `+++` front matter (`toml`) |
+| `json` | yes | JSON-object front matter (`serde_json`) |
+| `html` | yes | `extract_meta_tags` (`quick-xml`); implies `std` |
+| `tokio` | yes | `metadata_gen::tokio` and `async_extract_metadata_from_file`; implies `std` |
+
+```toml
+# YAML only, no standard library:
+metadata-gen = { version = "0.0.8", default-features = false, features = ["yaml"] }
+```
+
+A fence whose format is not compiled in is reported as `UnsupportedFormatError`, not as missing front matter.
 
 ---
 
 ## Requirements
 
 - **Rust 1.88.0 or newer.** `rust-version` in `Cargo.toml` is the floor and Cargo enforces it; CI builds on stable across Linux, macOS and Windows.
-- **A `std` platform.** The crate uses `std` unconditionally today. A `no_std + alloc` core is roadmap work.
-- **No async runtime is required.** Every synchronous entry point works without one. `async_extract_metadata_from_file` is a convenience for callers who run Tokio; the dependency is trimmed to `fs`, `io-util`, `rt` and `macros`.
+- **`alloc`, with `std` optional.** With `default-features = false` the crate is `no_std + alloc` and `MetadataMap` is a `BTreeMap`; `cargo build --no-default-features --features yaml --target thumbv7em-none-eabihf` builds.
+- **No async runtime is required.** Every synchronous entry point works without one. The `tokio` feature adds `metadata_gen::tokio` for callers who run Tokio; the dependency is trimmed to `fs` and `io-util`.
 
 ---
 
@@ -184,12 +200,14 @@ Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](
 - **Three front-matter shapes**: YAML (`---` ... `---`), TOML (`+++` ... `+++`), and JSON (`{ ... }` at top of file).
 - **Dual extraction APIs**:
   - `extract_metadata`: returns flat `Metadata` (`HashMap<String, String>`) with dot-separated keys (`author.name`), ideal for templates.
-  - `extract_typed::<T>`: hands the raw block to serde, returning your strongly typed struct.
+  - `extract_typed::<T>`: hands the raw block to serde, returning your strongly typed struct; `extract_typed_borrowed` lets `&str` fields point into the document.
 - **Document body access**: `extract_metadata_with_body` returns `(Metadata, &str)` with the body following the closing delimiter. `detect_front_matter` exposes format, raw block, and byte offset without parsing.
-- **Processing and normalization**: `process_metadata` and `process_metadata_with` normalize dates to `YYYY-MM-DD`, verify required fields, and derive URL slugs from titles.
-- **Meta tag synthesis**: `generate_metatags` creates grouped tags (`primary`, `og`, `twitter`, `apple`, `ms`) with attribute values passed through `escape_html`.
-- **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `quick-xml` without full DOM allocation.
-- **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, plus Tokio-backed `async_extract_metadata_from_file`.
+- **Bounded parsing**: every parse runs under `ParseLimits` (block size, nesting depth); the YAML parser gets its strict budget preset on the flat and typed paths alike. `extract_metadata_with_limits` takes your own limits.
+- **Errors that locate the fault**: `MetadataError::Parse` carries the format, the byte span inside the block and the parser's error; an unclosed fence reports its byte offset.
+- **Processing and normalization**: `process_metadata` and `process_metadata_with` normalize dates to `YYYY-MM-DD` (`DD/MM/YYYY` by default, `MM/DD/YYYY` with `DateOrder::MonthFirst`), verify required fields, and derive URL slugs from titles.
+- **Meta tag synthesis**: `generate_metatags` creates grouped tags (`primary`, `og`, `twitter`, `apple`, `ms`); Open Graph tags use `property=`, and attribute values pass through `escape_attribute`. `MetaTag` and `MetaTagGroups::iter` give the same tags as values.
+- **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `quick-xml` without full DOM allocation; `extract_meta_tags_lenient` also reports where a malformed page stopped the scan.
+- **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, readers and files in `metadata_gen::io`, and Tokio-backed helpers in `metadata_gen::tokio`.
 
 ---
 
@@ -217,6 +235,7 @@ assert!(!processed.contains_key("slug"));
 | :--- | :--- | :--- |
 | `required_fields` | `["title", "date"]` | Missing field returns `MissingFieldError` naming it |
 | `derive_slug` | `true` | Derives `slug` from `title` when absent |
+| `date_order` | `DateOrder::DayFirst` | How a slash-separated date such as `01/02/2024` is read |
 
 `ProcessOptions` is `#[non_exhaustive]`, so options can be added without breaking releases.
 
@@ -240,7 +259,6 @@ Run any example with `cargo run --example <name>`:
 
 ## When not to use metadata-gen
 
-- **You need `no_std` or a WASM component today.** The crate uses `std` unconditionally and pulls `tokio` for the async file helper. A `no_std + alloc` core is roadmap work.
 - **You need element-level access to arrays of objects from the flat map.** `[a, b]` is rendered as a string in the flat map by design. Use `extract_typed::<T>` instead, which preserves structure.
 - **You need to round-trip front matter byte-for-byte.** The crate parses; it does not preserve comments, key order or quoting style, and there is no serialiser back to a fenced block.
 - **You need every `<meta>` element from arbitrary broken HTML.** Extraction stops at the first unrecoverable reader error and returns what was found so far. A full HTML5 parser (`html5ever`, `scraper`) is the right tool if you need error recovery over broken whole pages.
@@ -287,7 +305,8 @@ make deny / vet / audit   # supply chain
 - No C dependencies, no FFI, no network I/O, no environment reads.
 - Meta-tag attribute values are escaped on generation, preventing markup injection.
 - Supply chain audited via `cargo-audit`, `cargo-deny`, and `cargo-vet` with a locked exemption baseline.
-- First-party dependencies `noyalib` and `dtt` are pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)).
+- Front matter is parsed under `ParseLimits` (block size and depth), with the YAML parser's strict resource budgets on every path, the typed one included.
+- The first-party dependency `noyalib` is pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)).
 - Property-based testing via Proptest for parser round-trips and HTML escape involution.
 - Concurrency testing scaffold via Loom (`tests/loom_smoke.rs`) for thread schedule exploration.
 - Formal verification via Kani (`tests/kani/`) proving HTML escape totality and ASCII round-trip.

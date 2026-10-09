@@ -30,7 +30,7 @@ between this file and the README, this file wins.
 
 | Crate | MSRV | Rationale |
 |---|---|---|
-| `metadata-gen` (library) | **1.88.0** | The floor is pulled by the transitive `time` dependency through `dtt`, which requires edition 2024. Lowering it would mean pinning an older `time` carrying a stack-exhaustion advisory. Enforced by Cargo's `rust-version` field and verified in CI across Linux, macOS, and Windows. |
+| `metadata-gen` (library) | **1.88.0** | The floor is pulled by the `time` dependency (date normalisation), whose current releases declare `rust-version = "1.88.0"`. Lowering it would mean pinning an older `time` carrying a stack-exhaustion advisory. Enforced by Cargo's `rust-version` field and verified in CI across Linux, macOS, and Windows. |
 
 **When we bump it.** Only when the toolchain we build and test at
 moves, such as a dependency raising its floor, never speculatively.
@@ -72,8 +72,9 @@ Reference: [`SECURITY.md`](../SECURITY.md).
 
 ## 4. Performance & algorithmic complexity
 
-- Delimiter detection uses precompiled static regexes compiled once
-  at startup via `std::sync::LazyLock`.
+- Delimiter detection is a hand-written scanner: one pass over the
+  opening line and one `memchr::memmem` search for the closing fence,
+  with no regex and no per-call compilation.
 - HTML escaping runs in a single left-to-right pass with a single
   allocation.
 - HTML unescaping uses a single-pass scanner that decodes each entity
@@ -121,8 +122,9 @@ context while preserving the underlying failure cause.
 
 ## 9. Dependency policy
 
-- First-party dependencies `noyalib` and `dtt` are pinned exactly
-  until 1.0 (ADR-0004).
+- The first-party dependency `noyalib` is pinned exactly until 1.0
+  (ADR-0004). `dtt` was dropped in 0.0.8 for `time`, which builds
+  without `std` (ADR-0005).
 - Dependencies are vetted with `cargo-vet` and recorded in
   `supply-chain/`.
 
