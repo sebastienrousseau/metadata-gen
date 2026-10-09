@@ -122,6 +122,13 @@ required-features = ["std", "yaml", "toml", "json", "html", "tokio"]
 # Criterion Benchmark
 # -----------------------------------------------------------------------------
 
+# Kani proofs live in a subdirectory, which Cargo does not discover on
+# its own; this target is what `cargo kani --tests` (make kani) checks.
+# Outside Kani the file compiles to an empty test binary.
+[[test]]
+name = "kani_escape_html"
+path = "tests/kani/escape_html.rs"
+
 [[bench]]
 name = "metadata_benchmark"
 harness = false

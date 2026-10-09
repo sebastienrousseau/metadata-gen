@@ -81,8 +81,8 @@ loom:
 	RUSTFLAGS="--cfg loom" cargo test --test loom_smoke --release
 
 kani:
-	cargo kani --harness check_escape_html_totality
-	cargo kani --harness check_html_escape_ascii_roundtrip
+	cargo kani --tests --harness check_escape_html_totality
+	cargo kani --tests --harness check_html_escape_ascii_roundtrip
 
 mutants:
 	cargo mutants --no-shuffle --check
