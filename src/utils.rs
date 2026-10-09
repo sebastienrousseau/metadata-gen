@@ -229,10 +229,6 @@ mod tests {
     #[cfg(all(feature = "tokio", not(loom)))]
     use tokio::io::AsyncWriteExt;
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_escape_html() {
         let input = "Hello, <world> & \"friends\"!";
@@ -241,10 +237,6 @@ mod tests {
         assert_eq!(escape_html(input), expected);
     }
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_escape_html_special_characters() {
         let input = "It's <b>bold</b> & it's <i>italic</i>";
@@ -252,10 +244,6 @@ mod tests {
         assert_eq!(escape_html(input), expected);
     }
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_unescape_html() {
         let input = "Hello, &lt;world&gt; &amp; &quot;friends&quot;!";
@@ -263,10 +251,6 @@ mod tests {
         assert_eq!(unescape_html(input), expected);
     }
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_unescape_html_edge_cases() {
         let input = "&lt;&amp;&gt;&quot;&#x27;&#39;&#x2F;";
@@ -274,10 +258,6 @@ mod tests {
         assert_eq!(unescape_html(input), expected);
     }
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_escape_unescape_roundtrip() {
         let original = "Test <script>alert('XSS');</script> & other \"special\" chars";
