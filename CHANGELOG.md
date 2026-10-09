@@ -5,10 +5,43 @@ All notable changes to `metadata-gen` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.8] - 2026-10-05
+## [0.0.8] - 2026-10-09
+
+The release that clears RUSTSEC-2026-0333 and makes every format a Cargo
+feature. It has breaking changes; [`docs/MIGRATION.md`](docs/MIGRATION.md)
+lists each one and what to do about it.
+
+### Security
+
+- **RUSTSEC-2026-0333**: `noyalib` before 0.0.53 did not enforce
+  `ParserConfig` budgets on the typed deserialization path. The pin moves
+  from `=0.0.43` to `=0.0.56`, and every front-matter parse now runs
+  under `ParseLimits` (block size checked before any parser runs, YAML
+  nesting depth) with noyalib's strict budget preset, on the flat
+  (`extract_metadata`) and typed (`extract_typed`,
+  `extract_typed_borrowed`) paths alike. `cargo deny check` fails on the
+  previous pin and passes on this one.
 
 ### Fixed
 
+- **Empty front matter is empty metadata.** `---\n---` was not found at
+  all, and `---\n\n---` gave one entry under the empty key
+  (`{"": "null"}`); both now give an empty map, as `+++\n+++` and `{}`
+  did.
+- **The fence scanner no longer reads past an empty block.** The old
+  lazy regex matched `---\n\n---\n\nbody\n---` up to the second fence
+  and treated `body` as front matter.
+- **Front matter after a UTF-8 BOM is found**; it used to be missed.
+- **Malformed JSON front matter reports the parser's own error and
+  position.** The block handed to the parser was empty, so the message
+  read "EOF while parsing a value" whatever the fault.
+- **Five pure string tests ran without Miri.** They carried a "touches
+  the filesystem" ignore they did not need; Miri now runs them.
+- **`make kani` found no harness.** The proofs in `tests/kani/` were not
+  a Cargo target; they are now `kani_escape_html`, and `make kani` runs
+  `cargo kani --tests`.
+- `fuzz/Cargo.lock` still resolved `metadata-gen` 0.0.7 and `noyalib`
+  0.0.37; it now matches the crate.
 - **TOML front matter in `extract_and_prepare_metadata`**: allow key-value
   pairs separated by `=` without requiring colons (`:`). Valid TOML front
   matter without colons is now accepted and correctly extracted.
@@ -20,6 +53,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Cargo features** `std`, `yaml`, `toml`, `json`, `html` and `tokio`,
+  all on by default. With `default-features = false` the crate is
+  `no_std + alloc` (`MetadataMap` is then a `BTreeMap`); a fence whose
+  format is compiled out is `UnsupportedFormatError`. ADR-0005.
+- `ParseLimits` and `extract_metadata_with_limits`.
+- `extract_typed_borrowed`: typed extraction whose `&str` fields point
+  into the document.
+- `MetadataError::Parse { format, span, source }`, `MetadataError::other`
+  and the `BoxedError` alias.
+- `DateOrder` and `ProcessOptions::date_order` for `MM/DD/YYYY` dates.
+- `MetaTag::new`, `MetaTag::render`, `MetaTag::attribute`,
+  `MetaAttribute`, `MetaTagGroups::iter`, `extract_meta_tags_lenient`
+  (reports where a malformed page stopped the scan), `escape_attribute`
+  and `escape_html_cow`.
+- `metadata_gen::io` (`std` readers and files) and `metadata_gen::tokio`
+  (Tokio readers and files).
 - **Property-based testing**: Proptest harness for front-matter round-trip
   (YAML, TOML, JSON) and HTML escape involution with regression replay (#51).
 - **Concurrency verification scaffold**: Loom smoke test harness with
@@ -39,7 +88,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `cargo-semver-checks` against the last crates.io release, the
   `cargo-hack` feature powerset, a per-function complexity gate
   (`scripts/complexity_check.py` with an empty `complexity-baseline.txt`
-  that may only shrink), and a lychee link check over every Markdown file.
+  that may only shrink), a lychee link check over every Markdown file,
+  and a `no_std + alloc` build on `thumbv7em-none-eabihf` with a
+  YAML-only test run (`make no-std`).
 - `GNUmakefile` targets for each new gate plus `dist`, `distcheck`,
   `sbom` (CycloneDX) and `tools`.
 - `docs/MIGRATION.md`: what changes for consumers between releases.
@@ -47,14 +98,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Bumped `noyalib` requirement to `=0.0.43` (#102).
+- **Breaking: parser rejections are `MetadataError::Parse`** instead of
+  `YamlError`, `TomlError`, `JsonError` or a JSON `ExtractionError`, and
+  an unclosed fence is an `ExtractionError` with its byte offset instead
+  of "No valid front matter found."
+- **Breaking: Open Graph tags render with `property=`** (`og:`,
+  `article:`, `fb:`, `profile:`, `book:`, `music:`, `video:`), and
+  attribute values escape `&`, `<` and `>` as well as `"`.
+- **Breaking: slugs keep letters and digits only**, joined by single
+  `-` (`Hello, World!` gives `hello-world`, was `hello,-world!`).
+- **Breaking: a TOML fence must sit on its own line**; `+++ a = 1 +++`
+  is no longer front matter.
+- **Breaking: `MetadataError`, `MetaTag` and `MetaTagGroups` are
+  `#[non_exhaustive]`**, and `From<Box<dyn Error + Send + Sync>>` for
+  `MetadataError` is removed; use `MetadataError::other`.
+- `MetadataError::Utf8Error` is deprecated: nothing produces it.
+- Fence detection is a `memchr` scanner instead of two regexes; `regex`
+  is now a dev-dependency only.
+- Dates are parsed with `time` instead of `dtt`; across 1,011 date
+  strings compared against 0.0.7's parser, every input that parsed
+  still gives the same date and every rejected input is still rejected.
+- `tokio` is trimmed to `fs` and `io-util`.
+- `async_extract_metadata_from_file` delegates to
+  `metadata_gen::tokio::extract_from_file`.
+- `noyalib` pinned at `=0.0.56` (from `=0.0.43`, #102), with its
+  cargo-vet trusted-publisher import recorded.
 - Bumped `thiserror` to 2.0.21 and `toml` to 1.1.6 (#107).
 - Updated GitHub Actions workflow dependencies (`dtolnay/rust-toolchain` #109, `taiki-e/install-action` #108, `astral-sh/setup-uv` #105).
-- Ratcheted cargo-vet exemption baseline down from 103 to 89.
+- Ratcheted the cargo-vet exemption baseline down from 103 to 87: the
+  last two from `cargo vet prune` once `regex` became dev-only and `dtt`
+  left the tree.
 - Every GitHub Action in `ci.yml` and `docs.yml` is pinned by commit SHA.
 - Source layout: inline test modules moved to child files
   (`src/<module>/tests.rs`), and `metadata.rs` split into
-  `metadata/front_matter.rs` and `metadata/date.rs`. Six functions were
+  `metadata/front_matter.rs` and `metadata/date.rs` (later also
+  `metadata/scan.rs` and `metadata/process.rs`, and `<meta>`
+  extraction moved to `metatags/html.rs`). Six functions were
   refactored under the complexity ceilings. No public API or behaviour
   change; the test suite is unchanged.
 - `Makefile` renamed `GNUmakefile`; `make sbom` now writes CycloneDX JSON
