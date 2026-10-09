@@ -4,7 +4,7 @@
 //! Tests for `metadata`; a child module so private items stay reachable.
 
 use super::*;
-use dtt::dtt_parse;
+use crate::MetadataMap;
 
 #[test]
 fn test_standardize_date() {
@@ -15,7 +15,7 @@ fn test_standardize_date() {
     ];
 
     for (input, expected) in test_cases {
-        let result = standardize_date(input);
+        let result = standardize_date(input, DateOrder::DayFirst);
         assert!(result.is_ok(), "Failed for input: {}", input);
         assert_eq!(result.unwrap(), expected);
     }
@@ -23,33 +23,22 @@ fn test_standardize_date() {
 
 #[test]
 fn test_standardize_date_errors() {
-    assert!(standardize_date("").is_err());
-    assert!(standardize_date("invalid").is_err());
-    assert!(standardize_date("20/05/23").is_err()); // Invalid DD/MM/YY format
-}
-
-#[test]
-fn test_date_format() {
-    let dt = dtt_parse!("2023-01-01T12:00:00+00:00").unwrap();
-    let formatted = format!(
-        "{:04}-{:02}-{:02}",
-        dt.year(),
-        dt.month() as u8,
-        dt.day()
-    );
-    assert_eq!(formatted, "2023-01-01");
+    assert!(standardize_date("", DateOrder::DayFirst).is_err());
+    assert!(standardize_date("invalid", DateOrder::DayFirst).is_err());
+    assert!(standardize_date("20/05/23", DateOrder::DayFirst).is_err());
+    // Invalid DD/MM/YY format
 }
 
 #[test]
 fn test_generate_slug() {
     assert_eq!(generate_slug("Hello World"), "hello-world");
     assert_eq!(generate_slug("Test 123"), "test-123");
-    assert_eq!(generate_slug("  Spaces  "), "--spaces--");
+    assert_eq!(generate_slug("  Spaces  "), "spaces");
 }
 
 #[test]
 fn test_process_metadata() {
-    let mut metadata = Metadata::new(HashMap::new());
+    let mut metadata = Metadata::new(MetadataMap::new());
     metadata.insert("title".to_string(), "Test Title".to_string());
     metadata
         .insert("date".to_string(), "2023-05-20T15:30:00Z".to_string());
@@ -98,21 +87,21 @@ fn test_extract_metadata_failure() {
 
 #[test]
 fn test_ensure_required_fields() {
-    let mut metadata = Metadata::new(HashMap::new());
+    let mut metadata = Metadata::new(MetadataMap::new());
     metadata.insert("title".to_string(), "Test".to_string());
     metadata.insert("date".to_string(), "2023-05-20".to_string());
 
-    assert!(ensure_required_fields(&metadata).is_ok());
+    assert!(process_metadata(&metadata).is_ok());
 
-    let mut incomplete_metadata = Metadata::new(HashMap::new());
+    let mut incomplete_metadata = Metadata::new(MetadataMap::new());
     incomplete_metadata.insert("title".to_string(), "Test".to_string());
 
-    assert!(ensure_required_fields(&incomplete_metadata).is_err());
+    assert!(process_metadata(&incomplete_metadata).is_err());
 }
 
 #[test]
 fn test_generate_derived_fields() {
-    let mut metadata = Metadata::new(HashMap::new());
+    let mut metadata = Metadata::new(MetadataMap::new());
     metadata.insert("title".to_string(), "Test Title".to_string());
 
     generate_derived_fields(&mut metadata);
@@ -122,7 +111,7 @@ fn test_generate_derived_fields() {
 
 #[test]
 fn test_metadata_methods() {
-    let mut metadata = Metadata::new(HashMap::new());
+    let mut metadata = Metadata::new(MetadataMap::new());
     metadata.insert("key".to_string(), "value".to_string());
 
     assert_eq!(metadata.get("key"), Some(&"value".to_string()));
@@ -140,7 +129,7 @@ fn test_metadata_methods() {
 
 #[test]
 fn test_process_metadata_with_invalid_date() {
-    let mut metadata = Metadata::new(HashMap::new());
+    let mut metadata = Metadata::new(MetadataMap::new());
     metadata.insert("title".to_string(), "Test Title".to_string());
     metadata.insert("date".to_string(), "invalid_date".to_string());
 
@@ -221,11 +210,11 @@ Content here"#;
 
 #[test]
 fn test_generate_slug_with_special_characters() {
-    assert_eq!(generate_slug("Hello, World! 123"), "hello,-world!-123");
-    assert_eq!(generate_slug("Test: Ästhetik"), "test:-ästhetik");
+    assert_eq!(generate_slug("Hello, World! 123"), "hello-world-123");
+    assert_eq!(generate_slug("Test: Ästhetik"), "test-ästhetik");
     assert_eq!(
         generate_slug("  Multiple   Spaces  "),
-        "--multiple---spaces--"
+        "multiple-spaces"
     );
 }
 
@@ -286,14 +275,25 @@ fn test_extract_json_metadata_with_array_of_objects() {
 
 #[test]
 fn test_extract_json_metadata_malformed_surfaces_error() {
-    // Issue #26 acceptance criterion: malformed JSON returns
-    // ExtractionError with the underlying serde_json message —
-    // not the generic "No valid front matter found".
+    // Issue #26 acceptance criterion: malformed JSON surfaces the
+    // underlying serde_json message, not the generic "No valid front
+    // matter found", and the parser sees the whole malformed object.
     let content = r#"{"title": "unterminated"#; // intentionally malformed
     let err = extract_metadata(content).expect_err("must error");
     let msg = err.to_string();
     assert!(
-        msg.contains("JSON parse error in frontmatter"),
+        matches!(
+            err,
+            MetadataError::Parse {
+                format: FrontMatterFormat::Json,
+                ..
+            }
+        ),
+        "expected a JSON parse error, got: {err:?}"
+    );
+    assert!(
+        msg.contains("json front matter failed to parse")
+            && msg.contains("EOF while parsing a string"),
         "expected surfaced JSON error, got: {msg}"
     );
     assert!(
@@ -316,7 +316,7 @@ fn test_extract_metadata_surfaces_yaml_parse_error() {
         .expect_err("malformed YAML should error");
     let msg = format!("{err}");
     assert!(
-        msg.contains("YAML parse error in frontmatter"),
+        msg.contains("yaml front matter failed to parse"),
         "expected surfaced YAML error, got: {msg}"
     );
     assert!(

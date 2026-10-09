@@ -108,7 +108,7 @@ fn test_utf8_error() {
     let invalid_bytes: &[u8] = &[0xFF, 0xFF];
     let utf8_error = std::str::from_utf8(invalid_bytes).unwrap_err();
     let error: MetadataError = utf8_error.into();
-    assert!(matches!(error, MetadataError::Utf8Error(..)));
+    // Matched through `Display`: the variant is deprecated.
     assert!(error.to_string().starts_with("UTF-8 decoding error:"));
 }
 
@@ -208,7 +208,7 @@ fn test_utf8_error_with_specific_invalid_bytes() {
     let invalid_bytes: &[u8] = &[0xC0, 0x80]; // Overlong encoding, invalid UTF-8
     let utf8_error = std::str::from_utf8(invalid_bytes).unwrap_err();
     let error: MetadataError = utf8_error.into();
-    assert!(matches!(error, MetadataError::Utf8Error(..)));
+    // Matched through `Display`: the variant is deprecated.
     assert!(error.to_string().starts_with("UTF-8 decoding error:"));
 }
 

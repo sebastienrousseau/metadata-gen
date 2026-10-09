@@ -3,6 +3,14 @@
 //! This module tests the various custom error types defined in `MetadataError`
 //! and their functionality.
 
+// The suites exercise the default feature set.
+#![cfg(all(
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
+
 #[cfg(test)]
 mod tests {
     use metadata_gen::error::MetadataError;

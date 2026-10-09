@@ -7,6 +7,14 @@
 //! 2. Front-matter round-trip for YAML, TOML, and JSON formats
 //! 3. Replay of persisted regression inputs in `tests/regression_corpus/`
 
+// The suites exercise the default feature set.
+#![cfg(all(
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
+
 use metadata_gen::extract_metadata;
 use metadata_gen::utils::{escape_html, unescape_html};
 use proptest::collection::hash_map;

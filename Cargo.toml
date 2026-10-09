@@ -40,22 +40,25 @@ path = "src/lib.rs"
 # Dependencies required for building and running the project.
 #
 # Notes:
-# - `noyalib` and `dtt` are first-party (same maintainer). They are pinned
-#   strictly until they reach 1.0 so a 0.0.x patch upstream cannot silently
-#   break every downstream consumer of `metadata-gen`. See ADR-004.
-# - `tokio` is intentionally feature-trimmed to `fs` + `io-util` for the
-#   single `async_extract_metadata_from_file` helper. We do not need `net`,
-#   `signal`, `process`, or `parking_lot`. See ADR-008 in v0.0.6.
-dtt = "=0.0.11"
-quick-xml = "0.42"
-regex = "1.12"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0"
-noyalib = { version = "=0.0.56", default-features = false, features = ["std"] }
-thiserror = "2.0"
-time = { version = "0.3", features = ["parsing"] }
-tokio = { version = "1.50", default-features = false, features = ["fs", "io-util", "rt", "macros"] }
-toml = "1.1"
+# - `noyalib` is first-party (same maintainer) and pinned strictly until
+#   it reaches 1.0 so a 0.0.x patch upstream cannot silently break every
+#   downstream consumer of `metadata-gen`. See ADR-0004.
+# - `tokio` is optional (feature `tokio`) and trimmed to `fs` + `io-util`
+#   for the file helpers in `metadata_gen::tokio`. We do not need `net`,
+#   `signal`, `process`, or `parking_lot`.
+# Every dependency is `default-features = false`; the crate's own `std`
+# feature switches their std support back on, so a `no_std + alloc`
+# build (`default-features = false, features = ["yaml"]`) gets a tree
+# that never names `std`.
+memchr = { version = "2.7", default-features = false }
+noyalib = { version = "=0.0.56", default-features = false, optional = true }
+quick-xml = { version = "0.42", optional = true }
+serde = { version = "1.0.228", default-features = false, features = ["derive", "alloc"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
+thiserror = { version = "2.0", default-features = false }
+time = { version = "0.3", default-features = false, features = ["parsing"] }
+tokio = { version = "1.50", default-features = false, features = ["fs", "io-util"], optional = true }
+toml = { version = "1.1", default-features = false, features = ["parse", "display", "serde"], optional = true }
 
 # -----------------------------------------------------------------------------
 # Build Dependencies
@@ -78,6 +81,7 @@ tempfile = "3.27"
 # bundle, but library consumers must not pay for that.
 tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "fs", "io-util"] }
 serde = { version = "1.0", features = ["derive"] }
+regex = "1.12"
 proptest = { version = "1.6", default-features = false, features = ["std", "bit-set"] }
 
 [target.'cfg(loom)'.dev-dependencies]
@@ -91,22 +95,27 @@ tokio = { version = "1.50", features = ["sync"] }
 [[example]]
 name = "error_example"
 path = "examples/error_example.rs"
+required-features = ["std", "yaml", "toml", "json", "html", "tokio"]
 
 [[example]]
 name = "lib_example"
 path = "examples/lib_example.rs"
+required-features = ["std", "yaml", "toml", "json", "html", "tokio"]
 
 [[example]]
 name = "metadata_example"
 path = "examples/metadata_example.rs"
+required-features = ["std", "yaml", "toml", "json", "html"]
 
 [[example]]
 name = "metatags_example"
 path = "examples/metatags_example.rs"
+required-features = ["std", "yaml", "toml", "json", "html"]
 
 [[example]]
 name = "utils_example"
 path = "examples/utils_example.rs"
+required-features = ["std", "yaml", "toml", "json", "html", "tokio"]
 
 
 # -----------------------------------------------------------------------------
@@ -116,6 +125,7 @@ path = "examples/utils_example.rs"
 [[bench]]
 name = "metadata_benchmark"
 harness = false
+required-features = ["std", "yaml", "toml", "json", "html"]
 
 [profile.bench]
 # Match release codegen so reported numbers reflect what users will see.
@@ -131,7 +141,32 @@ opt-level = 3
 # -----------------------------------------------------------------------------
 
 [features]
-default = []
+# Every format and integration is a feature so a consumer pays only for
+# what it parses. The default set keeps everything 0.0.7 offered, the
+# Tokio file helper included; `default-features = false` gives a
+# `no_std + alloc` core. See docs/adr/0005-feature-flags-and-no-std.md.
+default = ["std", "yaml", "toml", "json", "html", "tokio"]
+# Standard library: file helpers, `std::io::Error`, `HashMap`-backed maps.
+# Without it the crate is `no_std + alloc` and `MetadataMap` is a `BTreeMap`.
+std = [
+    "memchr/std",
+    "serde/std",
+    "serde_json?/std",
+    "toml?/std",
+    "noyalib?/std",
+    "time/std",
+    "thiserror/std",
+]
+# Front-matter formats. At least one is needed for `extract_metadata` to
+# ever succeed; a format that is not compiled in is reported as
+# `MetadataError::UnsupportedFormatError`.
+yaml = ["dep:noyalib"]
+toml = ["dep:toml"]
+json = ["dep:serde_json"]
+# `extract_meta_tags`: the streaming `<meta>` scanner (needs std for quick-xml).
+html = ["std", "dep:quick-xml"]
+# `metadata_gen::tokio`: async file helpers on the Tokio runtime.
+tokio = ["std", "dep:tokio"]
 
 # -----------------------------------------------------------------------------
 # Release Profile

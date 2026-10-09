@@ -4,38 +4,35 @@
 //! (YAML, TOML, JSON) and processing it into a standardized structure.
 
 use crate::error::MetadataError;
-use regex::Regex;
-use serde_json::Value as JsonValue;
-use std::collections::HashMap;
-use std::sync::LazyLock;
+use crate::MetadataMap;
+use alloc::string::{String, ToString};
 
 mod date;
 mod front_matter;
+mod process;
+mod scan;
 
+#[cfg(all(
+    test,
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
 use date::standardize_date;
-use front_matter::{
-    collapse_multiline_quoted_scalars, extract_json_metadata,
-    extract_toml_metadata, extract_yaml_metadata,
+use front_matter::parse_block;
+#[cfg(all(
+    test,
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
+use process::{generate_derived_fields, generate_slug};
+pub use process::{
+    process_metadata, process_metadata_with, DateOrder, ProcessOptions,
 };
-
-// One-time compiled front-matter delimiters. Calling `Regex::new` on every
-// `extract_metadata` invocation cost ~30–50 µs per call plus an allocation
-// per regex — entirely unnecessary at SSG scale. The patterns are static,
-// so compile them once per process. Issue #25.
-//
-// The `expect` is unreachable in any reachable code path: the patterns are
-// compile-time literals and have been validated by the test suite for
-// every release. If a future edit introduces a malformed pattern, the
-// startup-time panic is preferable to silently returning `None` from
-// every parse call.
-static YAML_FRONT_MATTER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?s)^\s*---\s*\n(.*?)\n\s*---\s*")
-        .expect("YAML front-matter regex is statically valid")
-});
-static TOML_FRONT_MATTER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?s)^\s*\+\+\+\s*(.*?)\s*\+\+\+")
-        .expect("TOML front-matter regex is statically valid")
-});
+use scan::Scan;
 
 /// Represents metadata for a page or content item.
 ///
@@ -53,7 +50,7 @@ static TOML_FRONT_MATTER: LazyLock<Regex> = LazyLock::new(|| {
 #[derive(Debug, Default, Clone)]
 pub struct Metadata {
     /// The underlying key-value store for metadata fields.
-    inner: HashMap<String, String>,
+    inner: MetadataMap,
 }
 
 impl Metadata {
@@ -61,12 +58,12 @@ impl Metadata {
     ///
     /// # Arguments
     ///
-    /// * `data` - A `HashMap` containing the metadata key-value pairs.
+    /// * `data` - A [`MetadataMap`] containing the metadata key-value pairs.
     ///
     /// # Returns
     ///
     /// A new `Metadata` instance.
-    pub fn new(data: HashMap<String, String>) -> Self {
+    pub fn new(data: MetadataMap) -> Self {
         Metadata { inner: data }
     }
 
@@ -114,12 +111,12 @@ impl Metadata {
         self.inner.contains_key(key)
     }
 
-    /// Consumes the `Metadata` instance and returns the inner `HashMap`.
+    /// Consumes the `Metadata` instance and returns the inner map.
     ///
     /// # Returns
     ///
-    /// The inner `HashMap<String, String>` containing all metadata key-value pairs.
-    pub fn into_inner(self) -> HashMap<String, String> {
+    /// The inner [`MetadataMap`] containing all metadata key-value pairs.
+    pub fn into_inner(self) -> MetadataMap {
         self.inner
     }
 }
@@ -142,29 +139,111 @@ impl Metadata {
 pub fn extract_metadata(
     content: &str,
 ) -> Result<Metadata, MetadataError> {
-    // YAML returns Option<Result<...>>: `Some(Ok)` = parsed OK,
-    // `Some(Err)` = fence matched but YAML failed (surface that
-    // specific error), `None` = no YAML fence found, fall through.
-    // Issue #20.
-    if let Some(yaml_result) = extract_yaml_metadata(content) {
-        return yaml_result;
+    extract_metadata_with_limits(content, &ParseLimits::default())
+}
+
+/// Resource limits applied while a front-matter block is parsed.
+///
+/// Front matter is untrusted input in any pipeline that ingests
+/// contributed documents, so every parse runs under a budget. The
+/// defaults are the YAML parser's strict preset narrowed to what a
+/// document header plausibly needs; raise them with the builder methods
+/// for manifests that are genuinely large.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{extract_metadata_with_limits, ParseLimits};
+///
+/// let limits = ParseLimits::default().max_block_bytes(4096);
+/// let err = extract_metadata_with_limits(
+///     &format!("---\ntitle: {}\n---\n", "x".repeat(5000)),
+///     &limits,
+/// )
+/// .unwrap_err();
+/// assert!(err.to_string().contains("exceeds"));
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct ParseLimits {
+    /// Largest front-matter block, in bytes, that will be handed to a parser.
+    pub max_block_bytes: usize,
+    /// Deepest nesting of mappings and sequences the YAML parser accepts.
+    pub max_depth: usize,
+}
+
+impl Default for ParseLimits {
+    fn default() -> Self {
+        Self {
+            max_block_bytes: 1024 * 1024,
+            max_depth: 64,
+        }
     }
-    if let Some(toml) = extract_toml_metadata(content) {
-        return Ok(toml);
+}
+
+impl ParseLimits {
+    /// Sets the largest block size, in bytes, a parser will be given.
+    #[must_use]
+    pub const fn max_block_bytes(mut self, bytes: usize) -> Self {
+        self.max_block_bytes = bytes;
+        self
     }
-    if let Some(json_result) = extract_json_metadata(content) {
-        return json_result;
+
+    /// Sets the deepest nesting the YAML parser accepts.
+    #[must_use]
+    pub const fn max_depth(mut self, depth: usize) -> Self {
+        self.max_depth = depth;
+        self
     }
-    Err(MetadataError::ExtractionError {
-        message: "No valid front matter found.".to_string(),
-    })
+}
+
+/// Extracts metadata like [`extract_metadata`], under explicit [`ParseLimits`].
+///
+/// # Errors
+///
+/// Returns [`MetadataError::ExtractionError`] when no front matter is
+/// found, the block exceeds `limits.max_block_bytes`, or an opening fence
+/// has no closing fence (the message carries the byte offset);
+/// [`MetadataError::Parse`] when a parser rejects the block; and
+/// [`MetadataError::UnsupportedFormatError`] when the block's format was
+/// not compiled in.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{extract_metadata_with_limits, ParseLimits};
+///
+/// let doc = "---\ntitle: Limits\n---\n";
+/// let metadata = extract_metadata_with_limits(doc, &ParseLimits::default()).unwrap();
+/// assert_eq!(metadata.get("title").unwrap(), "Limits");
+/// ```
+pub fn extract_metadata_with_limits(
+    content: &str,
+    limits: &ParseLimits,
+) -> Result<Metadata, MetadataError> {
+    match scan::scan(content) {
+        Scan::Found { format, raw, .. } => parse_block(format, raw, limits),
+        Scan::Unterminated { format, offset } => {
+            Err(MetadataError::ExtractionError {
+                message: alloc::format!(
+                    "{format} front matter opened at byte {offset} has no closing fence."
+                ),
+            })
+        }
+        Scan::Unsupported(format) => {
+            Err(MetadataError::UnsupportedFormatError(format.to_string()))
+        }
+        Scan::None => Err(MetadataError::ExtractionError {
+            message: "No valid front matter found.".to_string(),
+        }),
+    }
 }
 
 /// Which front-matter shape a document carries, and where its body starts.
 ///
 /// Returned by [`detect_front_matter`]; the byte offset is the first byte
 /// after the closing delimiter, so `&content[body_start..]` is the body.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum FrontMatterFormat {
     /// `---` fenced YAML.
@@ -173,6 +252,26 @@ pub enum FrontMatterFormat {
     Toml,
     /// A JSON object at the top of the document.
     Json,
+}
+
+impl FrontMatterFormat {
+    /// The format's lower-case name: `yaml`, `toml` or `json`.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Yaml => "yaml",
+            Self::Toml => "toml",
+            Self::Json => "json",
+        }
+    }
+}
+
+impl core::fmt::Display for FrontMatterFormat {
+    fn fmt(
+        &self,
+        f: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 /// Locates the front-matter block without parsing it.
@@ -195,33 +294,14 @@ pub enum FrontMatterFormat {
 pub fn detect_front_matter(
     content: &str,
 ) -> Option<(FrontMatterFormat, &str, usize)> {
-    if let Some(caps) = YAML_FRONT_MATTER.captures(content) {
-        let whole = caps.get(0)?;
-        let raw = caps.get(1)?.as_str().trim();
-        return Some((FrontMatterFormat::Yaml, raw, whole.end()));
+    match scan::scan(content) {
+        Scan::Found {
+            format,
+            raw,
+            body_offset,
+        } => Some((format, raw, body_offset)),
+        _ => None,
     }
-    if let Some(caps) = TOML_FRONT_MATTER.captures(content) {
-        let whole = caps.get(0)?;
-        let raw = caps.get(1)?.as_str().trim();
-        return Some((FrontMatterFormat::Toml, raw, whole.end()));
-    }
-    let trimmed = content.trim_start();
-    if trimmed.starts_with('{') {
-        let lead = content.len() - trimmed.len();
-        let mut stream = serde_json::Deserializer::from_str(trimmed)
-            .into_iter::<serde_json::Map<String, JsonValue>>(
-        );
-        // A syntax error still identifies the shape; the caller's parse
-        // reports it. The offset then covers the text the parser consumed.
-        let _ = stream.next()?;
-        let end = lead + stream.byte_offset();
-        return Some((
-            FrontMatterFormat::Json,
-            &content[lead..end],
-            end,
-        ));
-    }
-    None
 }
 
 /// Extracts metadata and returns the document body alongside it.
@@ -292,204 +372,82 @@ pub fn extract_typed<T: serde::de::DeserializeOwned + 'static>(
                 message: "No valid front matter found.".to_string(),
             }
         })?;
-    match format {
-        FrontMatterFormat::Yaml => {
-            let collapsed = collapse_multiline_quoted_scalars(raw);
-            noyalib::from_str::<T>(&collapsed)
-                .map_err(MetadataError::from)
-        }
-        FrontMatterFormat::Toml => {
-            toml::from_str::<T>(raw).map_err(MetadataError::from)
-        }
-        FrontMatterFormat::Json => {
-            serde_json::from_str::<T>(raw).map_err(MetadataError::from)
-        }
-    }
+    front_matter::deserialize_block::<T>(
+        format,
+        raw,
+        &ParseLimits::default(),
+    )
 }
 
-/// Options for [`process_metadata_with`].
+/// Deserialises the front matter into `T` while borrowing from `content`.
+///
+/// The zero-copy counterpart of [`extract_typed`]: a field typed
+/// `&'a str` (or `Cow<'a, str>`) points into `content` instead of being
+/// copied, for every format whose text already holds the value verbatim.
+/// Values that need unescaping (a YAML `"line\nbreak"`, a JSON `\u00e9`)
+/// are materialised by the parser as owned strings, which is why a
+/// `Cow<'a, str>` field is the general choice.
+///
+/// # Errors
+///
+/// As [`extract_typed`].
 ///
 /// # Example
 ///
 /// ```
-/// use metadata_gen::metadata::{process_metadata_with, Metadata, ProcessOptions};
-/// use std::collections::HashMap;
+/// use metadata_gen::extract_typed_borrowed;
+/// use serde::Deserialize;
 ///
-/// let opts = ProcessOptions::default().required_fields(["title"]);
-/// let mut m = HashMap::new();
-/// m.insert("title".to_string(), "Hello".to_string());
-/// let out = process_metadata_with(&Metadata::new(m), &opts).unwrap();
-/// assert_eq!(out.get("slug").map(String::as_str), Some("hello"));
+/// #[derive(Deserialize)]
+/// struct Post<'a> {
+///     title: &'a str,
+///     tags: Vec<&'a str>,
+/// }
+///
+/// let doc = "{\"title\": \"Borrowed\", \"tags\": [\"a\", \"b\"]}\nbody";
+/// let post: Post<'_> = extract_typed_borrowed(doc).unwrap();
+/// assert_eq!(post.title, "Borrowed");
+/// assert_eq!(post.tags, ["a", "b"]);
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[non_exhaustive]
-pub struct ProcessOptions {
-    /// Keys that must be present after processing. Default: `title`, `date`.
-    pub required_fields: Vec<String>,
-    /// Derive `slug` from `title` when absent. Default: `true`.
-    pub derive_slug: bool,
+pub fn extract_typed_borrowed<'a, T: serde::Deserialize<'a>>(
+    content: &'a str,
+) -> Result<T, MetadataError> {
+    let (format, raw, _) =
+        detect_front_matter(content).ok_or_else(|| {
+            MetadataError::ExtractionError {
+                message: "No valid front matter found.".to_string(),
+            }
+        })?;
+    front_matter::deserialize_borrowed::<T>(
+        format,
+        raw,
+        &ParseLimits::default(),
+    )
 }
 
-impl Default for ProcessOptions {
-    fn default() -> Self {
-        Self {
-            required_fields: vec![
-                "title".to_string(),
-                "date".to_string(),
-            ],
-            derive_slug: true,
-        }
-    }
-}
-
-impl ProcessOptions {
-    /// Replaces the required-field list.
-    #[must_use]
-    pub fn required_fields<I, S>(mut self, fields: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<String>,
-    {
-        self.required_fields =
-            fields.into_iter().map(Into::into).collect();
-        self
-    }
-
-    /// Turns slug derivation on or off.
-    #[must_use]
-    pub const fn derive_slug(mut self, on: bool) -> Self {
-        self.derive_slug = on;
-        self
-    }
-}
-
-/// [`process_metadata`] with caller-chosen required fields and derivations.
-///
-/// # Errors
-///
-/// [`MetadataError::DateParseError`] for an unparseable `date`;
-/// [`MetadataError::MissingFieldError`] naming the first required field
-/// that is absent.
-pub fn process_metadata_with(
-    metadata: &Metadata,
-    options: &ProcessOptions,
-) -> Result<Metadata, MetadataError> {
-    let mut processed = metadata.clone();
-    if let Some(date) = processed.get("date").cloned() {
-        let standardized_date = standardize_date(&date)?;
-        processed.insert("date".to_string(), standardized_date);
-    }
-    for field in &options.required_fields {
-        if !processed.contains_key(field) {
-            return Err(MetadataError::MissingFieldError(
-                field.clone(),
-            ));
-        }
-    }
-    if options.derive_slug {
-        generate_derived_fields(&mut processed);
-    }
-    Ok(processed)
-}
-
-/// Processes the extracted metadata.
-///
-/// This function standardizes dates, ensures required fields are present, and generates derived fields.
-///
-/// # Arguments
-///
-/// * `metadata` - A reference to the `Metadata` instance to process.
-///
-/// # Returns
-///
-/// A `Result` containing the processed `Metadata` if successful, or a `MetadataError` if processing fails.
-///
-/// # Errors
-///
-/// Returns a `MetadataError` if date standardization fails or if required fields are missing.
-pub fn process_metadata(
-    metadata: &Metadata,
-) -> Result<Metadata, MetadataError> {
-    let mut processed = metadata.clone();
-
-    // Convert dates to a standard format
-    if let Some(date) = processed.get("date").cloned() {
-        let standardized_date = standardize_date(&date)?;
-        processed.insert("date".to_string(), standardized_date);
-    }
-
-    // Ensure required fields are present
-    ensure_required_fields(&processed)?;
-
-    // Generate derived fields
-    generate_derived_fields(&mut processed);
-
-    Ok(processed)
-}
-
-/// Ensures that all required fields are present in the metadata.
-///
-/// # Arguments
-///
-/// * `metadata` - A reference to the `Metadata` instance to check.
-///
-/// # Returns
-///
-/// A `Result<()>` if all required fields are present, or a `MetadataError` if any are missing.
-///
-/// # Errors
-///
-/// Returns a `MetadataError::MissingFieldError` if any required field is missing.
-fn ensure_required_fields(
-    metadata: &Metadata,
-) -> Result<(), MetadataError> {
-    let required_fields = ["title", "date"];
-
-    for &field in &required_fields {
-        if !metadata.contains_key(field) {
-            return Err(MetadataError::MissingFieldError(
-                field.to_string(),
-            ));
-        }
-    }
-
-    Ok(())
-}
-
-/// Generates derived fields for the metadata.
-///
-/// Currently, this function generates a URL slug from the title if not already present.
-///
-/// # Arguments
-///
-/// * `metadata` - A mutable reference to the `Metadata` instance to update.
-fn generate_derived_fields(metadata: &mut Metadata) {
-    if !metadata.contains_key("slug") {
-        if let Some(title) = metadata.get("title") {
-            let slug = generate_slug(title);
-            metadata.insert("slug".to_string(), slug);
-        }
-    }
-}
-
-/// Generates a URL slug from the given title.
-///
-/// # Arguments
-///
-/// * `title` - A string slice containing the title to convert to a slug.
-///
-/// # Returns
-///
-/// A `String` containing the generated slug.
-fn generate_slug(title: &str) -> String {
-    title.to_lowercase().replace(' ', "-")
-}
-
-#[cfg(test)]
+#[cfg(all(
+    test,
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
 mod tests;
 
-#[cfg(test)]
+#[cfg(all(
+    test,
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
 mod coverage_tests;
 
-#[cfg(test)]
+#[cfg(all(
+    test,
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
 mod typed_api_tests;

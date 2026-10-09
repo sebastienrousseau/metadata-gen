@@ -26,6 +26,7 @@ Nothing is silently rewritten.
 | [0002](./0002-flat-string-metadata.md) | Front matter flattens to `HashMap<String, String>` with dotted keys | accepted |
 | [0003](./0003-streaming-meta-extraction.md) | `<meta>` extraction is a streaming `quick-xml` pass, not a DOM | accepted |
 | [0004](./0004-first-party-exact-pins.md) | First-party crates are pinned exactly (`=0.0.X`) | accepted |
+| [0005](./0005-feature-flags-and-no-std.md) | Formats and integrations are Cargo features; the core is `no_std + alloc` | accepted |
 
 ## When to add an ADR
 

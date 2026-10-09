@@ -1,3 +1,10 @@
+// The suites exercise the default feature set.
+#![cfg(all(
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
 #[cfg(test)]
 mod integration_tests {
     use metadata_gen::error::MetadataError;
@@ -104,6 +111,7 @@ Just plain content without --- markers.
     /// Integration test: Metadata extraction from file and meta tag generation.
     ///
     /// This async test ensures that metadata can be extracted from a file and meta tags generated correctly.
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_async_metadata_and_metatags_integration() {
         use tempfile::tempdir;

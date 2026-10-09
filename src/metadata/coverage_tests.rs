@@ -7,8 +7,13 @@
 //! multi-line quote, non-string leaves in each flattener, the
 //! DD/MM/YYYY shape checks, and slug derivation.
 
-use super::front_matter::*;
+use super::front_matter::json::flatten_json;
+use super::front_matter::toml_fm::flatten_toml;
+use super::front_matter::yaml::{
+    collapse_multiline_quoted_scalars, flatten_yaml,
+};
 use super::*;
+use crate::MetadataMap;
 use serde_json::Value as JsonValue;
 use toml::Value as TomlValue;
 
@@ -48,7 +53,7 @@ fn toml_flattener_covers_every_leaf_kind() {
          ints = [1, 2]\nwords = [\"a\", \"b\"]\n[nested]\nk = 1.5",
     )
     .expect("valid toml");
-    let mut map = HashMap::new();
+    let mut map = MetadataMap::new();
     flatten_toml(&value, &mut map, String::new());
     assert_eq!(map["name"], "x");
     assert_eq!(map["n"], "7");
@@ -65,7 +70,7 @@ fn json_flattener_covers_every_leaf_kind() {
         r#"{"s":"x","n":2,"b":false,"z":null,"arr":[1,"a",null],"o":{"k":{"d":1}}}"#,
     )
     .expect("valid json");
-    let mut map = HashMap::new();
+    let mut map = MetadataMap::new();
     flatten_json(&value, &mut map, String::new());
     assert_eq!(map["s"], "x");
     assert_eq!(map["n"], "2");
@@ -79,8 +84,17 @@ fn json_flattener_covers_every_leaf_kind() {
 fn json_front_matter_syntax_error_is_reported() {
     let err = extract_metadata("{\"title\": }").unwrap_err();
     assert!(
-        matches!(err, MetadataError::ExtractionError { ref message } if message.contains("JSON parse error"))
+        matches!(
+            err,
+            MetadataError::Parse {
+                format: FrontMatterFormat::Json,
+                span: Some(ref span),
+                ..
+            } if span.start == 10
+        ),
+        "got {err:?}"
     );
+    assert!(err.to_string().contains("expected value"), "got {err}");
 }
 
 #[test]
@@ -95,13 +109,17 @@ fn json_front_matter_with_nested_objects_and_body() {
 
 #[test]
 fn dd_mm_yyyy_dates_are_reformatted() {
-    assert_eq!(standardize_date("01/02/2024").unwrap(), "2024-02-01");
+    assert_eq!(
+        standardize_date("01/02/2024", DateOrder::DayFirst).unwrap(),
+        "2024-02-01"
+    );
 }
 
 #[test]
 fn slash_dates_with_wrong_part_widths_are_rejected() {
     // Ten characters with a slash, but not DD/MM/YYYY.
-    let err = standardize_date("123/4/5678").unwrap_err();
+    let err = standardize_date("123/4/5678", DateOrder::DayFirst)
+        .unwrap_err();
     assert!(
         matches!(err, MetadataError::DateParseError(ref m) if m.contains("DD/MM/YYYY"))
     );
@@ -110,19 +128,19 @@ fn slash_dates_with_wrong_part_widths_are_rejected() {
 #[test]
 fn short_and_empty_dates_are_rejected() {
     assert!(
-        matches!(standardize_date("   ").unwrap_err(), MetadataError::DateParseError(ref m) if m.contains("empty"))
+        matches!(standardize_date("   ", DateOrder::DayFirst).unwrap_err(), MetadataError::DateParseError(ref m) if m.contains("empty"))
     );
     assert!(
-        matches!(standardize_date("2024-1").unwrap_err(), MetadataError::DateParseError(ref m) if m.contains("too short"))
+        matches!(standardize_date("2024-1", DateOrder::DayFirst).unwrap_err(), MetadataError::DateParseError(ref m) if m.contains("too short"))
     );
     assert!(
-        matches!(standardize_date("2024-99-99").unwrap_err(), MetadataError::DateParseError(ref m) if m.contains("Failed to parse"))
+        matches!(standardize_date("2024-99-99", DateOrder::DayFirst).unwrap_err(), MetadataError::DateParseError(ref m) if m.contains("Failed to parse"))
     );
 }
 
 #[test]
 fn process_metadata_standardises_date_and_derives_slug() {
-    let mut data = HashMap::new();
+    let mut data = MetadataMap::new();
     data.insert("title".to_string(), "Hello World!".to_string());
     data.insert("date".to_string(), "01/02/2024".to_string());
     let out =
@@ -137,7 +155,7 @@ fn process_metadata_standardises_date_and_derives_slug() {
 
 #[test]
 fn process_metadata_keeps_an_explicit_slug() {
-    let mut data = HashMap::new();
+    let mut data = MetadataMap::new();
     data.insert("title".to_string(), "T".to_string());
     data.insert("date".to_string(), "2024-02-01".to_string());
     data.insert("slug".to_string(), "keep-me".to_string());
@@ -148,7 +166,7 @@ fn process_metadata_keeps_an_explicit_slug() {
 
 #[test]
 fn process_metadata_reports_a_missing_required_field() {
-    let mut data = HashMap::new();
+    let mut data = MetadataMap::new();
     data.insert("title".to_string(), "T".to_string());
     let err = process_metadata(&Metadata::new(data)).unwrap_err();
     assert!(

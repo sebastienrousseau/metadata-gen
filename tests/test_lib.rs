@@ -1,3 +1,10 @@
+// The suites exercise the default feature set.
+#![cfg(all(
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
 #[cfg(test)]
 mod tests {
     use metadata_gen::{

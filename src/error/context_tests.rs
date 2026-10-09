@@ -87,19 +87,10 @@ fn context_rewrites_parser_errors_as_custom_messages() {
 }
 
 #[test]
-fn context_leaves_utf8_errors_untouched() {
-    let bytes = vec![0xffu8];
-    let utf8 = std::str::from_utf8(&bytes).unwrap_err();
-    let e = MetadataError::from(utf8).context("ignored");
-    assert!(matches!(e, MetadataError::Utf8Error(_)));
-    assert!(!e.to_string().contains("ignored"));
-}
-
-#[test]
 fn context_boxes_other_errors_with_a_source_chain() {
     let inner: Box<dyn std::error::Error + Send + Sync> =
         "root cause".into();
-    let e = MetadataError::from(inner).context("outer");
+    let e = MetadataError::Other(inner).context("outer");
     let MetadataError::Other(boxed) = &e else {
         panic!("expected Other, got {e:?}");
     };
@@ -109,4 +100,65 @@ fn context_boxes_other_errors_with_a_source_chain() {
     let source = boxed.source().expect("ContextError keeps its source");
     assert_eq!(source.to_string(), "root cause");
     assert_eq!(e.to_string(), "Unexpected error: outer: root cause");
+}
+
+#[test]
+fn context_wraps_a_parse_error_and_keeps_its_span() {
+    let source = serde_json::from_str::<u8>("x").unwrap_err();
+    let e = MetadataError::parse(
+        FrontMatterFormat::Json,
+        Some(0..1),
+        source,
+    )
+    .context("post.md");
+    let MetadataError::Parse {
+        format,
+        ref span,
+        ref source,
+    } = e
+    else {
+        panic!("expected Parse, got {e:?}");
+    };
+    assert_eq!(format, FrontMatterFormat::Json);
+    assert_eq!(span.clone(), Some(0..1));
+    assert!(source.to_string().starts_with("post.md: "), "{source}");
+    assert!(e.to_string().contains("at bytes 0..1"), "{e}");
+}
+
+#[test]
+fn parse_error_without_a_span_has_no_suffix() {
+    let source = serde_json::from_str::<u8>("x").unwrap_err();
+    let e = MetadataError::parse(FrontMatterFormat::Yaml, None, source);
+    let text = e.to_string();
+    assert!(
+        text.starts_with("yaml front matter failed to parse: "),
+        "{text}"
+    );
+    assert!(!text.contains("at bytes"), "{text}");
+}
+
+#[test]
+fn other_boxes_any_error() {
+    let e = MetadataError::other(core::fmt::Error);
+    assert!(matches!(e, MetadataError::Other(_)));
+    assert!(e.to_string().starts_with("Unexpected error: "), "{e}");
+}
+
+#[test]
+fn prefix_message_leaves_wrapped_errors_to_context() {
+    // `context` handles these variants itself; `prefix_message` must hand
+    // them back untouched rather than lose them.
+    let e =
+        MetadataError::other(core::fmt::Error).prefix_message(&"ctx");
+    assert!(matches!(e, MetadataError::Other(_)));
+    assert!(!e.to_string().contains("ctx"), "{e}");
+}
+
+#[test]
+fn context_leaves_utf8_errors_untouched() {
+    let bytes = vec![0xffu8];
+    let utf8 = core::str::from_utf8(&bytes).unwrap_err();
+    let e = MetadataError::from(utf8).context("ignored");
+    assert!(e.to_string().starts_with("UTF-8 decoding error:"), "{e}");
+    assert!(!e.to_string().contains("ignored"));
 }

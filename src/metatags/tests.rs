@@ -4,10 +4,11 @@
 //! Tests for `metatags`; a child module so private items stay reachable.
 
 use super::*;
+use crate::MetadataMap;
 
 #[test]
 fn test_generate_metatags() {
-    let mut metadata = HashMap::new();
+    let mut metadata = MetadataMap::new();
     metadata.insert("title".to_string(), "Test Page".to_string());
     metadata
         .insert("description".to_string(), "A test page".to_string());
@@ -169,4 +170,57 @@ fn test_format_meta_tag() {
         tag,
         r#"<meta name="test" content="Test &quot;Value&quot;">"#
     );
+}
+
+#[test]
+fn meta_attribute_names() {
+    assert_eq!(MetaAttribute::Name.as_str(), "name");
+    assert_eq!(MetaAttribute::Property.as_str(), "property");
+    assert_eq!(MetaAttribute::HttpEquiv.as_str(), "http-equiv");
+}
+
+#[test]
+fn meta_tag_displays_as_its_rendering() {
+    let tag = MetaTag::new("article:author", "A <b> & \"c\"");
+    assert_eq!(tag.to_string(), tag.render());
+    assert_eq!(
+        tag.to_string(),
+        r#"<meta property="article:author" content="A &lt;b&gt; &amp; &quot;c&quot;">"#
+    );
+}
+
+#[test]
+fn custom_tags_in_one_group_are_one_per_line_and_iterate_back() {
+    let mut groups = MetaTagGroups::default();
+    groups.add_custom_tag("og:title", "T & \"Q\"");
+    groups.add_custom_tag("og:locale", "en_GB");
+    groups.add_custom_tag("msapplication-config", "none");
+    assert_eq!(groups.og.lines().count(), 2);
+    let tags: Vec<MetaTag> = groups.iter().collect();
+    assert_eq!(
+        tags,
+        [
+            MetaTag::new("og:title", "T & \"Q\""),
+            MetaTag::new("og:locale", "en_GB"),
+            MetaTag::new("msapplication-config", "none"),
+        ]
+    );
+}
+
+#[test]
+fn iter_skips_lines_it_did_not_render() {
+    let groups = MetaTagGroups {
+        primary: "<link rel=\"x\">\n<meta name=\"a\" content=\"1\">"
+            .to_string(),
+        ..MetaTagGroups::default()
+    };
+    let names: Vec<String> = groups.iter().map(|t| t.name).collect();
+    assert_eq!(names, ["a"]);
+}
+
+#[test]
+fn extraction_ignores_other_attributes_and_bad_entities() {
+    let html = r#"<meta charset="utf-8" name="a" content="1"><meta name="b" content="&bogus;">"#;
+    let tags = extract_meta_tags(html).unwrap();
+    assert_eq!(tags, [MetaTag::new("a", "1")]);
 }
