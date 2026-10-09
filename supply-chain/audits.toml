@@ -69,17 +69,17 @@ notes = "Concurrency testing via loom per issue #57"
 
 [[trusted.dtt]]
 criteria = "safe-to-deploy"
-user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
+user-id = 186843
 start = "2023-02-05"
 end = "2027-07-26"
-notes = "Same-author crate."
+notes = "Same-author crate. user-id 186843 is Sebastien Rousseau (sebastienrousseau)."
 
 [[trusted.noyalib]]
 criteria = "safe-to-deploy"
-user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
+user-id = 186843
 start = "2026-05-10"
 end = "2027-07-26"
-notes = "Same-author crate; pinned exactly."
+notes = "Same-author crate; pinned exactly. user-id 186843 is Sebastien Rousseau (sebastienrousseau)."
 
 [[trusted.noyalib]]
 criteria = "safe-to-deploy"
