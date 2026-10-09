@@ -44,7 +44,9 @@ jobs:
           # Fail the build on any rustdoc warning (broken intra-doc link,
           # missing docs on a public item, etc.).
           RUSTDOCFLAGS: "--cfg docsrs --deny warnings"
-        run: cargo doc --no-deps --all-features
+        # `+nightly` explicitly: rust-toolchain.toml pins `stable`, and a
+        # toolchain file overrides the toolchain this job installs.
+        run: cargo +nightly doc --no-deps --all-features
 
       # crates.io serves index.html via metadata_gen/index.html; redirect / to it.
       - name: Add root redirect
