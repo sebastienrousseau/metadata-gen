@@ -3,12 +3,8 @@
 //! This module provides various utility functions for tasks such as HTML escaping,
 //! asynchronous file reading, and metadata extraction from files.
 
-use crate::error::MetadataError;
-use crate::extract_and_prepare_metadata;
-use crate::metatags::MetaTagGroups;
-use std::collections::HashMap;
-use tokio::fs::File;
-use tokio::io::AsyncReadExt;
+use alloc::borrow::Cow;
+use alloc::string::String;
 
 /// Escapes special HTML characters in a string.
 ///
@@ -55,6 +51,61 @@ pub fn escape_html(value: &str) -> String {
             '>' => out.push_str("&gt;"),
             '"' => out.push_str("&quot;"),
             '\'' => out.push_str("&#x27;"),
+            other => out.push(other),
+        }
+    }
+    out
+}
+
+/// Escapes HTML without allocating when nothing needs escaping.
+///
+/// Returns `Cow::Borrowed(value)` when `value` contains none of `&`, `<`,
+/// `>`, `"` or `'`, and otherwise the same string [`escape_html`] produces.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::utils::escape_html_cow;
+/// use std::borrow::Cow;
+///
+/// assert!(matches!(escape_html_cow("plain"), Cow::Borrowed("plain")));
+/// assert_eq!(escape_html_cow("a < b"), "a &lt; b");
+/// ```
+pub fn escape_html_cow(value: &str) -> Cow<'_, str> {
+    if value
+        .bytes()
+        .any(|b| matches!(b, b'&' | b'<' | b'>' | b'"' | b'\''))
+    {
+        Cow::Owned(escape_html(value))
+    } else {
+        Cow::Borrowed(value)
+    }
+}
+
+/// Escapes a value for use inside a double-quoted HTML attribute.
+///
+/// `&`, `<`, `>` and `"` are replaced; an apostrophe is left alone because
+/// it cannot terminate a double-quoted attribute, which keeps rendered
+/// meta tags readable.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::escape_attribute;
+///
+/// assert_eq!(
+///     escape_attribute(r#"Fish & "Chips" <it's>"#),
+///     "Fish &amp; &quot;Chips&quot; &lt;it's&gt;"
+/// );
+/// ```
+pub fn escape_attribute(value: &str) -> String {
+    let mut out = String::with_capacity(value.len() + value.len() / 8);
+    for ch in value.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
             other => out.push(other),
         }
     }
@@ -130,92 +181,54 @@ pub fn unescape_html(value: &str) -> String {
     out
 }
 
-/// Asynchronously reads a file and extracts metadata from its content.
+/// Asynchronously extracts metadata from a file (feature `tokio`).
 ///
-/// This function reads the content of a file asynchronously and then extracts
-/// metadata, generates keywords, and prepares meta tag groups.
-///
-/// # Arguments
-///
-/// * `file_path` - A string slice representing the path to the file.
-///
-/// # Returns
-///
-/// Returns a Result containing a tuple with:
-/// * `HashMap<String, String>`: Extracted metadata
-/// * `Vec<String>`: A list of keywords
-/// * `MetaTagGroups`: A structure containing various meta tags
+/// Kept for callers of earlier releases; new code should use
+/// [`crate::tokio::extract_from_file`], which accepts any path type.
 ///
 /// # Errors
 ///
-/// This function will return a `MetadataError` if:
-/// - File reading fails (e.g., file not found, permission denied)
-/// - Metadata extraction or processing fails
-///
-/// # Examples
-///
-/// ```no_run
-/// use metadata_gen::utils::async_extract_metadata_from_file;
-///
-/// #[tokio::main]
-/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     let (metadata, keywords, meta_tags) = async_extract_metadata_from_file("path/to/file.md").await?;
-///     println!("Metadata: {:?}", metadata);
-///     println!("Keywords: {:?}", keywords);
-///     println!("Meta tags: {}", meta_tags);
-///     Ok(())
-/// }
-/// ```
+/// As [`crate::tokio::extract_from_file`].
 ///
 /// # Security
 ///
 /// This function reads files from the file system. Ensure that the `file_path`
 /// is properly sanitized and validated to prevent potential security issues like
 /// path traversal attacks.
+///
+/// # Example
+///
+/// ```no_run
+/// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+/// use metadata_gen::utils::async_extract_metadata_from_file;
+///
+/// let result = async_extract_metadata_from_file("content/post.md").await;
+/// # let _ = result;
+/// # });
+/// ```
+#[cfg(all(feature = "tokio", not(loom)))]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
 pub async fn async_extract_metadata_from_file(
     file_path: &str,
 ) -> Result<
-    (HashMap<String, String>, Vec<String>, MetaTagGroups),
-    MetadataError,
+    (crate::MetadataMap, crate::Keywords, crate::MetaTagGroups),
+    crate::error::MetadataError,
 > {
-    let mut file = File::open(file_path)
-        .await
-        .map_err(MetadataError::IoError)?;
-
-    let mut content = String::new();
-    file.read_to_string(&mut content)
-        .await
-        .map_err(MetadataError::IoError)?;
-
-    if content.trim().is_empty() {
-        // If file is empty, return empty structures
-        return Ok((
-            HashMap::new(),
-            Vec::new(),
-            MetaTagGroups {
-                primary: String::new(),
-                apple: String::new(),
-                ms: String::new(),
-                og: String::new(),
-                twitter: String::new(),
-            },
-        ));
-    }
-
-    extract_and_prepare_metadata(&content)
+    crate::tokio::extract_from_file(file_path).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(all(feature = "tokio", not(loom)))]
+    use crate::error::MetadataError;
+    #[cfg(all(feature = "tokio", not(loom)))]
     use tempfile::tempdir;
+    #[cfg(all(feature = "tokio", not(loom)))]
     use tokio::fs::File;
+    #[cfg(all(feature = "tokio", not(loom)))]
     use tokio::io::AsyncWriteExt;
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_escape_html() {
         let input = "Hello, <world> & \"friends\"!";
@@ -224,10 +237,6 @@ mod tests {
         assert_eq!(escape_html(input), expected);
     }
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_escape_html_special_characters() {
         let input = "It's <b>bold</b> & it's <i>italic</i>";
@@ -235,10 +244,6 @@ mod tests {
         assert_eq!(escape_html(input), expected);
     }
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_unescape_html() {
         let input = "Hello, &lt;world&gt; &amp; &quot;friends&quot;!";
@@ -246,10 +251,6 @@ mod tests {
         assert_eq!(unescape_html(input), expected);
     }
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_unescape_html_edge_cases() {
         let input = "&lt;&amp;&gt;&quot;&#x27;&#39;&#x2F;";
@@ -257,10 +258,6 @@ mod tests {
         assert_eq!(unescape_html(input), expected);
     }
 
-    #[cfg_attr(
-        miri,
-        ignore = "touches the filesystem; Miri isolation forbids it"
-    )]
     #[test]
     fn test_escape_unescape_roundtrip() {
         let original = "Test <script>alert('XSS');</script> & other \"special\" chars";
@@ -269,6 +266,7 @@ mod tests {
         assert_eq!(original, unescaped);
     }
 
+    #[cfg(all(feature = "tokio", not(loom)))]
     #[cfg_attr(
         miri,
         ignore = "touches the filesystem; Miri isolation forbids it"
@@ -313,6 +311,7 @@ This is a test file for metadata extraction."#;
         assert!(!meta_tags.primary.is_empty());
     }
 
+    #[cfg(all(feature = "tokio", not(loom)))]
     #[cfg_attr(
         miri,
         ignore = "touches the filesystem; Miri isolation forbids it"
@@ -341,6 +340,7 @@ This is a test file for metadata extraction."#;
         assert!(meta_tags.primary.is_empty());
     }
 
+    #[cfg(all(feature = "tokio", not(loom)))]
     #[cfg_attr(
         miri,
         ignore = "touches the filesystem; Miri isolation forbids it"
@@ -400,6 +400,27 @@ mod unescape_single_pass_tests {
 #[cfg(test)]
 mod escape_single_pass_tests {
     use super::*;
+
+    #[test]
+    fn escape_html_cow_borrows_clean_input() {
+        assert!(matches!(
+            escape_html_cow("plain text"),
+            Cow::Borrowed(_)
+        ));
+        for dirty in ["a&b", "a<b", "a>b", "a\"b", "a'b"] {
+            let out = escape_html_cow(dirty);
+            assert!(matches!(out, Cow::Owned(_)), "{dirty}");
+            assert_eq!(out, escape_html(dirty));
+        }
+    }
+
+    #[test]
+    fn escape_attribute_keeps_apostrophes() {
+        assert_eq!(
+            escape_attribute("<a href=\"x\">it's & that</a>"),
+            "&lt;a href=&quot;x&quot;&gt;it's &amp; that&lt;/a&gt;"
+        );
+    }
 
     #[test]
     fn escape_matches_the_replace_chain_it_replaced() {

@@ -128,18 +128,9 @@ fn meta_tags_to_hashmap_example() -> Result<(), MetadataError> {
     println!("---------------------------------------------");
 
     let meta_tags = vec![
-        MetaTag {
-            name: "description".to_string(),
-            content: "A sample page".to_string(),
-        },
-        MetaTag {
-            name: "og:title".to_string(),
-            content: "Sample Title".to_string(),
-        },
-        MetaTag {
-            name: "keywords".to_string(),
-            content: "sample, meta tags, rust".to_string(),
-        },
+        MetaTag::new("description", "A sample page"),
+        MetaTag::new("og:title", "Sample Title"),
+        MetaTag::new("keywords", "sample, meta tags, rust"),
     ];
 
     let hashmap = meta_tags_to_hashmap(meta_tags);

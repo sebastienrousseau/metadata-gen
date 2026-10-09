@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Configuration for cargo-mutants (https://mutants.rs)
+# Measures mutation kill rate across the core parser logic in src/.
+
+# Target source directories and files
+# Exclude tests, benches, examples, and fuzz targets from mutation analysis
+exclude_globs = [
+    "benches/**",
+    "examples/**",
+    "fuzz/**",
+    "tests/**",
+]
+
+# Exclude functions that are purely formatting, debugging, or vacuous fallbacks
+exclude_re = [
+    ".*::fmt",
+    ".*::test_.*",
+]
+
+# Baseline build timeout multiplier
+timeout_multiplier = 2.0

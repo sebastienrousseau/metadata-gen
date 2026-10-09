@@ -2,222 +2,368 @@
 //!
 //! This module provides functionality for generating HTML meta tags from metadata
 //! and extracting meta tags from HTML content.
+//!
+//! Rendering follows the specifications the tags come from: Open Graph
+//! (`og:*`, `article:*`, `fb:*`, `profile:*`, `book:*`, `music:*`,
+//! `video:*`) uses the `property` attribute, everything else uses `name`,
+//! and both attribute values go through [`crate::escape_attribute`].
 
-use crate::error::MetadataError;
-use quick_xml::events::Event;
-use quick_xml::reader::Reader;
-use std::{collections::HashMap, fmt};
+use crate::utils::escape_attribute;
+use crate::MetadataMap;
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::fmt;
 
 /// Holds collections of meta tags for different platforms and categories.
+///
+/// Each field is the rendered `<meta>` elements of one group, one per
+/// line. [`MetaTagGroups::iter`] gives the same tags as values.
 ///
 /// # Example
 ///
 /// ```
 /// use metadata_gen::metatags::generate_metatags;
-/// use std::collections::HashMap;
+/// use metadata_gen::MetadataMap;
 ///
-/// let mut metadata = HashMap::new();
+/// let mut metadata = MetadataMap::new();
 /// metadata.insert("description".to_string(), "A sample page".to_string());
 /// metadata.insert("og:title".to_string(), "Sample".to_string());
 ///
 /// let tags = generate_metatags(&metadata);
 /// assert!(tags.primary.contains("description"));
-/// assert!(tags.og.contains("og:title"));
+/// assert!(tags.og.contains(r#"property="og:title""#));
 /// ```
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+#[non_exhaustive]
 pub struct MetaTagGroups {
-    /// The `apple` meta tags.
+    /// Meta tags specific to Apple devices.
     pub apple: String,
-    /// The primary meta tags.
+    /// Primary meta tags (description, keywords, author, viewport).
     pub primary: String,
-    /// The `og` meta tags.
+    /// Open Graph meta tags.
     pub og: String,
-    /// The `ms` meta tags.
+    /// Microsoft-specific meta tags.
     pub ms: String,
-    /// The `twitter` meta tags.
+    /// Twitter meta tags.
     pub twitter: String,
 }
 
-/// Represents a single meta tag.
+/// Which attribute carries a meta tag's identifier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum MetaAttribute {
+    /// `<meta name="…">`: the HTML default, used by Twitter cards too.
+    Name,
+    /// `<meta property="…">`: what the Open Graph protocol requires.
+    Property,
+    /// `<meta http-equiv="…">`.
+    HttpEquiv,
+}
+
+impl MetaAttribute {
+    /// The attribute name as written in HTML.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Name => "name",
+            Self::Property => "property",
+            Self::HttpEquiv => "http-equiv",
+        }
+    }
+}
+
+/// One `<meta>` element: its identifier and content.
 ///
 /// # Example
 ///
 /// ```
-/// use metadata_gen::metatags::MetaTag;
+/// use metadata_gen::MetaTag;
 ///
-/// let tag = MetaTag {
-///     name: "description".to_string(),
-///     content: "A sample page".to_string(),
-/// };
-/// assert_eq!(tag.name, "description");
+/// let tag = MetaTag::new("og:title", r#"Fish & "Chips""#);
+/// assert_eq!(
+///     tag.render(),
+///     r#"<meta property="og:title" content="Fish &amp; &quot;Chips&quot;">"#
+/// );
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub struct MetaTag {
-    /// The name or property of the meta tag.
+    /// The tag's identifier (`description`, `og:title`, `twitter:card`).
     pub name: String,
-    /// The content of the meta tag.
+    /// The tag's content.
     pub content: String,
 }
 
-impl MetaTagGroups {
-    /// Adds a custom meta tag to the appropriate group.
-    ///
-    /// # Arguments
-    ///
-    /// * `name` - The name of the meta tag.
-    /// * `content` - The content of the meta tag.
-    pub fn add_custom_tag(&mut self, name: &str, content: &str) {
-        let formatted_tag = self.format_meta_tag(name, content);
+/// Prefixes whose tags the Open Graph protocol identifies with `property=`.
+const PROPERTY_PREFIXES: [&str; 7] = [
+    "og:", "article:", "fb:", "profile:", "book:", "music:", "video:",
+];
 
-        // Match based on specific prefixes for Apple, MS, OG, Twitter, etc.
-        if name.starts_with("apple-")
-            || name == "mobile-web-app-capable"
-        {
-            self.apple.push_str(&formatted_tag);
-        } else if name.starts_with("msapplication-") {
-            // println!("Adding MS meta tag: {}", formatted_tag);  // Debugging output
-            self.ms.push_str(&formatted_tag);
-        } else if name.starts_with("og:") {
-            // println!("Adding OG meta tag: {}", formatted_tag);  // Debugging output
-            self.og.push_str(&formatted_tag);
-        } else if name.starts_with("twitter:") {
-            // println!("Adding Twitter meta tag: {}", formatted_tag);  // Debugging output
-            self.twitter.push_str(&formatted_tag);
-        } else {
-            // println!("Adding Primary meta tag: {}", formatted_tag);  // Debugging output
-            self.primary.push_str(&formatted_tag);
+impl MetaTag {
+    /// Creates a tag from its identifier and content.
+    pub fn new(
+        name: impl Into<String>,
+        content: impl Into<String>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            content: content.into(),
         }
     }
 
-    /// Formats a single meta tag.
+    /// The attribute this tag's identifier belongs in.
     ///
-    /// # Arguments
+    /// # Example
     ///
-    /// * `name` - The name of the meta tag.
-    /// * `content` - The content of the meta tag.
+    /// ```
+    /// use metadata_gen::metatags::{MetaAttribute, MetaTag};
     ///
-    /// # Returns
-    ///
-    /// A formatted meta tag string.
-    pub fn format_meta_tag(&self, name: &str, content: &str) -> String {
+    /// assert_eq!(MetaTag::new("og:image", "x").attribute(), MetaAttribute::Property);
+    /// assert_eq!(MetaTag::new("twitter:card", "x").attribute(), MetaAttribute::Name);
+    /// assert_eq!(MetaTag::new("refresh", "x").attribute(), MetaAttribute::Name);
+    /// ```
+    pub fn attribute(&self) -> MetaAttribute {
+        if PROPERTY_PREFIXES.iter().any(|p| self.name.starts_with(p)) {
+            MetaAttribute::Property
+        } else {
+            MetaAttribute::Name
+        }
+    }
+
+    /// Renders the element with both attribute values escaped.
+    pub fn render(&self) -> String {
         format!(
-            r#"<meta name="{}" content="{}">"#,
-            name,
-            content.replace('"', "&quot;")
+            r#"<meta {}="{}" content="{}">"#,
+            self.attribute().as_str(),
+            escape_attribute(&self.name),
+            escape_attribute(&self.content)
         )
     }
+}
 
-    /// Generates meta tags for Apple devices.
-    ///
-    /// # Arguments
-    ///
-    /// * `metadata` - A reference to a HashMap containing the metadata.
-    pub fn generate_apple_meta_tags(
-        &mut self,
-        metadata: &HashMap<String, String>,
-    ) {
-        const APPLE_TAGS: [&str; 4] = [
-            "apple-mobile-web-app-capable",
-            "mobile-web-app-capable",
-            "apple-mobile-web-app-status-bar-style",
-            "apple-mobile-web-app-title",
-        ];
-        self.apple = self.generate_tags(metadata, &APPLE_TAGS);
+impl fmt::Display for MetaTag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.render())
+    }
+}
+
+/// The group a tag renders into.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Group {
+    Apple,
+    Primary,
+    Og,
+    Ms,
+    Twitter,
+}
+
+/// The tags each group renders, in order. Adding a tag is one row.
+const TAG_TABLE: [(Group, &str); 20] = [
+    (Group::Apple, "apple-mobile-web-app-capable"),
+    (Group::Apple, "mobile-web-app-capable"),
+    (Group::Apple, "apple-mobile-web-app-status-bar-style"),
+    (Group::Apple, "apple-mobile-web-app-title"),
+    (Group::Primary, "author"),
+    (Group::Primary, "description"),
+    (Group::Primary, "keywords"),
+    (Group::Primary, "viewport"),
+    (Group::Og, "og:title"),
+    (Group::Og, "og:description"),
+    (Group::Og, "og:image"),
+    (Group::Og, "og:url"),
+    (Group::Og, "og:type"),
+    (Group::Ms, "msapplication-TileColor"),
+    (Group::Ms, "msapplication-TileImage"),
+    (Group::Twitter, "twitter:card"),
+    (Group::Twitter, "twitter:site"),
+    (Group::Twitter, "twitter:title"),
+    (Group::Twitter, "twitter:description"),
+    (Group::Twitter, "twitter:image"),
+];
+
+/// The group a custom tag name routes to.
+fn group_for(name: &str) -> Group {
+    if name.starts_with("apple-") || name == "mobile-web-app-capable" {
+        Group::Apple
+    } else if name.starts_with("msapplication-") {
+        Group::Ms
+    } else if PROPERTY_PREFIXES.iter().any(|p| name.starts_with(p)) {
+        Group::Og
+    } else if name.starts_with("twitter:") {
+        Group::Twitter
+    } else {
+        Group::Primary
+    }
+}
+
+impl MetaTagGroups {
+    fn field_mut(&mut self, group: Group) -> &mut String {
+        match group {
+            Group::Apple => &mut self.apple,
+            Group::Primary => &mut self.primary,
+            Group::Og => &mut self.og,
+            Group::Ms => &mut self.ms,
+            Group::Twitter => &mut self.twitter,
+        }
     }
 
-    /// Generates primary meta tags like `author`, `description`, and `keywords`.
+    /// Adds a custom meta tag to the appropriate group, chosen by its
+    /// name: `apple-*` and `mobile-web-app-capable` go to `apple`,
+    /// `msapplication-*` to `ms`, Open Graph prefixes to `og`,
+    /// `twitter:*` to `twitter`, everything else to `primary`.
     ///
-    /// # Arguments
+    /// # Example
     ///
-    /// * `metadata` - A reference to a HashMap containing the metadata.
+    /// ```
+    /// use metadata_gen::MetaTagGroups;
+    ///
+    /// let mut groups = MetaTagGroups::default();
+    /// groups.add_custom_tag("og:locale", "en_GB");
+    /// assert_eq!(groups.og, r#"<meta property="og:locale" content="en_GB">"#);
+    /// ```
+    pub fn add_custom_tag(&mut self, name: &str, content: &str) {
+        let rendered = MetaTag::new(name, content).render();
+        let field = self.field_mut(group_for(name));
+        if !field.is_empty() {
+            field.push('\n');
+        }
+        field.push_str(&rendered);
+    }
+
+    /// Formats one meta tag as [`MetaTag::render`] does.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::MetaTagGroups;
+    ///
+    /// let groups = MetaTagGroups::default();
+    /// assert_eq!(
+    ///     groups.format_meta_tag("description", r#"say "hi""#),
+    ///     r#"<meta name="description" content="say &quot;hi&quot;">"#
+    /// );
+    /// ```
+    pub fn format_meta_tag(&self, name: &str, content: &str) -> String {
+        MetaTag::new(name, content).render()
+    }
+
+    /// Generates the Apple-specific group from `metadata`.
+    pub fn generate_apple_meta_tags(&mut self, metadata: &MetadataMap) {
+        self.apple = self.generate_group(metadata, Group::Apple);
+    }
+
+    /// Generates the primary group (author, description, keywords,
+    /// viewport) from `metadata`.
     pub fn generate_primary_meta_tags(
         &mut self,
-        metadata: &HashMap<String, String>,
+        metadata: &MetadataMap,
     ) {
-        const PRIMARY_TAGS: [&str; 4] =
-            ["author", "description", "keywords", "viewport"];
-        self.primary = self.generate_tags(metadata, &PRIMARY_TAGS);
+        self.primary = self.generate_group(metadata, Group::Primary);
     }
 
-    /// Generates Open Graph (`og`) meta tags for social media.
-    ///
-    /// # Arguments
-    ///
-    /// * `metadata` - A reference to a HashMap containing the metadata.
-    pub fn generate_og_meta_tags(
-        &mut self,
-        metadata: &HashMap<String, String>,
-    ) {
-        const OG_TAGS: [&str; 5] = [
-            "og:title",
-            "og:description",
-            "og:image",
-            "og:url",
-            "og:type",
-        ];
-        self.og = self.generate_tags(metadata, &OG_TAGS);
+    /// Generates the Open Graph group from `metadata`.
+    pub fn generate_og_meta_tags(&mut self, metadata: &MetadataMap) {
+        self.og = self.generate_group(metadata, Group::Og);
     }
 
-    /// Generates Microsoft-specific meta tags.
-    ///
-    /// # Arguments
-    ///
-    /// * `metadata` - A reference to a HashMap containing the metadata.
-    pub fn generate_ms_meta_tags(
-        &mut self,
-        metadata: &HashMap<String, String>,
-    ) {
-        const MS_TAGS: [&str; 2] =
-            ["msapplication-TileColor", "msapplication-TileImage"];
-        self.ms = self.generate_tags(metadata, &MS_TAGS);
+    /// Generates the Microsoft-specific group from `metadata`.
+    pub fn generate_ms_meta_tags(&mut self, metadata: &MetadataMap) {
+        self.ms = self.generate_group(metadata, Group::Ms);
     }
 
-    /// Generates Twitter meta tags for embedding rich media in tweets.
-    ///
-    /// # Arguments
-    ///
-    /// * `metadata` - A reference to a HashMap containing the metadata.
+    /// Generates the Twitter group from `metadata`.
     pub fn generate_twitter_meta_tags(
         &mut self,
-        metadata: &HashMap<String, String>,
+        metadata: &MetadataMap,
     ) {
-        const TWITTER_TAGS: [&str; 5] = [
-            "twitter:card",
-            "twitter:site",
-            "twitter:title",
-            "twitter:description",
-            "twitter:image",
-        ];
-        self.twitter = self.generate_tags(metadata, &TWITTER_TAGS);
+        self.twitter = self.generate_group(metadata, Group::Twitter);
     }
 
-    /// Generates meta tags based on the provided list of tag names.
+    fn generate_group(
+        &self,
+        metadata: &MetadataMap,
+        group: Group,
+    ) -> String {
+        let names: Vec<&str> = TAG_TABLE
+            .iter()
+            .filter(|(g, _)| *g == group)
+            .map(|(_, name)| *name)
+            .collect();
+        self.generate_tags(metadata, &names)
+    }
+
+    /// Renders every tag in `tags` that has a value in `metadata`, one
+    /// per line, in the order given.
     ///
-    /// # Arguments
+    /// # Example
     ///
-    /// * `metadata` - A reference to a `HashMap` containing the metadata.
-    /// * `tags` - A reference to an array of tag names.
+    /// ```
+    /// use metadata_gen::{MetaTagGroups, MetadataMap};
     ///
-    /// # Returns
-    ///
-    /// A string containing the generated meta tags.
+    /// let mut metadata = MetadataMap::new();
+    /// metadata.insert("author".into(), "Ada".into());
+    /// let groups = MetaTagGroups::default();
+    /// assert_eq!(
+    ///     groups.generate_tags(&metadata, &["author", "missing"]),
+    ///     r#"<meta name="author" content="Ada">"#
+    /// );
+    /// ```
     pub fn generate_tags(
         &self,
-        metadata: &HashMap<String, String>,
+        metadata: &MetadataMap,
         tags: &[&str],
     ) -> String {
         tags.iter()
             .filter_map(|&tag| {
-                metadata
-                    .get(tag)
-                    .map(|value| self.format_meta_tag(tag, value))
+                metadata.get(tag).map(|value| {
+                    MetaTag::new(tag, value.as_str()).render()
+                })
             })
             .collect::<Vec<_>>()
             .join("\n")
     }
+
+    /// Every rendered element across the five groups, in group order,
+    /// as [`MetaTag`] values again.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::MetaTagGroups;
+    ///
+    /// let mut groups = MetaTagGroups::default();
+    /// groups.add_custom_tag("og:title", "T");
+    /// groups.add_custom_tag("author", "A");
+    /// let names: Vec<String> = groups.iter().map(|t| t.name).collect();
+    /// assert_eq!(names, ["author", "og:title"]);
+    /// ```
+    pub fn iter(&self) -> impl Iterator<Item = MetaTag> + '_ {
+        [
+            &self.apple,
+            &self.primary,
+            &self.og,
+            &self.ms,
+            &self.twitter,
+        ]
+        .into_iter()
+        .flat_map(|group| group.lines())
+        .filter_map(parse_rendered)
+    }
 }
 
-/// Implement `Display` for `MetaTagGroups`.
+/// Reads a rendered element back into a [`MetaTag`]; `None` for a line
+/// that is not one of ours.
+fn parse_rendered(line: &str) -> Option<MetaTag> {
+    let rest = line.strip_prefix("<meta ")?;
+    let (_, rest) = rest.split_once("=\"")?;
+    let (name, rest) = rest.split_once("\" content=\"")?;
+    let content = rest.strip_suffix("\">")?;
+    Some(MetaTag::new(
+        crate::utils::unescape_html(name),
+        crate::utils::unescape_html(content),
+    ))
+}
+
 impl fmt::Display for MetaTagGroups {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -228,20 +374,31 @@ impl fmt::Display for MetaTagGroups {
     }
 }
 
-/// Generates HTML meta tags based on the provided metadata.
-///
-/// This function takes metadata from a `HashMap` and generates meta tags for various platforms (e.g., Apple, Open Graph, Twitter).
+/// Generates all meta tag groups from the given metadata.
 ///
 /// # Arguments
 ///
-/// * `metadata` - A reference to a `HashMap` containing the metadata.
+/// * `metadata` - A map of metadata keys to values.
 ///
 /// # Returns
 ///
-/// A `MetaTagGroups` structure with meta tags grouped by platform.
-pub fn generate_metatags(
-    metadata: &HashMap<String, String>,
-) -> MetaTagGroups {
+/// A [`MetaTagGroups`] with one rendered group per platform.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metatags::generate_metatags;
+/// use metadata_gen::MetadataMap;
+///
+/// let mut metadata = MetadataMap::new();
+/// metadata.insert("description".to_string(), "A sample page".to_string());
+/// metadata.insert("twitter:card".to_string(), "summary".to_string());
+///
+/// let tags = generate_metatags(&metadata);
+/// assert_eq!(tags.primary, r#"<meta name="description" content="A sample page">"#);
+/// assert_eq!(tags.twitter, r#"<meta name="twitter:card" content="summary">"#);
+/// ```
+pub fn generate_metatags(metadata: &MetadataMap) -> MetaTagGroups {
     let mut meta_tag_groups = MetaTagGroups::default();
     meta_tag_groups.generate_apple_meta_tags(metadata);
     meta_tag_groups.generate_primary_meta_tags(metadata);
@@ -251,313 +408,30 @@ pub fn generate_metatags(
     meta_tag_groups
 }
 
-/// Extracts every `<meta>` tag from an HTML document.
-///
-/// Walks the input in document order, yielding one `MetaTag` per
-/// `<meta>` element that carries both an identifying attribute (`name`,
-/// `property`, or `http-equiv`, in that fallback order) and a `content`
-/// attribute. Self-closing (`<meta … />`) and HTML-style (`<meta …>`)
-/// shapes are both accepted.
-///
-/// # Arguments
-///
-/// * `html_content` - A string slice containing the HTML content to parse.
-///
-/// # Returns
-///
-/// Returns a `Result` containing a `Vec<MetaTag>` in document order if
-/// parsing reached the end of the input, or a `MetadataError` if the
-/// underlying scanner could not recover from a malformed region.
-///
-/// # Errors
-///
-/// Returns `MetadataError::ExtractionError` only when the input is so
-/// malformed that no further events can be produced. Per-element issues
-/// (missing `content`, unknown attributes, unrecognized escape) are
-/// tolerated silently.
-///
-/// # Implementation note
-///
-/// Backed by `quick-xml` configured in HTML-tolerant mode (mismatched
-/// end tags allowed, no DTD validation). This replaces the previous
-/// `scraper` / `html5ever` dependency tree, which dragged ~30 transitive
-/// crates including `fxhash` (RUSTSEC-2025-0057) and a vulnerable
-/// `phf_generator` / `rand 0.8` path (RUSTSEC-2026-0097). See issue #22.
-pub fn extract_meta_tags(
-    html_content: &str,
-) -> Result<Vec<MetaTag>, MetadataError> {
-    let mut reader = Reader::from_str(html_content);
-    let config = reader.config_mut();
-    // HTML is not XML — be lenient so doctypes, unquoted attrs, and
-    // mismatched end tags don't abort the scan.
-    config.check_end_names = false;
-    config.trim_text(false);
+#[cfg(feature = "html")]
+mod html;
+#[cfg(feature = "html")]
+#[cfg_attr(docsrs, doc(cfg(feature = "html")))]
+pub use html::{extract_meta_tags, extract_meta_tags_lenient};
 
-    let mut meta_tags = Vec::new();
-    let mut buf = Vec::new();
-
-    loop {
-        match reader.read_event_into(&mut buf) {
-            Ok(Event::Eof) => break,
-            // Both Start (`<meta …>`) and Empty (`<meta … />`) shapes are
-            // produced for `<meta>` depending on author style. Treat them
-            // identically.
-            Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e))
-                if e.name().as_ref().eq_ignore_ascii_case("meta") =>
-            {
-                if let Some(tag) = collect_meta_tag(e) {
-                    meta_tags.push(tag);
-                }
-            }
-            Ok(_) => {}
-            Err(e) => {
-                // Per #22 acceptance: tolerate malformed regions and
-                // return what we found so far. The remaining content may
-                // simply be the body of an HTML page that quick-xml
-                // doesn't fully understand.
-                let _ = e;
-                break;
-            }
-        }
-        buf.clear();
-    }
-
-    Ok(meta_tags)
-}
-
-/// Pulls a `MetaTag` out of a `<meta>` start/empty element if it carries
-/// both an identifying attribute (`name` → fallback `property` →
-/// fallback `http-equiv`) and a `content` value.
+/// Converts a list of tags into a map from identifier to content.
 ///
-/// HTML entities in attribute values are decoded via `quick-xml`'s
-/// `unescape_value` so `&amp;`, `&quot;`, numeric refs, etc. round-trip
-/// to the same byte sequence the previous `scraper` implementation
-/// produced.
-fn collect_meta_tag(
-    e: &quick_xml::events::BytesStart<'_>,
-) -> Option<MetaTag> {
-    let mut name: Option<String> = None;
-    let mut property: Option<String> = None;
-    let mut http_equiv: Option<String> = None;
-    let mut content: Option<String> = None;
-
-    for attr_res in e.attributes() {
-        let Ok(attr) = attr_res else { continue };
-        // quick-xml 0.42 hands attribute names and values out as `str`
-        // (its reader validates UTF-8 up front), so there is no decode
-        // step here any more: unescape HTML entities and match the name.
-        // `unescape_value` was deprecated in quick-xml 0.40; driving the
-        // static `escape::unescape` helper directly is the replacement.
-        let raw: &str = attr.value.as_ref();
-        let value = match quick_xml::escape::unescape(raw) {
-            Ok(v) => v.into_owned(),
-            Err(_) => continue,
-        };
-        let key: &str = attr.key.as_ref();
-        if key.eq_ignore_ascii_case("name") {
-            name = Some(value);
-        } else if key.eq_ignore_ascii_case("property") {
-            property = Some(value);
-        } else if key.eq_ignore_ascii_case("http-equiv") {
-            http_equiv = Some(value);
-        } else if key.eq_ignore_ascii_case("content") {
-            content = Some(value);
-        }
-    }
-
-    let id = name.or(property).or(http_equiv)?;
-    let content = content?;
-    Some(MetaTag { name: id, content })
-}
-
-/// Converts a vector of MetaTags into a HashMap for easier access.
+/// A repeated identifier keeps the last value.
 ///
-/// # Arguments
+/// # Example
 ///
-/// * `meta_tags` - A vector of MetaTag structs.
+/// ```
+/// use metadata_gen::metatags::{meta_tags_to_hashmap, MetaTag};
 ///
-/// # Returns
-///
-/// A HashMap where the keys are the meta tag names and the values are the contents.
-pub fn meta_tags_to_hashmap(
-    meta_tags: Vec<MetaTag>,
-) -> HashMap<String, String> {
+/// let map = meta_tags_to_hashmap(vec![MetaTag::new("a", "1"), MetaTag::new("a", "2")]);
+/// assert_eq!(map["a"], "2");
+/// ```
+pub fn meta_tags_to_hashmap(meta_tags: Vec<MetaTag>) -> MetadataMap {
     meta_tags
         .into_iter()
         .map(|tag| (tag.name, tag.content))
         .collect()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_generate_metatags() {
-        let mut metadata = HashMap::new();
-        metadata.insert("title".to_string(), "Test Page".to_string());
-        metadata.insert(
-            "description".to_string(),
-            "A test page".to_string(),
-        );
-        metadata
-            .insert("og:title".to_string(), "OG Test Page".to_string());
-
-        let meta_tags = generate_metatags(&metadata);
-
-        assert!(meta_tags.primary.contains("description"));
-        assert!(meta_tags.og.contains("og:title"));
-    }
-
-    #[test]
-    fn test_extract_meta_tags() {
-        let html = r#"
-        <html>
-          <head>
-            <meta name="description" content="A sample page">
-            <meta property="og:title" content="Sample Title">
-            <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-          </head>
-          <body>
-            <p>Some content</p>
-          </body>
-        </html>
-        "#;
-
-        let meta_tags = extract_meta_tags(html).unwrap();
-        assert_eq!(meta_tags.len(), 3);
-        assert!(meta_tags.iter().any(|tag| tag.name == "description"
-            && tag.content == "A sample page"));
-        assert!(meta_tags.iter().any(|tag| tag.name == "og:title"
-            && tag.content == "Sample Title"));
-        assert!(meta_tags.iter().any(|tag| tag.name == "content-type"
-            && tag.content == "text/html; charset=UTF-8"));
-    }
-
-    #[test]
-    fn test_extract_meta_tags_preserves_document_order() {
-        // Issue #22 acceptance: document order must match the previous
-        // scraper-backed implementation. Three tags, deterministic order.
-        let html = r#"
-        <html><head>
-          <meta name="a" content="1">
-          <meta property="og:b" content="2">
-          <meta name="c" content="3">
-        </head><body></body></html>
-        "#;
-        let tags = extract_meta_tags(html).unwrap();
-        let names: Vec<_> =
-            tags.iter().map(|t| t.name.as_str()).collect();
-        assert_eq!(names, vec!["a", "og:b", "c"]);
-    }
-
-    #[test]
-    fn test_extract_meta_tags_handles_self_closing() {
-        // XHTML-style self-closing syntax must yield the same result as
-        // HTML-style. Both shapes appear in the wild.
-        let html = r#"<meta name="x" content="1" /><meta name="y" content="2">"#;
-        let tags = extract_meta_tags(html).unwrap();
-        assert_eq!(tags.len(), 2);
-        assert_eq!(tags[0].name, "x");
-        assert_eq!(tags[1].name, "y");
-    }
-
-    #[test]
-    fn test_extract_meta_tags_decodes_entities() {
-        // Issue #22 acceptance: HTML entities in attribute values must
-        // be decoded so consumers don't see literal `&amp;` text.
-        let html =
-            r#"<meta name="title" content="Tom &amp; Jerry &lt;3">"#;
-        let tags = extract_meta_tags(html).unwrap();
-        assert_eq!(tags.len(), 1);
-        assert_eq!(tags[0].content, "Tom & Jerry <3");
-    }
-
-    #[test]
-    fn test_extract_meta_tags_does_not_panic_on_malformed() {
-        // Issue #22 acceptance: a malformed HTML fragment with an
-        // unclosed tag must not panic; whatever was already parsed is
-        // returned to the caller. We don't pin the exact count because
-        // recovery behaviour is intentionally implementation-defined.
-        let html = r#"
-        <html><head>
-          <meta name="first" content="ok">
-          <meta name="broken" content="oops
-          <meta name="second" content="probably-lost">
-        </head>
-        "#;
-        let _ = extract_meta_tags(html).expect("must not panic");
-    }
-
-    #[test]
-    fn test_extract_meta_tags_ignores_meta_without_content() {
-        // A <meta> with no content attr is dropped (parity with the
-        // previous scraper-based behaviour).
-        let html =
-            r#"<meta name="orphan"><meta name="ok" content="yes">"#;
-        let tags = extract_meta_tags(html).unwrap();
-        assert_eq!(tags.len(), 1);
-        assert_eq!(tags[0].name, "ok");
-        assert_eq!(tags[0].content, "yes");
-    }
-
-    #[test]
-    fn test_extract_meta_tags_empty_html() {
-        let html = "<html><head></head><body></body></html>";
-        let meta_tags = extract_meta_tags(html).unwrap();
-        assert_eq!(meta_tags.len(), 0);
-    }
-
-    #[test]
-    fn test_meta_tags_to_hashmap() {
-        let meta_tags = vec![
-            MetaTag {
-                name: "description".to_string(),
-                content: "A sample page".to_string(),
-            },
-            MetaTag {
-                name: "og:title".to_string(),
-                content: "Sample Title".to_string(),
-            },
-        ];
-
-        let hashmap = meta_tags_to_hashmap(meta_tags);
-        assert_eq!(hashmap.len(), 2);
-        assert_eq!(
-            hashmap.get("description"),
-            Some(&"A sample page".to_string())
-        );
-        assert_eq!(
-            hashmap.get("og:title"),
-            Some(&"Sample Title".to_string())
-        );
-    }
-
-    #[test]
-    fn test_meta_tag_groups_display() {
-        let groups = MetaTagGroups {
-    apple: "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">".to_string(),
-    primary: "<meta name=\"description\" content=\"A test page\">".to_string(),
-    og: "<meta property=\"og:title\" content=\"Test Page\">".to_string(),
-    ms: "<meta name=\"msapplication-TileColor\" content=\"#ffffff\">".to_string(),
-    twitter: "<meta name=\"twitter:card\" content=\"summary\">".to_string(),
-};
-
-        let display = groups.to_string();
-        assert!(display.contains("apple-mobile-web-app-capable"));
-        assert!(display.contains("description"));
-        assert!(display.contains("og:title"));
-        assert!(display.contains("msapplication-TileColor"));
-        assert!(display.contains("twitter:card"));
-    }
-
-    #[test]
-    fn test_format_meta_tag() {
-        let groups = MetaTagGroups::default();
-        let tag = groups.format_meta_tag("test", "Test \"Value\"");
-        assert_eq!(
-            tag,
-            r#"<meta name="test" content="Test &quot;Value&quot;">"#
-        );
-    }
-}
+#[cfg(all(test, feature = "html"))]
+mod tests;

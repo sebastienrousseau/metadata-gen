@@ -58,8 +58,11 @@ and every fixed-bug reproducer are replayed on each push; see
 - Dependency provenance recorded with `cargo-vet`
   (`supply-chain/`); exemptions are regenerated on every dependency
   change, never added by hand.
-- The first-party crates `noyalib` and `dtt` are pinned exactly
-  (`=0.0.X`); a bump is a deliberate release of this crate (ADR-0004).
+- The first-party crate `noyalib` is pinned exactly (`=0.0.X`); a
+  bump is a deliberate release of this crate (ADR-0004).
+- Front matter is untrusted input: every parse runs under
+  `ParseLimits` (block size, nesting depth), and the YAML parser gets
+  its strict resource budgets on the flat and typed paths alike.
 - `Cargo.lock` committed for deterministic builds; CI builds
   `--locked`.
 - All GitHub Actions SHA-pinned.

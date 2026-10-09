@@ -1,5 +1,8 @@
+#![cfg_attr(not(feature = "std"), no_std)]
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 #![doc(
     html_favicon_url = "https://cloudcdn.pro/metadata-gen/v1/favicon.ico",
@@ -9,27 +12,46 @@
 #![crate_name = "metadata_gen"]
 #![crate_type = "lib"]
 
-use std::collections::HashMap;
+extern crate alloc;
+
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 
 /// The `error` module contains error types for metadata processing.
 pub mod error;
+/// Synchronous readers and files (`std`).
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+pub mod io;
 /// The `metadata` module contains functions for extracting and processing metadata.
 pub mod metadata;
 /// The `metatags` module contains functions for generating meta tags.
 pub mod metatags;
+/// Async file helpers on the Tokio runtime (feature `tokio`).
+#[cfg(all(feature = "tokio", not(loom)))]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
+pub mod tokio;
 /// The `utils` module contains utility functions for metadata processing.
 pub mod utils;
 
 pub use error::MetadataError;
 pub use metadata::{
     detect_front_matter, extract_metadata, extract_metadata_with_body,
-    extract_typed, process_metadata, process_metadata_with,
-    FrontMatterFormat, Metadata, ProcessOptions,
+    extract_metadata_with_limits, extract_typed,
+    extract_typed_borrowed, process_metadata, process_metadata_with,
+    DateOrder, FrontMatterFormat, Metadata, ParseLimits,
+    ProcessOptions,
 };
-pub use metatags::{generate_metatags, MetaTagGroups};
-pub use utils::{async_extract_metadata_from_file, escape_html};
+pub use metatags::{generate_metatags, MetaTag, MetaTagGroups};
+#[cfg(all(feature = "tokio", not(loom)))]
+pub use utils::async_extract_metadata_from_file;
+pub use utils::{escape_attribute, escape_html};
 
 /// Type alias for a map of metadata key-value pairs.
+///
+/// With the `std` feature (the default) this is `std::collections::HashMap`;
+/// in a `no_std + alloc` build it is `alloc::collections::BTreeMap`, which
+/// has the same `get`, `insert`, `iter` and `contains_key` surface.
 ///
 /// # Example
 ///
@@ -40,7 +62,11 @@ pub use utils::{async_extract_metadata_from_file, escape_html};
 /// map.insert("title".to_string(), "My Page".to_string());
 /// assert_eq!(map.get("title"), Some(&"My Page".to_string()));
 /// ```
-pub type MetadataMap = HashMap<String, String>;
+#[cfg(feature = "std")]
+pub type MetadataMap = std::collections::HashMap<String, String>;
+/// Type alias for a map of metadata key-value pairs (`no_std` build).
+#[cfg(not(feature = "std"))]
+pub type MetadataMap = alloc::collections::BTreeMap<String, String>;
 
 /// Type alias for a list of keywords.
 ///
@@ -82,7 +108,7 @@ pub type MetadataResult =
 /// # Returns
 ///
 /// Returns a Result containing a tuple with:
-/// * `HashMap<String, String>`: Extracted metadata
+/// * [`MetadataMap`]: Extracted metadata
 /// * `Vec<String>`: A list of keywords
 /// * `MetaTagGroups`: A structure containing various meta tags
 ///
@@ -106,8 +132,8 @@ pub type MetadataResult =
 /// assert!(result.is_ok());
 /// ```
 pub fn extract_and_prepare_metadata(content: &str) -> MetadataResult {
-    // Ensure the front matter format is correct
-    if !content.contains(':') {
+    // Ensure the front matter format contains key-value separators
+    if !content.contains(':') && !content.contains('=') {
         return Err(MetadataError::ExtractionError {
             message: "No valid front matter found".to_string(),
         });
@@ -127,7 +153,7 @@ pub fn extract_and_prepare_metadata(content: &str) -> MetadataResult {
 ///
 /// # Arguments
 ///
-/// * `metadata` - A reference to a HashMap containing the metadata.
+/// * `metadata` - A reference to the [`MetadataMap`] holding the metadata.
 ///
 /// # Returns
 ///
@@ -136,27 +162,26 @@ pub fn extract_and_prepare_metadata(content: &str) -> MetadataResult {
 /// # Example
 ///
 /// ```
-/// use std::collections::HashMap;
-/// use metadata_gen::extract_keywords;
+/// use metadata_gen::{extract_keywords, MetadataMap};
 ///
-/// let mut metadata = HashMap::new();
+/// let mut metadata = MetadataMap::new();
 /// metadata.insert("keywords".to_string(), "rust, metadata, parsing".to_string());
 ///
 /// let keywords = extract_keywords(&metadata);
 /// assert_eq!(keywords, vec!["rust", "metadata", "parsing"]);
 /// ```
-pub fn extract_keywords(
-    metadata: &HashMap<String, String>,
-) -> Vec<String> {
+pub fn extract_keywords(metadata: &MetadataMap) -> Vec<String> {
     metadata
         .get("keywords")
         .map(|k| k.split(',').map(|s| s.trim().to_string()).collect())
         .unwrap_or_default()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std", feature = "yaml"))]
 mod tests {
     use super::*;
+    use alloc::string::ToString;
+    use alloc::vec;
 
     #[test]
     fn test_extract_and_prepare_metadata() {
@@ -186,7 +211,7 @@ This is a test file for metadata extraction."#;
 
     #[test]
     fn test_extract_keywords() {
-        let mut metadata = HashMap::new();
+        let mut metadata = MetadataMap::new();
         metadata.insert(
             "keywords".to_string(),
             "rust, programming, metadata".to_string(),
@@ -198,7 +223,7 @@ This is a test file for metadata extraction."#;
 
     #[test]
     fn test_extract_keywords_empty() {
-        let metadata = HashMap::new();
+        let metadata = MetadataMap::new();
         let keywords = extract_keywords(&metadata);
         assert!(keywords.is_empty());
     }

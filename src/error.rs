@@ -3,10 +3,22 @@
 //! This module defines custom error types used throughout the library,
 //! providing detailed information about various failure scenarios.
 
+use crate::metadata::FrontMatterFormat;
+use alloc::boxed::Box;
+use alloc::format;
+use alloc::string::{String, ToString};
+use core::fmt::Display;
+use core::ops::Range;
+#[cfg(feature = "yaml")]
 use noyalib::Error as SerdeYmlError;
+#[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
 use serde::de::Error as SerdeError;
-use std::fmt::Display;
 use thiserror::Error;
+
+/// A boxed error that can cross threads; the payload of
+/// [`MetadataError::Other`] and the `source` of [`MetadataError::Parse`].
+pub type BoxedError =
+    Box<dyn core::error::Error + Send + Sync + 'static>;
 
 /// A custom error type to add context to the `Other` variant of `MetadataError`.
 ///
@@ -16,19 +28,22 @@ pub struct ContextError {
     /// The context message providing additional information about the error.
     context: String,
     /// The source error that this `ContextError` is wrapping.
-    source: Box<dyn std::error::Error + Send + Sync>,
+    source: BoxedError,
 }
 
 /// Displays the context error as `"context: source"`.
-impl std::fmt::Display for ContextError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for ContextError {
+    fn fmt(
+        &self,
+        f: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
         write!(f, "{}: {}", self.context, self.source)
     }
 }
 
 /// Provides access to the underlying source error.
-impl std::error::Error for ContextError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for ContextError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         Some(&*self.source)
     }
 }
@@ -38,7 +53,25 @@ impl std::error::Error for ContextError {
 /// This enum encompasses all possible errors that can occur during
 /// metadata extraction, processing, and related operations.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum MetadataError {
+    /// A front-matter block was found but its parser rejected it.
+    ///
+    /// `span` is the byte range inside the raw block the parser pointed
+    /// at, when it reported one (TOML and JSON always do; YAML reports
+    /// a line and column that are mapped to an offset). `source` is the
+    /// parser's own error, reachable through `Error::source`.
+    #[error("{format} front matter failed to parse{}: {source}", span_suffix(.span))]
+    Parse {
+        /// Which parser rejected the block.
+        format: FrontMatterFormat,
+        /// Byte range inside the raw front-matter block, if the parser gave one.
+        span: Option<Range<usize>>,
+        /// The parser's error.
+        #[source]
+        source: BoxedError,
+    },
+
     /// Error occurred while extracting metadata.
     #[error("Failed to extract metadata: {message}")]
     ExtractionError {
@@ -62,18 +95,26 @@ pub enum MetadataError {
     DateParseError(String),
 
     /// I/O error.
+    #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
 
     /// YAML parsing error.
+    #[cfg(feature = "yaml")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "yaml")))]
     #[error("YAML parsing error: {0}")]
     YamlError(#[from] SerdeYmlError),
 
     /// JSON parsing error.
+    #[cfg(feature = "json")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "json")))]
     #[error("JSON parsing error: {0}")]
     JsonError(#[from] serde_json::Error),
 
     /// TOML parsing error.
+    #[cfg(feature = "toml")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "toml")))]
     #[error("TOML parsing error: {0}")]
     TomlError(#[from] toml::de::Error),
 
@@ -91,15 +132,70 @@ pub enum MetadataError {
     },
 
     /// UTF-8 decoding error.
+    ///
+    /// No function in the crate returns it: every entry point takes
+    /// `&str`, and the readers in `metadata_gen::io` report invalid UTF-8 as
+    /// an I/O error. Kept for code that matches on it or converts a
+    /// `core::str::Utf8Error` with `?`.
+    #[deprecated(
+        since = "0.0.8",
+        note = "never produced by the crate; match on `IoError` for invalid UTF-8 from a reader"
+    )]
     #[error("UTF-8 decoding error: {0}")]
-    Utf8Error(#[from] std::str::Utf8Error),
+    Utf8Error(#[from] core::str::Utf8Error),
 
     /// Catch-all for unexpected errors.
+    ///
+    /// There is deliberately no `From<BoxedError>`: a boxed error never
+    /// becomes a `MetadataError` by accident through `?`. Build it with
+    /// [`MetadataError::other`] where the coercion is intended.
     #[error("Unexpected error: {0}")]
-    Other(#[from] Box<dyn std::error::Error + Send + Sync>),
+    Other(BoxedError),
+}
+
+/// Renders ` at bytes a..b` for the `Parse` display, or nothing.
+fn span_suffix(span: &Option<Range<usize>>) -> String {
+    match span {
+        Some(r) => format!(" at bytes {}..{}", r.start, r.end),
+        None => String::new(),
+    }
 }
 
 impl MetadataError {
+    /// Wraps any error as [`MetadataError::Other`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::error::MetadataError;
+    ///
+    /// let err = MetadataError::other(core::fmt::Error);
+    /// assert!(matches!(err, MetadataError::Other(_)));
+    /// ```
+    pub fn other<E>(error: E) -> Self
+    where
+        E: core::error::Error + Send + Sync + 'static,
+    {
+        Self::Other(Box::new(error))
+    }
+
+    /// Builds a [`MetadataError::Parse`] from a parser's error.
+    #[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
+    pub(crate) fn parse<E>(
+        format: FrontMatterFormat,
+        span: Option<Range<usize>>,
+        source: E,
+    ) -> Self
+    where
+        E: core::error::Error + Send + Sync + 'static,
+    {
+        Self::Parse {
+            format,
+            span,
+            source: Box::new(source),
+        }
+    }
+
     /// Creates a new `ExtractionError` with the given message.
     ///
     /// # Arguments
@@ -203,6 +299,50 @@ impl MetadataError {
         C: Display + Send + Sync + 'static,
     {
         match self {
+            #[cfg(feature = "std")]
+            Self::IoError(error) => Self::IoError(std::io::Error::new(
+                error.kind(),
+                format!("{}: {}", ctx, error),
+            )),
+            #[cfg(feature = "yaml")]
+            Self::YamlError(error) => Self::YamlError(
+                SerdeYmlError::custom(format!("{}: {}", ctx, error)),
+            ),
+            #[cfg(feature = "json")]
+            Self::JsonError(error) => {
+                Self::JsonError(serde_json::Error::custom(format!(
+                    "{}: {}",
+                    ctx, error
+                )))
+            }
+            #[cfg(feature = "toml")]
+            Self::TomlError(error) => Self::TomlError(
+                toml::de::Error::custom(format!("{}: {}", ctx, error)),
+            ),
+            Self::Parse {
+                format,
+                span,
+                source,
+            } => Self::Parse {
+                format,
+                span,
+                source: Box::new(ContextError {
+                    context: ctx.to_string(),
+                    source,
+                }),
+            },
+            Self::Other(error) => Self::Other(Box::new(ContextError {
+                context: ctx.to_string(),
+                source: error,
+            })),
+            other => other.prefix_message(&ctx),
+        }
+    }
+
+    /// Prefixes `ctx` onto the variants whose payload is a plain message.
+    /// Variants that wrap a foreign error are handled by [`Self::context`].
+    fn prefix_message<C: Display>(self, ctx: &C) -> Self {
+        match self {
             Self::ExtractionError { message } => {
                 Self::ExtractionError {
                     message: format!("{}: {}", ctx, message),
@@ -219,22 +359,6 @@ impl MetadataError {
             Self::DateParseError(error) => {
                 Self::DateParseError(format!("{}: {}", ctx, error))
             }
-            Self::IoError(error) => Self::IoError(std::io::Error::new(
-                error.kind(),
-                format!("{}: {}", ctx, error),
-            )),
-            Self::YamlError(error) => Self::YamlError(
-                SerdeYmlError::custom(format!("{}: {}", ctx, error)),
-            ),
-            Self::JsonError(error) => {
-                Self::JsonError(serde_json::Error::custom(format!(
-                    "{}: {}",
-                    ctx, error
-                )))
-            }
-            Self::TomlError(error) => Self::TomlError(
-                toml::de::Error::custom(format!("{}: {}", ctx, error)),
-            ),
             Self::UnsupportedFormatError(format) => {
                 Self::UnsupportedFormatError(format!(
                     "{}: {}",
@@ -247,637 +371,25 @@ impl MetadataError {
                     message: format!("{}: {}", ctx, message),
                 }
             }
-            Self::Utf8Error(error) => Self::Utf8Error(error),
-            Self::Other(error) => Self::Other(Box::new(ContextError {
-                context: ctx.to_string(),
-                source: error,
-            })),
+            other => other,
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::error::Error;
-    use std::fmt;
-    use std::io;
-
-    #[test]
-    fn test_extraction_error() {
-        let error = MetadataError::new_extraction_error(
-            "No valid front matter found.",
-        );
-        assert_eq!(
-            error.to_string(),
-            "Failed to extract metadata: No valid front matter found."
-        );
-    }
-
-    #[test]
-    fn test_processing_error() {
-        let error =
-            MetadataError::new_processing_error("Unknown field");
-        assert_eq!(
-            error.to_string(),
-            "Failed to process metadata: Unknown field"
-        );
-    }
-
-    #[test]
-    fn test_missing_field_error() {
-        let error =
-            MetadataError::MissingFieldError("author".to_string());
-        assert_eq!(
-            error.to_string(),
-            "Missing required metadata field: author"
-        );
-    }
-
-    #[test]
-    fn test_date_parse_error() {
-        let error = MetadataError::DateParseError(
-            "Invalid date format".to_string(),
-        );
-        assert_eq!(
-            error.to_string(),
-            "Failed to parse date: Invalid date format"
-        );
-    }
-
-    #[test]
-    fn test_io_error() {
-        let io_error =
-            io::Error::new(io::ErrorKind::NotFound, "File not found");
-        let error: MetadataError = io_error.into();
-        assert_eq!(error.to_string(), "I/O error: File not found");
-    }
-
-    #[test]
-    fn test_yaml_error() {
-        let yaml_error = noyalib::Error::custom("YAML structure error");
-        let error: MetadataError = yaml_error.into();
-        assert!(error.to_string().contains("YAML parsing error"));
-    }
-
-    #[test]
-    fn test_json_error() {
-        let json_error =
-            serde_json::Error::custom("Invalid JSON format");
-        let error: MetadataError = json_error.into();
-        assert_eq!(
-            error.to_string(),
-            "JSON parsing error: Invalid JSON format"
-        );
-    }
-
-    #[test]
-    fn test_toml_error() {
-        let toml_error =
-            toml::de::Error::custom("Invalid TOML structure");
-        let error: MetadataError = toml_error.into();
-        assert!(error.to_string().contains("TOML parsing error"));
-    }
-
-    #[test]
-    fn test_unsupported_format_error() {
-        let error =
-            MetadataError::UnsupportedFormatError("XML".to_string());
-        assert_eq!(
-            error.to_string(),
-            "Unsupported metadata format: XML"
-        );
-    }
-
-    #[test]
-    fn test_validation_error() {
-        let error = MetadataError::new_validation_error(
-            "title",
-            "Title must not be empty",
-        );
-        match error {
-            MetadataError::ValidationError { field, message } => {
-                assert_eq!(field, "title");
-                assert_eq!(message, "Title must not be empty");
-            }
-            _ => panic!("Unexpected error variant"),
-        }
-    }
-
-    #[test]
-    #[allow(invalid_from_utf8)]
-    fn test_utf8_error() {
-        let invalid_bytes: &[u8] = &[0xFF, 0xFF];
-        let utf8_error =
-            std::str::from_utf8(invalid_bytes).unwrap_err();
-        let error: MetadataError = utf8_error.into();
-        assert!(matches!(error, MetadataError::Utf8Error(..)));
-        assert!(error.to_string().starts_with("UTF-8 decoding error:"));
-    }
-
-    #[test]
-    fn test_other_error() {
-        use std::error::Error;
-
-        #[derive(Debug)]
-        struct CustomError;
-
-        impl std::fmt::Display for CustomError {
-            fn fmt(
-                &self,
-                f: &mut std::fmt::Formatter<'_>,
-            ) -> std::fmt::Result {
-                write!(f, "Custom error occurred")
-            }
-        }
-
-        impl Error for CustomError {}
-
-        let custom_error = CustomError;
-        let error = MetadataError::Other(Box::new(custom_error));
-
-        assert!(matches!(error, MetadataError::Other(..)));
-        assert_eq!(
-            error.to_string(),
-            "Unexpected error: Custom error occurred"
-        );
-    }
-
-    #[test]
-    fn test_extraction_error_with_empty_message() {
-        let error = MetadataError::new_extraction_error("");
-        assert_eq!(error.to_string(), "Failed to extract metadata: ");
-    }
-
-    #[test]
-    fn test_processing_error_with_empty_message() {
-        let error = MetadataError::new_processing_error("");
-        assert_eq!(error.to_string(), "Failed to process metadata: ");
-    }
-
-    #[test]
-    fn test_validation_error_with_empty_field_and_message() {
-        let error = MetadataError::new_validation_error("", "");
-        match error {
-            MetadataError::ValidationError { field, message } => {
-                assert_eq!(field, "");
-                assert_eq!(message, "");
-            }
-            _ => panic!("Unexpected error variant"),
-        }
-    }
-
-    #[test]
-    fn test_unsupported_format_error_with_empty_format() {
-        let error =
-            MetadataError::UnsupportedFormatError("".to_string());
-        assert_eq!(error.to_string(), "Unsupported metadata format: ");
-    }
-
-    #[test]
-    fn test_yaml_error_with_custom_message() {
-        // Custom YAML error message
-        let yaml_error =
-            noyalib::Error::custom("Custom YAML error occurred");
-        let error: MetadataError = yaml_error.into();
-        assert!(error.to_string().contains(
-            "YAML parsing error: Custom YAML error occurred"
-        ));
-    }
-
-    #[test]
-    fn test_json_error_with_custom_message() {
-        // Custom JSON error message
-        let json_error = serde_json::Error::custom("Custom JSON error");
-        let error: MetadataError = json_error.into();
-        assert_eq!(
-            error.to_string(),
-            "JSON parsing error: Custom JSON error"
-        );
-    }
-
-    #[test]
-    fn test_toml_error_with_custom_message() {
-        // Custom TOML error message
-        let toml_error = toml::de::Error::custom("Custom TOML error");
-        let error: MetadataError = toml_error.into();
-        assert!(error
-            .to_string()
-            .contains("TOML parsing error: Custom TOML error"));
-    }
-
-    #[test]
-    #[allow(invalid_from_utf8)]
-    fn test_utf8_error_with_specific_invalid_bytes() {
-        let invalid_bytes: &[u8] = &[0xC0, 0x80]; // Overlong encoding, invalid UTF-8
-        let utf8_error =
-            std::str::from_utf8(invalid_bytes).unwrap_err();
-        let error: MetadataError = utf8_error.into();
-        assert!(matches!(error, MetadataError::Utf8Error(..)));
-        assert!(error.to_string().starts_with("UTF-8 decoding error:"));
-    }
-
-    #[test]
-    fn test_io_error_with_custom_message() {
-        let io_error = std::io::Error::new(
-            std::io::ErrorKind::PermissionDenied,
-            "Permission denied",
-        );
-        let error: MetadataError = io_error.into();
-        assert_eq!(error.to_string(), "I/O error: Permission denied");
-    }
-
-    #[test]
-    fn test_extraction_error_to_debug() {
-        let error = MetadataError::new_extraction_error(
-            "Failed to extract metadata",
-        );
-        assert_eq!(
-            format!("{:?}", error),
-            r#"ExtractionError { message: "Failed to extract metadata" }"#
-        );
-    }
-
-    #[test]
-    fn test_processing_error_to_debug() {
-        let error =
-            MetadataError::new_processing_error("Processing failed");
-        assert_eq!(
-            format!("{:?}", error),
-            r#"ProcessingError { message: "Processing failed" }"#
-        );
-    }
-
-    #[test]
-    fn test_validation_error_to_debug() {
-        let error = MetadataError::new_validation_error(
-            "title",
-            "Title cannot be empty",
-        );
-        assert_eq!(
-            format!("{:?}", error),
-            r#"ValidationError { field: "title", message: "Title cannot be empty" }"#
-        );
-    }
-
-    #[test]
-    fn test_other_error_to_debug() {
-        #[derive(Debug)]
-        struct CustomError;
-
-        impl std::fmt::Display for CustomError {
-            fn fmt(
-                &self,
-                f: &mut std::fmt::Formatter<'_>,
-            ) -> std::fmt::Result {
-                write!(f, "A custom error occurred")
-            }
-        }
-
-        impl std::error::Error for CustomError {}
-
-        let custom_error = CustomError;
-        let error = MetadataError::Other(Box::new(custom_error));
-
-        // Ensure the debug output is correctly formatted
-        assert!(format!("{:?}", error).contains("Other("));
-    }
-
-    #[test]
-    fn test_context_error() {
-        let error =
-            MetadataError::new_extraction_error("Failed to parse YAML")
-                .context("Processing file 'example.md'");
-        assert_eq!(
-            error.to_string(),
-            "Failed to extract metadata: Processing file 'example.md': Failed to parse YAML"
-        );
-    }
-
-    #[test]
-    fn test_nested_context_error() {
-        let error =
-            MetadataError::new_extraction_error("Failed to parse YAML")
-                .context("Processing file 'example.md'")
-                .context("Metadata extraction process");
-        assert_eq!(
-            error.to_string(),
-            "Failed to extract metadata: Metadata extraction process: Processing file 'example.md': Failed to parse YAML"
-        );
-    }
-
-    #[test]
-    fn test_extraction_error_empty_message() {
-        let error = MetadataError::ExtractionError {
-            message: "".to_string(),
-        };
-        assert_eq!(error.to_string(), "Failed to extract metadata: ");
-    }
-
-    #[test]
-    fn test_processing_error_empty_message() {
-        let error = MetadataError::ProcessingError {
-            message: "".to_string(),
-        };
-        assert_eq!(error.to_string(), "Failed to process metadata: ");
-    }
-
-    #[test]
-    fn test_missing_field_error_empty_message() {
-        let error = MetadataError::MissingFieldError("".to_string());
-        assert_eq!(
-            error.to_string(),
-            "Missing required metadata field: "
-        );
-    }
-
-    #[test]
-    fn test_date_parse_error_empty_message() {
-        let error = MetadataError::DateParseError("".to_string());
-        assert_eq!(error.to_string(), "Failed to parse date: ");
-    }
-
-    #[test]
-    fn test_extraction_error_debug() {
-        let error = MetadataError::ExtractionError {
-            message: "Error extracting metadata".to_string(),
-        };
-        // The correct Debug output for the struct variant should include the field name
-        assert_eq!(
-            format!("{:?}", error),
-            r#"ExtractionError { message: "Error extracting metadata" }"#
-        );
-    }
-
-    #[test]
-    fn test_processing_error_debug() {
-        let error = MetadataError::ProcessingError {
-            message: "Error processing metadata".to_string(),
-        };
-        // The correct Debug output for the struct variant should include the field name
-        assert_eq!(
-            format!("{:?}", error),
-            r#"ProcessingError { message: "Error processing metadata" }"#
-        );
-    }
-
-    #[test]
-    fn test_io_error_propagation() {
-        let io_error =
-            io::Error::new(io::ErrorKind::NotFound, "file not found");
-        let error: MetadataError = io_error.into();
-        assert_eq!(error.to_string(), "I/O error: file not found");
-        assert!(matches!(error, MetadataError::IoError(_)));
-    }
-
-    #[test]
-    fn test_yaml_error_propagation() {
-        let yaml_error = noyalib::Error::custom("Custom YAML error");
-        let error: MetadataError = yaml_error.into();
-        assert_eq!(
-            error.to_string(),
-            "YAML parsing error: Custom YAML error"
-        );
-        assert!(matches!(error, MetadataError::YamlError(_)));
-    }
-
-    #[test]
-    fn test_json_error_propagation() {
-        let json_error = serde_json::Error::custom("Custom JSON error");
-        let error: MetadataError = json_error.into();
-        assert_eq!(
-            error.to_string(),
-            "JSON parsing error: Custom JSON error"
-        );
-        assert!(matches!(error, MetadataError::JsonError(_)));
-    }
-
-    #[test]
-    fn test_toml_error_propagation() {
-        let toml_error = toml::de::Error::custom("Custom TOML error");
-        let error: MetadataError = toml_error.into();
-        assert_eq!(
-            error.to_string(),
-            "TOML parsing error: Custom TOML error\n"
-        );
-        assert!(matches!(error, MetadataError::TomlError(_)));
-    }
-
-    #[test]
-    fn test_missing_field_error_debug() {
-        let error =
-            MetadataError::MissingFieldError("title".to_string());
-        assert_eq!(
-            format!("{:?}", error),
-            r#"MissingFieldError("title")"#
-        );
-    }
-
-    #[test]
-    fn test_date_parse_error_debug() {
-        let error = MetadataError::DateParseError(
-            "Invalid date format".to_string(),
-        );
-        assert_eq!(
-            format!("{:?}", error),
-            r#"DateParseError("Invalid date format")"#
-        );
-    }
-
-    #[test]
-    fn test_empty_yaml_error_message() {
-        let yaml_error = noyalib::Error::custom("");
-        let error: MetadataError = yaml_error.into();
-        assert_eq!(error.to_string(), "YAML parsing error: ");
-    }
-
-    #[test]
-    fn test_empty_json_error_message() {
-        let json_error = serde_json::Error::custom("");
-        let error: MetadataError = json_error.into();
-        assert_eq!(error.to_string(), "JSON parsing error: ");
-    }
-
-    #[test]
-    fn test_empty_toml_error_message() {
-        let toml_error = toml::de::Error::custom("");
-        let error: MetadataError = toml_error.into();
-        assert_eq!(error.to_string(), "TOML parsing error: \n");
-    }
-
-    // A custom error for testing purposes
-    #[derive(Debug)]
-    struct CustomError;
-
-    impl fmt::Display for CustomError {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "Custom error occurred")
-        }
-    }
-
-    impl Error for CustomError {}
-
-    #[test]
-    fn test_context_error_fmt() {
-        let custom_error = CustomError;
-        let context_error = ContextError {
-            context: "An error occurred while processing".to_string(),
-            source: Box::new(custom_error),
-        };
-
-        let formatted = format!("{}", context_error);
-        assert_eq!(
-            formatted,
-            "An error occurred while processing: Custom error occurred"
-        );
-    }
-
-    #[test]
-    fn test_context_error_source() {
-        let custom_error = CustomError;
-        let context_error = ContextError {
-            context: "Error with context".to_string(),
-            source: Box::new(custom_error),
-        };
-
-        // The source method should return a reference to the original error (custom_error in this case)
-        let source = context_error.source().unwrap();
-        assert_eq!(source.to_string(), "Custom error occurred");
-    }
-
-    #[test]
-    fn test_context_error_debug() {
-        let custom_error = CustomError;
-        let context_error = ContextError {
-            context: "Error during processing".to_string(),
-            source: Box::new(custom_error),
-        };
-
-        let debug_output = format!("{:?}", context_error);
-
-        // Ensure the debug output includes the "ContextError" struct and its fields
-        assert!(debug_output.contains("ContextError"));
-        assert!(debug_output.contains("Error during processing"));
-        assert!(debug_output.contains("CustomError"));
-    }
-}
-
-#[cfg(test)]
-mod context_tests {
-    //! `MetadataError::context` rewrites every variant. Each arm is a
-    //! separate branch, so each needs its own case: a missed arm here is
-    //! a variant whose context silently disappears.
-
-    use super::*;
-
-    fn assert_prefixed(err: &MetadataError, ctx: &str) {
-        let text = err.to_string();
-        assert!(
-            text.contains(ctx),
-            "context {ctx:?} missing from {text:?}"
-        );
-    }
-
-    #[test]
-    fn context_prefixes_extraction_and_processing() {
-        let e =
-            MetadataError::new_extraction_error("bad").context("front");
-        assert!(
-            matches!(e, MetadataError::ExtractionError { ref message } if message == "front: bad")
-        );
-        let e =
-            MetadataError::new_processing_error("bad").context("front");
-        assert!(
-            matches!(e, MetadataError::ProcessingError { ref message } if message == "front: bad")
-        );
-    }
-
-    #[test]
-    fn context_prefixes_string_payload_variants() {
-        let e = MetadataError::MissingFieldError("title".into())
-            .context("page");
-        assert!(
-            matches!(e, MetadataError::MissingFieldError(ref s) if s == "page: title")
-        );
-        let e =
-            MetadataError::DateParseError("x".into()).context("page");
-        assert!(
-            matches!(e, MetadataError::DateParseError(ref s) if s == "page: x")
-        );
-        let e = MetadataError::UnsupportedFormatError("ini".into())
-            .context("page");
-        assert!(
-            matches!(e, MetadataError::UnsupportedFormatError(ref s) if s == "page: ini")
-        );
-        let e = MetadataError::new_validation_error("title", "empty")
-            .context("page");
-        assert!(matches!(
-            e,
-            MetadataError::ValidationError { ref field, ref message }
-                if field == "title" && message == "page: empty"
-        ));
-    }
-
-    #[test]
-    fn context_wraps_io_error_and_keeps_its_kind() {
-        let io =
-            std::io::Error::new(std::io::ErrorKind::NotFound, "gone");
-        let e = MetadataError::from(io).context("reading");
-        match e {
-            MetadataError::IoError(inner) => {
-                assert_eq!(inner.kind(), std::io::ErrorKind::NotFound);
-                assert_eq!(inner.to_string(), "reading: gone");
-            }
-            other => panic!("expected IoError, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn context_rewrites_parser_errors_as_custom_messages() {
-        let yaml =
-            noyalib::from_str::<noyalib::Value>("a: [").unwrap_err();
-        let e = MetadataError::from(yaml).context("yaml");
-        assert!(matches!(e, MetadataError::YamlError(_)));
-        assert_prefixed(&e, "yaml");
-
-        let json =
-            serde_json::from_str::<serde_json::Value>("{").unwrap_err();
-        let e = MetadataError::from(json).context("json");
-        assert!(matches!(e, MetadataError::JsonError(_)));
-        assert_prefixed(&e, "json");
-
-        let toml = toml::from_str::<toml::Value>("a = ").unwrap_err();
-        let e = MetadataError::from(toml).context("toml");
-        assert!(matches!(e, MetadataError::TomlError(_)));
-        assert_prefixed(&e, "toml");
-    }
-
-    #[test]
-    fn context_leaves_utf8_errors_untouched() {
-        let bytes = vec![0xffu8];
-        let utf8 = std::str::from_utf8(&bytes).unwrap_err();
-        let e = MetadataError::from(utf8).context("ignored");
-        assert!(matches!(e, MetadataError::Utf8Error(_)));
-        assert!(!e.to_string().contains("ignored"));
-    }
-
-    #[test]
-    fn context_boxes_other_errors_with_a_source_chain() {
-        let inner: Box<dyn std::error::Error + Send + Sync> =
-            "root cause".into();
-        let e = MetadataError::from(inner).context("outer");
-        let MetadataError::Other(boxed) = &e else {
-            panic!("expected Other, got {e:?}");
-        };
-        // ContextError renders "context: source" and keeps the source
-        // reachable for callers walking the chain.
-        assert_eq!(boxed.to_string(), "outer: root cause");
-        let source =
-            boxed.source().expect("ContextError keeps its source");
-        assert_eq!(source.to_string(), "root cause");
-        assert_eq!(
-            e.to_string(),
-            "Unexpected error: outer: root cause"
-        );
-    }
-}
+#[cfg(all(
+    test,
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
+mod tests;
+
+#[cfg(all(
+    test,
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
+mod context_tests;

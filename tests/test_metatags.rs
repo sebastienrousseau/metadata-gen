@@ -2,6 +2,15 @@
 //!
 //! This module tests the handling and validation of meta tags in HTML documents.
 
+// The suites exercise the default feature set.
+#![cfg(all(
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json",
+    feature = "html"
+))]
+
 #[cfg(test)]
 mod tests {
     use metadata_gen::MetaTagGroups;
@@ -68,7 +77,7 @@ mod tests {
         meta_tags.add_custom_tag("og:custom", "custom og value");
 
         assert!(meta_tags.og.contains(
-            "<meta name=\"og:custom\" content=\"custom og value\">"
+            "<meta property=\"og:custom\" content=\"custom og value\">"
         ));
     }
 
@@ -124,7 +133,7 @@ mod tests {
         // Check Open Graph (og) meta tags
         assert!(
             meta_tags.og.contains(
-                "<meta name=\"og:custom\" content=\"og value\">"
+                "<meta property=\"og:custom\" content=\"og value\">"
             ),
             "OG meta tag should contain 'og:custom'"
         );

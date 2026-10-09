@@ -6,7 +6,7 @@ contributors should understand before proposing structural changes.
 
 ## Format
 
-Every ADR uses [Michael Nygard's format](https://github.com/joelparkerhenderson/architecture-decision-record/tree/main/locales/en/templates/decision-record-template-by-michael-nygard)
+Every ADR uses [Michael Nygard's format](https://github.com/architecture-decision-record/architecture-decision-record/tree/main/locales/en-gb/templates/decision-record-template-by-michael-nygard)
 — see [`TEMPLATE.md`](./TEMPLATE.md). Sections are:
 
 - **Status:** proposed / accepted / superseded / deprecated
@@ -26,6 +26,7 @@ Nothing is silently rewritten.
 | [0002](./0002-flat-string-metadata.md) | Front matter flattens to `HashMap<String, String>` with dotted keys | accepted |
 | [0003](./0003-streaming-meta-extraction.md) | `<meta>` extraction is a streaming `quick-xml` pass, not a DOM | accepted |
 | [0004](./0004-first-party-exact-pins.md) | First-party crates are pinned exactly (`=0.0.X`) | accepted |
+| [0005](./0005-feature-flags-and-no-std.md) | Formats and integrations are Cargo features; the core is `no_std + alloc` | accepted |
 
 ## When to add an ADR
 

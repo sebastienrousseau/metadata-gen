@@ -28,7 +28,7 @@ make            # check + clippy + test — the default gate
 ## Task map
 
 `make` targets are the canonical dev tasks (see the
-[`Makefile`](Makefile) header for the full list):
+[`GNUmakefile`](GNUmakefile) header for the full list):
 
 | Task | Command |
 | :--- | :--- |
@@ -44,6 +44,15 @@ make            # check + clippy + test — the default gate
 | Benches compile and run once | `make bench-smoke` |
 | Version-bearing files agree | `make versions` |
 | Supply chain | `make deny` / `make vet` / `make audit` |
+| Complexity ceilings | `make complexity` |
+| Links in every Markdown file | `make links` |
+| Minimum Rust (1.88) | `make msrv` |
+| Public API against the last release | `make semver` |
+| Every feature combination | `make hack` |
+| Package and verify the archive | `make distcheck` |
+| CycloneDX SBOM | `make sbom` |
+| Release preflight for a local tag | `make preflight TAG=vX.Y.Z` |
+| Install the tools the gates need | `make tools` |
 
 ## Reproducing the CI gates
 
@@ -69,6 +78,13 @@ Every gate has a local equivalent:
 | `docs-lint` | `make lint` | British spellings are house style; see `.codespellrc` |
 | `reuse-lint` | `uvx --with chardet reuse lint` | files without an inline header are covered by `REUSE.toml` |
 | `docs-strict` | `make doc` | warnings are errors; every public item is documented |
+| `msrv` (quality.yml) | `make msrv` | needs `rustup toolchain install 1.88.0` |
+| `semver-checks` (quality.yml) | `make semver` | builds the crates.io baseline, so it needs the network |
+| `feature-powerset` (quality.yml) | `make hack` | the crate has no features yet, so this is one build |
+| `complexity` (quality.yml) | `make complexity` | ceilings in `scripts/complexity_check.py`; `complexity-baseline.txt` may only shrink |
+| `links` (quality.yml) | `make links` | `lychee.toml` excludes loopback and `example.com` fixtures |
+| `scorecard.yml` | none | runs on `main`; the score is read at <https://scorecard.dev> |
+| `release.yml` | `make preflight TAG=vX.Y.Z` | only the local preflight can verify the tag signature |
 
 ## Coverage: the threshold and why
 
@@ -103,6 +119,23 @@ snippet. Tags are signed (`git tag -s vX.Y.Z`); the key is in
 (`cargo publish` from the tagged commit); moving it to a tag-triggered
 workflow with Trusted Publishing is tracked in the changelog's next
 release.
+
+### Release automation
+
+A release is a signed, annotated tag `vX.Y.Z` whose subject line is
+`metadata-gen vX.Y.Z`, pushed only after `make preflight TAG=vX.Y.Z`
+passes. `release.yml` then verifies the tag and versions again, packages
+the crate, writes a CycloneDX SBOM, attests build provenance for both,
+and publishes the GitHub release with the Highlights from
+`docs/releases/vX.Y.Z.md`, the generated What's Changed list, the asset
+checksums and the Full Changelog line. Publishing to crates.io stays a
+manual `cargo publish` after the published release has been audited.
+
+### Devcontainer
+
+The container runs only `rustup component add rustfmt clippy` on create
+so it boots in well under a minute; `make tools` installs the cargo
+tools the other gates need.
 
 ## House rules
 

@@ -2,8 +2,17 @@
 //!
 //! This module tests utility functions such as string manipulation and validation.
 
+// The suites exercise the default feature set.
+#![cfg(all(
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
+
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "tokio")]
     use metadata_gen::async_extract_metadata_from_file;
     use metadata_gen::utils::escape_html;
 
@@ -42,6 +51,7 @@ mod tests {
     }
 
     /// Test async file-based metadata extraction.
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_async_extract_metadata_from_file() {
         use tempfile::tempdir;

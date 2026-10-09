@@ -2,6 +2,14 @@
 //!
 //! This module contains tests for metadata extraction and manipulation.
 
+// The suites exercise the default feature set.
+#![cfg(all(
+    feature = "std",
+    feature = "yaml",
+    feature = "toml",
+    feature = "json"
+))]
+
 #[cfg(test)]
 mod tests {
     use metadata_gen::metadata::extract_metadata;
@@ -115,7 +123,13 @@ Content here
 
         if let Err(MetadataError::ExtractionError { message }) = result
         {
-            assert!(message.contains("No valid front matter found"));
+            // An opening fence with no closing fence says so, with the
+            // fence's byte offset, rather than "No valid front matter".
+            assert!(
+                message
+                    .contains("opened at byte 0 has no closing fence"),
+                "got: {message}"
+            );
         } else {
             panic!("Expected ExtractionError, got {:?}", result);
         }

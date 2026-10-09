@@ -1,0 +1,6 @@
+# Target tier under the workspace compliance matrix (~/Code/AGENTS.md, section 5).
+# L3 is a target, not a claim: each requirement is enforced in CI or listed
+# as open in DEVELOPMENT.md.
+tier: L3
+criticality: standard
+owner: sebastienrousseau

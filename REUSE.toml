@@ -9,6 +9,7 @@ version = 1
 [[annotations]]
 path = [
     ".editorconfig",
+    ".cargo/**",
     "audit.toml",
     "AUTHORS.md",
     ".codespellrc",
@@ -22,7 +23,9 @@ path = [
     "rustfmt.toml",
     "Cargo.toml",
     "Cargo.lock",
-    "Makefile",
+    "GNUmakefile",
+    ".compliance.yml",
+    "lychee.toml",
     "deny.toml",
     "codecov.yml",
     "rust-toolchain.toml",

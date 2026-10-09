@@ -23,8 +23,11 @@ this file covers the rules that are easy for an agent to violate.
   regression fix lands with the input that found it.
 - Run the local battery before pushing: `cargo fmt --all -- --check`,
   clippy, `cargo test --all-features`, `reuse lint`, codespell,
-  markdownlint. `scripts/verify-release-versions.sh` is the authority
-  on version-bearing files.
+  markdownlint, `make complexity`, `make links`.
+  `scripts/verify-release-versions.sh` is the authority on
+  version-bearing files.
+- Every function stays within the complexity ceilings (`make complexity`);
+  `complexity-baseline.txt` is empty and must stay empty.
 - A change to what `extract_metadata` or `generate_metatags` produces
   is a **breaking change** even when no Rust signature moves; see the
   README's Stability guarantees.

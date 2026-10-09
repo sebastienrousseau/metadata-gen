@@ -1,0 +1,14 @@
+# Link checker configuration, shared by `make links` and the `links` CI
+# job. Every Markdown file is checked; relative links resolve against the
+# repository, so a renamed document fails the gate rather than a reader.
+no_progress = true
+max_retries = 3
+retry_wait_time = 5
+timeout = 30
+exclude_path = ["target", "fuzz/target", "node_modules"]
+# Loopback and reserved example domains are fixtures, not references.
+exclude = [
+  "^https?://localhost",
+  "^https?://127\\.0\\.0\\.1",
+  "^https?://([a-z0-9-]+\\.)?example\\.(com|org|net)",
+]
