@@ -39,7 +39,7 @@ jobs:
           toolchain: nightly
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
-      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22, installs cargo-llvm-cov
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.22, installs cargo-llvm-cov
         with:
           tool: cargo-llvm-cov
       # The threshold and its rationale live in DEVELOPMENT.md. A number
@@ -156,7 +156,7 @@ jobs:
       # Pinned: releases before 0.10 reject a `[[trusted.*]]` entry that
       # names a `trusted-publisher` instead of a `user-id`, which is how
       # a crates.io Trusted Publishing release is attested.
-      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22, installs cargo-vet
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.22, installs cargo-vet
         with:
           tool: cargo-vet@0.10.2
       - run: cargo vet --locked
@@ -227,7 +227,7 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
-      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22, installs cargo-semver-checks
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.22, installs cargo-semver-checks
         with:
           tool: cargo-semver-checks
       # Compares the public API against the last crates.io release. While
@@ -247,7 +247,7 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
-      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22, installs cargo-hack
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.22, installs cargo-hack
         with:
           tool: cargo-hack
       - run: cargo hack check --feature-powerset --all-targets --locked
