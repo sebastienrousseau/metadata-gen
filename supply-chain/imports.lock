@@ -13,8 +13,8 @@ user-login = "fitzgen"
 user-name = "Nick Fitzgerald"
 
 [[publisher.noyalib]]
-version = "0.0.56"
-when = "2026-10-08"
+version = "0.0.57"
+when = "2026-10-09"
 trusted-publisher = "github:sebastienrousseau/noyalib"
 
 [[publisher.wasip2]]
