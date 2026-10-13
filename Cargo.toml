@@ -51,7 +51,7 @@ path = "src/lib.rs"
 # build (`default-features = false, features = ["yaml"]`) gets a tree
 # that never names `std`.
 memchr = { version = "2.7", default-features = false }
-noyalib = { version = "=0.0.56", default-features = false, optional = true }
+noyalib = { version = "=0.0.57", default-features = false, optional = true }
 quick-xml = { version = "0.42", optional = true }
 serde = { version = "1.0.228", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
