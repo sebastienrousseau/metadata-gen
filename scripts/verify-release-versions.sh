@@ -171,6 +171,55 @@ for f in snippet_files:
     else:
         ok(rel, "install snippets current")
 
+# The MSRV. `rust-version` in Cargo.toml is the floor Cargo enforces;
+# every other place that states it (CI, make targets, README, policy
+# docs) must name the same floor, or a raise leaves a stale promise
+# behind. 1.89 and 1.89.0 state the same floor. Each site must still
+# match its pattern, so a reworded statement fails here instead of
+# silently dropping out of the check.
+def same_floor(stated, floor):
+    def norm(v):
+        return v + ".0" if v.count(".") == 1 else v
+    return norm(stated) == norm(floor)
+
+
+MSRV_SITES = [
+    (".github/workflows/quality.yml", r"name: MSRV \(([0-9.]+)\)"),
+    (".github/workflows/quality.yml", r"^\s+toolchain: ([0-9]+\.[0-9.]+)\s*$"),
+    (".github/workflows/quality.yml", r"RUSTUP_TOOLCHAIN: ([0-9.]+)"),
+    (".github/workflows/quality.yml", r"grep -F 'rustc ([0-9.]+) '"),
+    ("GNUmakefile", r"cargo \+([0-9.]+) check"),
+    ("README.md", r"badge/MSRV-([0-9.]+)-"),
+    ("README.md", r'alt="MSRV ([0-9.]+)"'),
+    ("README.md", r"\*\*Rust ([0-9.]+) or newer\.\*\*"),
+    ("README.md", r"The floor is \*\*Rust ([0-9.]+)\*\*"),
+    ("CONTRIBUTING.md", r"\*\*Rust ([0-9.]+)\+\*\*"),
+    ("DEVELOPMENT.md", r"`rust-version` in `Cargo.toml` \(([0-9.]+)\)"),
+    ("DEVELOPMENT.md", r"Minimum Rust \(([0-9.]+)\)"),
+    ("DEVELOPMENT.md", r"rustup toolchain install ([0-9.]+)"),
+    ("docs/POLICIES.md", r"^\| `metadata-gen` \(library\) \| \*\*([0-9.]+)\*\*"),
+]
+
+msrv = package_field("rust-version")
+if not msrv:
+    skip("MSRV", "no rust-version in Cargo.toml")
+else:
+    for rel, pattern in MSRV_SITES:
+        f = root / rel
+        label = f"MSRV {rel}"
+        if not f.is_file():
+            bad(label, "file is missing")
+            continue
+        found = [v.rstrip(".") for v in re.findall(pattern, f.read_text(encoding="utf-8"), re.M)]
+        if not found:
+            bad(label, f"no statement matches {pattern!r}")
+            continue
+        stale = sorted({v for v in found if not same_floor(v, msrv)})
+        if stale:
+            bad(label, f"says {', '.join(stale)}, Cargo.toml says {msrv}")
+        else:
+            ok(label, f"{msrv} ({len(found)} statement{'s' if len(found) > 1 else ''})")
+
 print()
 if failed:
     print("Version mismatch. Fix these before tagging — a tag that fails the")
