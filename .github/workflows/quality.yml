@@ -30,6 +30,11 @@ jobs:
     name: coverage (98% lines)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # rust-toolchain.toml pins `stable`, and rustup prefers that file
+      # over the toolchain installed below, so without this the job
+      # ran on stable.
+      RUSTUP_TOOLCHAIN: nightly
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,6 +43,8 @@ jobs:
         with:
           toolchain: nightly
           components: llvm-tools-preview
+      - name: The nightly toolchain is the one in use
+        run: rustc --version | grep -F -- '-nightly'
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
       - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.22, installs cargo-llvm-cov
         with:
