@@ -30,10 +30,11 @@ between this file and the README, this file wins.
 
 | Crate | MSRV | Rationale |
 |---|---|---|
-| `metadata-gen` (library) | **1.88.0** | The floor is pulled by the `time` dependency (date normalisation), whose current releases declare `rust-version = "1.88.0"`. Lowering it would mean pinning an older `time` carrying a stack-exhaustion advisory. Enforced by Cargo's `rust-version` field and verified in CI across Linux, macOS, and Windows. |
+| `metadata-gen` (library) | **1.89.0** | One floor shared with the maintainer's other Rust crates, raised from 1.88.0 in 0.0.9. On its own the `time` dependency (date normalisation) needs 1.88.0, and lowering below that would mean pinning an older `time` carrying a stack-exhaustion advisory. Enforced by Cargo's `rust-version` field and verified in CI across Linux, macOS, and Windows. |
 
 **When we bump it.** Only when the toolchain we build and test at
-moves, such as a dependency raising its floor, never speculatively.
+moves, such as a dependency raising its floor, or to keep one floor
+across the maintainer's Rust crates; never speculatively.
 An MSRV bump ships as a patch in the `0.0.x` line, documented under
 an explicit heading in `CHANGELOG.md`.
 
