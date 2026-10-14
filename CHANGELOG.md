@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - noyalib 0.0.56 to 0.0.57, and the GitHub Actions updates for
   cargo-deny-action, setup-uv, install-action, upload-artifact and
   rust-toolchain, from Dependabot.
+- The minor-and-patch group (toml 1.1.8 and its parts, tokio 1.53.2),
+  from Dependabot #116. `cargo vet` needs the maintainer's decisions
+  for these: `.git/vet-v0.0.9.sh` asks for each.
 
 ## [0.0.8] - 2026-10-09
 
