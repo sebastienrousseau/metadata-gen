@@ -37,7 +37,7 @@ Front matter is parsed by `noyalib` (YAML), `toml` and `serde_json`,
 each with its own bounds on nesting and size; metadata-gen adds no
 recursion of its own beyond flattening the parsed tree, whose depth is
 bounded by those parsers. `<meta>` extraction is a single streaming
-pass over the input with `quick-xml`, and malformed markup ends the
+pass over the input with `oxml`, and malformed markup ends the
 scan rather than failing it: the tags found so far are returned.
 
 There are no configurable resource limits in this crate today. Callers

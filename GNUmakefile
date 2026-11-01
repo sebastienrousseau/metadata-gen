@@ -122,7 +122,7 @@ links:
 	lychee --config lychee.toml './**/*.md'
 
 msrv:
-	cargo +1.88.0 check --all-features --all-targets --locked
+	cargo +1.89.0 check --all-features --all-targets --locked
 
 # While the crate is 0.0.x every release is a major bump under semver,
 # so this proves the version moved; the lints bite from 0.1.0.

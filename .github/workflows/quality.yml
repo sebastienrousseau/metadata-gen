@@ -30,6 +30,11 @@ jobs:
     name: coverage (98% lines)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # rust-toolchain.toml pins `stable`, and rustup prefers that file
+      # over the toolchain installed below, so without this the job
+      # ran on stable.
+      RUSTUP_TOOLCHAIN: nightly
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,6 +43,8 @@ jobs:
         with:
           toolchain: nightly
           components: llvm-tools-preview
+      - name: The nightly toolchain is the one in use
+        run: rustc --version | grep -F -- '-nightly'
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.22, installs cargo-llvm-cov
         with:
@@ -134,7 +141,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - run: npx --yes markdownlint-cli2 "**/*.md" "!target/**" "!fuzz/target/**"
       - run: uvx codespell
       - run: uvx --with chardet reuse lint
@@ -200,9 +207,14 @@ jobs:
         run: cargo doc --no-deps --all-features --locked
 
   msrv:
-    name: MSRV (1.88.0)
+    name: MSRV (1.89.0)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # rust-toolchain.toml pins `stable`, and rustup prefers that file
+      # over the toolchain installed below, so without this the job
+      # built on stable and proved nothing about the floor.
+      RUSTUP_TOOLCHAIN: 1.89.0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -211,7 +223,9 @@ jobs:
         with:
           # `rust-version` in Cargo.toml. A dependency or syntax that
           # needs a newer compiler fails here, not on a user's machine.
-          toolchain: 1.88.0
+          toolchain: 1.89.0
+      - name: The MSRV toolchain is the one in use
+        run: rustc --version | grep -F 'rustc 1.89.0 '
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
       - run: cargo check --all-features --all-targets --locked
 

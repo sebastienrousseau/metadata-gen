@@ -9,8 +9,8 @@ authors:
 repository-code: "https://github.com/sebastienrousseau/metadata-gen"
 url: "https://github.com/sebastienrousseau/metadata-gen"
 license: "Apache-2.0 OR MIT"
-version: 0.0.8
-date-released: "2026-10-05"
+version: 0.0.9
+date-released: "2026-11-01"
 abstract: >-
   A Rust library for extracting, validating, and processing front
   matter in YAML, TOML, and JSON, and for generating and extracting

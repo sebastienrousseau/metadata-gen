@@ -5,6 +5,34 @@ All notable changes to `metadata-gen` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.9] - 2026-11-01
+
+### Changed
+
+- **Breaking: the MSRV is now Rust 1.89.0** (was 1.88.0), one floor
+  shared with the maintainer's other Rust crates. `rust-version`,
+  the `msrv` CI job, `make msrv`, the README, CONTRIBUTING,
+  DEVELOPMENT and `docs/POLICIES.md` all state 1.89.0.
+- **`extract_meta_tags` and `extract_meta_tags_lenient` now run on `oxml` (`=0.0.13`)**
+  instead of `quick-xml`, eliminating the last third-party XML parser
+  dependency in favour of the first-party zero-unsafe `oxml` crate.
+- **The `msrv` CI job checks the toolchain it claims to.**
+  `rust-toolchain.toml` pins `stable`, and rustup prefers that file
+  over the toolchain the job installs, so the job had been building on
+  stable. It now sets `RUSTUP_TOOLCHAIN` and asserts `rustc --version`
+  before building.
+- **`scripts/verify-release-versions.sh` checks the MSRV and `oxml` pin.**
+  Every statement of the floor must match `rust-version` in `Cargo.toml`.
+
+### Dependencies
+
+- `oxml = "=0.0.13"` replaces `quick-xml 0.42` under the `html` feature.
+- `noyalib` `0.0.56` to `0.0.58`, `tokio` `1.53.1` to `1.53.3`
+  (RUSTSEC-2026-0386), `toml` `1.1.8`, and the GitHub Actions updates
+  for `cargo-deny-action`, `setup-uv`, `install-action`,
+  `upload-artifact`, `scorecard-action`, `codeql-action`, `pipelines`,
+  and `rust-toolchain`, from Dependabot.
+
 ## [0.0.8] - 2026-10-09
 
 The release that clears RUSTSEC-2026-0333 and makes every format a Cargo

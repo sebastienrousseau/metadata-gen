@@ -12,7 +12,7 @@ toolchain, tasks, and reproducing every CI gate locally.
 
 | What | Version | Why |
 | :--- | :--- | :--- |
-| Rust stable | `rust-version` in `Cargo.toml` (1.88) or later | MSRV, enforced by Cargo and CI |
+| Rust stable | `rust-version` in `Cargo.toml` (1.89) or later | MSRV, enforced by Cargo and CI |
 | Rust nightly | any recent | Miri, cargo-fuzz, coverage (`cargo-llvm-cov`) |
 | cargo-deny, cargo-vet, cargo-audit | latest | supply-chain gates |
 | cargo-llvm-cov | latest | coverage gate |
@@ -46,7 +46,7 @@ make            # check + clippy + test — the default gate
 | Supply chain | `make deny` / `make vet` / `make audit` |
 | Complexity ceilings | `make complexity` |
 | Links in every Markdown file | `make links` |
-| Minimum Rust (1.88) | `make msrv` |
+| Minimum Rust (1.89) | `make msrv` |
 | Public API against the last release | `make semver` |
 | Every feature combination | `make hack` |
 | Package and verify the archive | `make distcheck` |
@@ -78,7 +78,7 @@ Every gate has a local equivalent:
 | `docs-lint` | `make lint` | British spellings are house style; see `.codespellrc` |
 | `reuse-lint` | `uvx --with chardet reuse lint` | files without an inline header are covered by `REUSE.toml` |
 | `docs-strict` | `make doc` | warnings are errors; every public item is documented |
-| `msrv` (quality.yml) | `make msrv` | needs `rustup toolchain install 1.88.0` |
+| `msrv` (quality.yml) | `make msrv` | needs `rustup toolchain install 1.89.0` |
 | `semver-checks` (quality.yml) | `make semver` | builds the crates.io baseline, so it needs the network |
 | `feature-powerset` (quality.yml) | `make hack` | the crate has no features yet, so this is one build |
 | `complexity` (quality.yml) | `make complexity` | ceilings in `scripts/complexity_check.py`; `complexity-baseline.txt` may only shrink |

@@ -201,10 +201,6 @@ criteria = "safe-to-run"
 version = "1.0.107"
 criteria = "safe-to-deploy"
 
-[[exemptions.quick-xml]]
-version = "0.42.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.quote]]
 version = "1.0.47"
 criteria = "safe-to-deploy"
@@ -293,28 +289,8 @@ criteria = "safe-to-deploy"
 version = "0.2.32"
 criteria = "safe-to-deploy"
 
-[[exemptions.tokio]]
-version = "1.53.3"
-criteria = "safe-to-deploy"
-
 [[exemptions.tokio-macros]]
 version = "2.7.1"
-criteria = "safe-to-deploy"
-
-[[exemptions.toml]]
-version = "1.1.6+spec-1.1.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.toml_datetime]]
-version = "1.1.1+spec-1.1.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.toml_parser]]
-version = "1.1.3+spec-1.1.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.toml_writer]]
-version = "1.1.2+spec-1.1.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.unicode-ident]]

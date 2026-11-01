@@ -19,6 +19,18 @@ criteria = "safe-to-run"
 version = "0.7.2"
 notes = "Concurrency testing via loom per issue #57"
 
+[[audits.noyalib]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.0.58"
+notes = "First-party YAML 1.2.2 parser crate (#![forbid(unsafe_code)])."
+
+[[audits.oxml]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.0.13"
+notes = "First-party XML parser crate (#![forbid(unsafe_code)])."
+
 [[audits.proptest]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
@@ -42,6 +54,12 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
 version = "1.1.10"
 notes = "Concurrency testing via loom per issue #57"
+
+[[audits.tokio]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "1.53.3"
+notes = "Tokio 1.53.3 security patch for RUSTSEC-2026-0386."
 
 [[audits.tracing]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -87,3 +105,39 @@ trusted-publisher = "github:sebastienrousseau/noyalib"
 start = "2026-09-01"
 end = "2027-07-26"
 notes = "Same-author crate published through crates.io Trusted Publishing from its own release workflow."
+
+[[trusted.serde_spanned]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-01-20"
+end = "2027-10-14"
+
+[[trusted.tokio]]
+criteria = "safe-to-deploy"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2020-12-25"
+end = "2027-10-14"
+
+[[trusted.toml]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-12-14"
+end = "2027-10-14"
+
+[[trusted.toml_datetime]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-10-21"
+end = "2027-10-14"
+
+[[trusted.toml_parser]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2025-07-08"
+end = "2027-10-14"
+
+[[trusted.toml_writer]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2025-07-08"
+end = "2027-10-14"

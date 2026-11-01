@@ -4,9 +4,9 @@
 
 [package]
 name = "metadata-gen"
-version = "0.0.8"
+version = "0.0.9"
 edition = "2021"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
 description = """
 A powerful Rust library for extracting, validating, and processing metadata in YAML, TOML, and JSON formats from any content or data file.
@@ -51,8 +51,8 @@ path = "src/lib.rs"
 # build (`default-features = false, features = ["yaml"]`) gets a tree
 # that never names `std`.
 memchr = { version = "2.7", default-features = false }
-noyalib = { version = "=0.0.56", default-features = false, optional = true }
-quick-xml = { version = "0.42", optional = true }
+noyalib = { version = "=0.0.58", default-features = false, optional = true }
+oxml = { version = "=0.0.13", default-features = false, optional = true }
 serde = { version = "1.0.228", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
 thiserror = { version = "2.0", default-features = false }
@@ -161,6 +161,7 @@ std = [
     "serde_json?/std",
     "toml?/std",
     "noyalib?/std",
+    "oxml?/std",
     "time/std",
     "thiserror/std",
 ]
@@ -170,8 +171,8 @@ std = [
 yaml = ["dep:noyalib"]
 toml = ["dep:toml"]
 json = ["dep:serde_json"]
-# `extract_meta_tags`: the streaming `<meta>` scanner (needs std for quick-xml).
-html = ["std", "dep:quick-xml"]
+# `extract_meta_tags`: the streaming `<meta>` scanner (backed by oxml).
+html = ["std", "dep:oxml"]
 # `metadata_gen::tokio`: async file helpers on the Tokio runtime.
 tokio = ["std", "dep:tokio"]
 

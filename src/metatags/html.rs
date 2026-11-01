@@ -27,11 +27,11 @@ use alloc::vec::Vec;
 ///
 /// # Implementation note
 ///
-/// Backed by `quick-xml` configured in HTML-tolerant mode (mismatched
-/// end tags allowed, no DTD validation). This replaces the previous
-/// `scraper` / `html5ever` dependency tree, which dragged ~30 transitive
-/// crates including `fxhash` (RUSTSEC-2025-0057) and a vulnerable
-/// `phf_generator` / `rand 0.8` path (RUSTSEC-2026-0097). See issue #22.
+/// Scans `<…>` tags in one forward pass and parses each `<meta>` tag
+/// with `oxml` (attribute parsing and XML/HTML character and entity
+/// reference decoding without full-document DOM allocation). This
+/// replaces the previous `scraper` / `html5ever` and `quick-xml`
+/// dependencies. See issue #22.
 ///
 /// # Example
 ///
@@ -68,91 +68,111 @@ pub fn extract_meta_tags(
 pub fn extract_meta_tags_lenient(
     html_content: &str,
 ) -> (Vec<MetaTag>, Option<MetadataError>) {
-    use quick_xml::events::Event;
-    use quick_xml::reader::Reader;
-
-    let mut reader = Reader::from_str(html_content);
-    let config = reader.config_mut();
-    // HTML is not XML: be lenient so doctypes, unquoted attrs, and
-    // mismatched end tags don't abort the scan.
-    config.check_end_names = false;
-    config.trim_text(false);
-
+    let bytes = html_content.as_bytes();
+    let mut pos = 0;
     let mut meta_tags = Vec::new();
-    let mut buf = Vec::new();
     let stopped = loop {
-        match reader.read_event_into(&mut buf) {
-            Ok(Event::Eof) => break None,
-            // Both Start (`<meta …>`) and Empty (`<meta … />`) shapes are
-            // produced for `<meta>` depending on author style. Treat them
-            // identically.
-            Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e))
-                if e.name().as_ref().eq_ignore_ascii_case("meta") =>
-            {
-                if let Some(tag) = collect_meta_tag(e) {
-                    meta_tags.push(tag);
+        let Some(rel) = memchr::memchr(b'<', &bytes[pos..]) else {
+            break None;
+        };
+        let start = pos + rel;
+        match scan_tag_end(bytes, start) {
+            Ok(end) => {
+                if let Some(attrs) =
+                    meta_body(&html_content[start..end])
+                {
+                    if let Some(tag) = collect_meta_tag(attrs) {
+                        meta_tags.push(tag);
+                    }
                 }
+                pos = end;
             }
-            Ok(_) => {}
-            Err(e) => {
-                // Per #22 acceptance: tolerate malformed regions and
-                // return what we found so far, now with where it stopped.
-                // The remaining content may simply be the body of an HTML
-                // page that quick-xml doesn't fully understand.
-                let offset = reader.buffer_position();
+            Err((offset, reason)) => {
                 break Some(MetadataError::ExtractionError {
                     message: format!(
-                        "HTML scan stopped at byte {offset}: {e}"
+                        "HTML scan stopped at byte {offset}: {reason}"
                     ),
                 });
             }
         }
-        buf.clear();
     };
     (meta_tags, stopped)
 }
 
-/// Pulls a `MetaTag` out of a `<meta>` start/empty element if it carries
+/// Finds the byte index one past the closing `>` of the tag starting at
+/// `start`, respecting single- and double-quoted attribute values.
+fn scan_tag_end(
+    bytes: &[u8],
+    start: usize,
+) -> Result<usize, (usize, &'static str)> {
+    let mut quote: Option<u8> = None;
+    for (idx, &b) in bytes[start + 1..].iter().enumerate() {
+        if let Some(q) = quote {
+            if b == q {
+                quote = None;
+            }
+        } else if b == b'"' || b == b'\'' {
+            quote = Some(b);
+        } else if b == b'<' {
+            return Err((start + 1 + idx, "unexpected '<' inside tag"));
+        } else if b == b'>' {
+            return Ok(start + 1 + idx + 1);
+        }
+    }
+    Err((start, "unclosed tag or attribute"))
+}
+
+/// Returns the trimmed attribute slice of a `<meta …>` or `<meta … />`
+/// tag, or `None` if `tag_slice` is any other tag.
+fn meta_body(tag_slice: &str) -> Option<&str> {
+    let inner = tag_slice[1..tag_slice.len() - 1].trim();
+    let head = inner.get(..4)?;
+    let rest = inner.get(4..)?;
+    if !head.eq_ignore_ascii_case("meta")
+        || !rest.starts_with(|c: char| c.is_ascii_whitespace())
+    {
+        return None;
+    }
+    Some(rest.trim_end_matches('/').trim())
+}
+
+/// Pulls a `MetaTag` out of a `<meta>` attribute slice if it carries
 /// both an identifying attribute (`name`, then `property`, then
 /// `http-equiv`) and a `content` value.
-///
-/// HTML entities in attribute values are decoded with `quick-xml`'s
-/// `escape::unescape`, so `&amp;`, `&quot;`, numeric refs, etc. round-trip
-/// to the same byte sequence the previous `scraper` implementation
-/// produced.
-fn collect_meta_tag(
-    e: &quick_xml::events::BytesStart<'_>,
-) -> Option<MetaTag> {
-    let mut name: Option<String> = None;
-    let mut property: Option<String> = None;
-    let mut http_equiv: Option<String> = None;
-    let mut content: Option<String> = None;
+fn collect_meta_tag(attrs_src: &str) -> Option<MetaTag> {
+    let xml = format!("<meta {attrs_src}/>");
+    let doc = oxml::parse(&xml).ok()?;
+    let root = doc.root_element()?;
+    let mut slots: [Option<String>; 4] = [None, None, None, None];
 
-    for attr_res in e.attributes() {
-        let Ok(attr) = attr_res else { continue };
-        // quick-xml 0.42 hands attribute names and values out as `str`
-        // (its reader validates UTF-8 up front), so there is no decode
-        // step here any more: unescape HTML entities and match the name.
-        // `unescape_value` was deprecated in quick-xml 0.40; driving the
-        // static `escape::unescape` helper directly is the replacement.
-        let raw: &str = attr.value.as_ref();
-        let value = match quick_xml::escape::unescape(raw) {
-            Ok(v) => v.into_owned(),
-            Err(_) => continue,
-        };
-        let key: &str = attr.key.as_ref();
-        if key.eq_ignore_ascii_case("name") {
-            name = Some(value);
-        } else if key.eq_ignore_ascii_case("property") {
-            property = Some(value);
-        } else if key.eq_ignore_ascii_case("http-equiv") {
-            http_equiv = Some(value);
-        } else if key.eq_ignore_ascii_case("content") {
-            content = Some(value);
+    for attr in doc.attributes(root) {
+        if let Some(name) = doc.name(attr.name) {
+            record_meta_attr(&name.local, attr.value, &mut slots);
         }
     }
 
+    let [name, property, http_equiv, content] = slots;
     let id = name.or(property).or(http_equiv)?;
-    let content = content?;
-    Some(MetaTag::new(id, content))
+    Some(MetaTag::new(id, content?))
+}
+
+/// Stores a recognized `<meta>` attribute (`name`, `property`,
+/// `http-equiv`, or `content`) into the corresponding slot.
+fn record_meta_attr(
+    key: &str,
+    value: &str,
+    slots: &mut [Option<String>; 4],
+) {
+    let idx = if key.eq_ignore_ascii_case("name") {
+        0
+    } else if key.eq_ignore_ascii_case("property") {
+        1
+    } else if key.eq_ignore_ascii_case("http-equiv") {
+        2
+    } else if key.eq_ignore_ascii_case("content") {
+        3
+    } else {
+        return;
+    };
+    slots[idx] = Some(String::from(value));
 }
