@@ -80,7 +80,7 @@ Reference: [`SECURITY.md`](../SECURITY.md).
   allocation.
 - HTML unescaping uses a single-pass scanner that decodes each entity
   once without rescanning output text.
-- Meta tag extraction streams HTML events with `quick-xml` without
+- Meta tag extraction scans HTML `<meta>` tags with `oxml` without
   allocating a full DOM tree.
 
 ---

@@ -18,7 +18,7 @@ metadata-gen/
 │   │   └── process.rs      # ProcessOptions, DateOrder, required and derived fields
 │   ├── metatags.rs   # MetaTag, MetaTagGroups and <meta> generation
 │   ├── metatags/
-│   │   └── html.rs   # <meta> extraction (quick-xml, feature `html`)
+│   │   └── html.rs   # <meta> extraction (oxml, feature `html`)
 │   ├── utils.rs      # HTML and attribute escaping, the 0.0.7 async file helper
 │   ├── io.rs         # std::io readers and files (feature `std`)
 │   ├── tokio.rs      # Tokio readers and files (feature `tokio`)
@@ -82,7 +82,7 @@ front matter". See [ADR-0005](adr/0005-feature-flags-and-no-std.md).
    as `MetaTag` values.
 
 The reverse direction, `metatags::extract_meta_tags`, is a single
-streaming pass with `quick-xml` over an HTML document. Both `<meta …>`
+streaming pass with `oxml` over an HTML document. Both `<meta …>`
 and `<meta … />` shapes are handled; attribute names are compared
 case-insensitively; entity references in values are decoded. Malformed
 markup ends the scan and returns what was found so far, because the

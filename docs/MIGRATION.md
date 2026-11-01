@@ -7,8 +7,13 @@ the entries that need action.
 
 Releases increment by 0.0.1 and the crate is pre-1.0, so under semver
 every release may break. The public API was additive from 0.0.5 to
-0.0.7; 0.0.8 is the first release since with breaking changes, listed
-below.
+0.0.7; 0.0.8 and 0.0.9 carry breaking changes, listed below.
+
+## 0.0.8 to 0.0.9
+
+- **Minimum Supported Rust Version (MSRV) raised to Rust 1.89.0** (from 1.88.0).
+- **`extract_meta_tags` (feature `html`) uses `oxml = "=0.0.13"` instead of `quick-xml`.**
+  Public function signatures and extracted `MetaTag` values are unchanged; if your crate also depends on `oxml` or `noyalib`, align with `oxml = "0.0.13"` and `noyalib = "0.0.58"`.
 
 ## 0.0.7 to 0.0.8
 

@@ -2,7 +2,7 @@
 # cargo-vet imports lock
 
 [[unpublished.metadata-gen]]
-version = "0.0.8"
+version = "0.0.9"
 audited_as = "0.0.6"
 
 [[publisher.bumpalo]]

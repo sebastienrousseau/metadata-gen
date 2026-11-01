@@ -60,7 +60,7 @@
 
 ```toml
 [dependencies]
-metadata-gen = "0.0.8"
+metadata-gen = "0.0.9"
 ```
 
 Or from the command line:
@@ -89,12 +89,12 @@ Every format and integration is a feature, and all of them are on by default, so
 | `yaml` | yes | `---` front matter (`noyalib`) |
 | `toml` | yes | `+++` front matter (`toml`) |
 | `json` | yes | JSON-object front matter (`serde_json`) |
-| `html` | yes | `extract_meta_tags` (`quick-xml`); implies `std` |
+| `html` | yes | `extract_meta_tags` (`oxml`); implies `std` |
 | `tokio` | yes | `metadata_gen::tokio` and `async_extract_metadata_from_file`; implies `std` |
 
 ```toml
 # YAML only, no standard library:
-metadata-gen = { version = "0.0.8", default-features = false, features = ["yaml"] }
+metadata-gen = { version = "0.0.9", default-features = false, features = ["yaml"] }
 ```
 
 A fence whose format is not compiled in is reported as `UnsupportedFormatError`, not as missing front matter.
@@ -157,7 +157,7 @@ The family releases along the `0.0.x` line, with each repository owning a focuse
 | Typed extraction | Deserialise front matter into user-defined structs | Stable |
 | Flat metadata | Flatten nested structures to dot-separated string maps | Stable |
 | Meta tag generation | Open Graph, Twitter, Apple, Microsoft, and primary tags | Stable |
-| Meta tag extraction | Single streaming pass over HTML documents with `quick-xml` | Stable |
+| Meta tag extraction | Single streaming pass over HTML documents with `oxml` | Stable |
 | Utilities | Single-pass HTML entity escaping and async file loading | Stable |
 
 ---
@@ -206,7 +206,7 @@ Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](
 - **Errors that locate the fault**: `MetadataError::Parse` carries the format, the byte span inside the block and the parser's error; an unclosed fence reports its byte offset.
 - **Processing and normalization**: `process_metadata` and `process_metadata_with` normalize dates to `YYYY-MM-DD` (`DD/MM/YYYY` by default, `MM/DD/YYYY` with `DateOrder::MonthFirst`), verify required fields, and derive URL slugs from titles.
 - **Meta tag synthesis**: `generate_metatags` creates grouped tags (`primary`, `og`, `twitter`, `apple`, `ms`); Open Graph tags use `property=`, and attribute values pass through `escape_attribute`. `MetaTag` and `MetaTagGroups::iter` give the same tags as values.
-- **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `quick-xml` without full DOM allocation; `extract_meta_tags_lenient` also reports where a malformed page stopped the scan.
+- **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `oxml` without full DOM allocation; `extract_meta_tags_lenient` also reports where a malformed page stopped the scan.
 - **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, readers and files in `metadata_gen::io`, and Tokio-backed helpers in `metadata_gen::tokio`.
 
 ---

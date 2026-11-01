@@ -201,10 +201,6 @@ criteria = "safe-to-run"
 version = "1.0.107"
 criteria = "safe-to-deploy"
 
-[[exemptions.quick-xml]]
-version = "0.42.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.quote]]
 version = "1.0.47"
 criteria = "safe-to-deploy"

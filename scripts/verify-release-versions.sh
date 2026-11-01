@@ -91,7 +91,7 @@ else:
 # every release may break. The pin and the lock entry must agree, or CI,
 # which builds --locked, fails on a stale lock.
 manifest = (root / "Cargo.toml").read_text(encoding="utf-8") if (root / "Cargo.toml").is_file() else ""
-for dep in ("noyalib", "dtt"):
+for dep in ("noyalib", "oxml", "dtt"):
     pin = re.search(rf'^{dep}\s*=\s*(?:"=([^"]+)"|\{{\s*version\s*=\s*"=([^"]+)")', manifest, re.M)
     if not pin:
         continue
