@@ -41,6 +41,14 @@ criteria = "safe-to-run"
 version = "2.13.1"
 criteria = "safe-to-run"
 
+[[exemptions.borsh]]
+version = "1.8.1"
+criteria = "safe-to-run"
+
+[[exemptions.borsh-derive]]
+version = "1.8.1"
+criteria = "safe-to-run"
+
 [[exemptions.bstr]]
 version = "1.13.0"
 criteria = "safe-to-run"
@@ -53,6 +61,10 @@ criteria = "safe-to-deploy"
 version = "1.4.0"
 criteria = "safe-to-run"
 
+[[exemptions.chacha20]]
+version = "0.10.2"
+criteria = "safe-to-run"
+
 [[exemptions.clap]]
 version = "4.6.4"
 criteria = "safe-to-run"
@@ -63,6 +75,10 @@ criteria = "safe-to-run"
 
 [[exemptions.clap_lex]]
 version = "1.1.0"
+criteria = "safe-to-run"
+
+[[exemptions.cpufeatures]]
+version = "0.3.1"
 criteria = "safe-to-run"
 
 [[exemptions.criterion]]
@@ -197,9 +213,17 @@ criteria = "safe-to-run"
 version = "1.0.13"
 criteria = "safe-to-run"
 
+[[exemptions.proc-macro-crate]]
+version = "3.5.0"
+criteria = "safe-to-run"
+
 [[exemptions.proc-macro2]]
 version = "1.0.107"
 criteria = "safe-to-deploy"
+
+[[exemptions.proptest]]
+version = "1.12.0"
+criteria = "safe-to-run"
 
 [[exemptions.quote]]
 version = "1.0.47"
@@ -207,6 +231,18 @@ criteria = "safe-to-deploy"
 
 [[exemptions.r-efi]]
 version = "6.0.0"
+criteria = "safe-to-run"
+
+[[exemptions.rand]]
+version = "0.10.3"
+criteria = "safe-to-run"
+
+[[exemptions.rand_core]]
+version = "0.10.1"
+criteria = "safe-to-run"
+
+[[exemptions.rand_xorshift]]
+version = "0.5.0"
 criteria = "safe-to-run"
 
 [[exemptions.rayon]]
@@ -250,7 +286,7 @@ version = "1.0.229"
 criteria = "safe-to-deploy"
 
 [[exemptions.serde_json]]
-version = "1.0.151"
+version = "1.0.154"
 criteria = "safe-to-deploy"
 
 [[exemptions.slab]]
@@ -292,6 +328,10 @@ criteria = "safe-to-deploy"
 [[exemptions.tokio-macros]]
 version = "2.7.1"
 criteria = "safe-to-deploy"
+
+[[exemptions.toml_edit]]
+version = "0.25.17+spec-1.1.0"
+criteria = "safe-to-run"
 
 [[exemptions.unicode-ident]]
 version = "1.0.24"
