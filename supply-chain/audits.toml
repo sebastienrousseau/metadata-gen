@@ -1,11 +1,146 @@
 
 # cargo-vet audits file
 
+[[audits.autocfg]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.5.0 -> 1.5.1"
+
+[[audits.bitflags]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "2.11.1 -> 2.13.1"
+
+[[audits.borsh]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "1.8.1"
+
+[[audits.borsh-derive]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "1.8.1"
+
+[[audits.bstr]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.11.3 -> 1.13.0"
+
+[[audits.cc]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.2.5 -> 1.4.0"
+
+[[audits.chacha20]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.10.0 -> 0.10.2"
+
+[[audits.cpufeatures]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.3.0 -> 0.3.1"
+
+[[audits.criterion]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.4.0"
+
+[[audits.crossbeam-deque]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.8.5 -> 0.8.7"
+
+[[audits.crossbeam-utils]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.8.18 -> 0.8.22"
+
+[[audits.deranged]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.3.11 -> 0.4.0"
+
+[[audits.either]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.16.0 -> 1.17.0"
+
+[[audits.fastrand]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "2.3.0 -> 2.5.0"
+
+[[audits.find-msvc-tools]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.1.9"
+
+[[audits.float-cmp]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.9.0 -> 0.10.0"
+
+[[audits.futures-core]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.3.31 -> 0.3.33"
+
+[[audits.futures-task]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.3.31 -> 0.3.33"
+
+[[audits.futures-util]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.3.31 -> 0.3.33"
+
 [[audits.generator]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
 version = "0.8.10"
 notes = "Concurrency testing via loom per issue #57"
+
+[[audits.getrandom]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.4.2 -> 0.4.3"
+
+[[audits.globset]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.4.19"
+
+[[audits.globwalk]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.9.1"
+
+[[audits.half]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "2.5.0 -> 2.7.1"
+
+[[audits.hashbrown]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.0 -> 0.14.2"
+
+[[audits.ignore]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.4.31"
+
+[[audits.itoa]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.15 -> 1.0.18"
+
+[[audits.js-sys]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.3.103"
 
 [[audits.lazy_static]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -13,11 +148,31 @@ criteria = "safe-to-run"
 version = "1.5.1"
 notes = "Concurrency testing via loom per issue #57"
 
+[[audits.libm]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.6 -> 0.2.16"
+
+[[audits.linux-raw-sys]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.6.5 -> 0.12.1"
+
+[[audits.log]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.4.29 -> 0.4.33"
+
 [[audits.loom]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
 version = "0.7.2"
 notes = "Concurrency testing via loom per issue #57"
+
+[[audits.memchr]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "2.8.3"
 
 [[audits.noyalib]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -25,11 +180,46 @@ criteria = "safe-to-deploy"
 version = "0.0.58"
 notes = "First-party YAML 1.2.2 parser crate (#![forbid(unsafe_code)])."
 
+[[audits.oorandom]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "11.1.5"
+
 [[audits.oxml]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 version = "0.0.13"
 notes = "First-party XML parser crate (#![forbid(unsafe_code)])."
+
+[[audits.pin-project-lite]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.14 -> 0.2.17"
+
+[[audits.plotters]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.3.7"
+
+[[audits.plotters-backend]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.3.7"
+
+[[audits.plotters-svg]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.3.7"
+
+[[audits.proc-macro-crate]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "2.0.1 -> 3.5.0"
+
+[[audits.proc-macro2]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.95 -> 1.0.107"
 
 [[audits.proptest]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -37,11 +227,26 @@ criteria = "safe-to-run"
 version = "1.11.0"
 notes = "Property-based testing suite per issue #51"
 
+[[audits.proptest]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.11.0 -> 1.12.0"
+
+[[audits.quote]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.40 -> 1.0.47"
+
 [[audits.r-efi]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
 version = "5.3.0"
 notes = "Transitive dev-dependency via getrandom for property testing"
+
+[[audits.r-efi]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "5.3.0 -> 6.0.0"
 
 [[audits.rand]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -49,11 +254,111 @@ criteria = "safe-to-run"
 version = "0.9.5"
 notes = "Transitive dev-dependency for proptest"
 
+[[audits.rand]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.10.1 -> 0.10.3"
+
+[[audits.rand_core]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.10.0 -> 0.10.1"
+
+[[audits.rand_xorshift]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.4.0 -> 0.5.0"
+
+[[audits.rayon]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.11.0 -> 1.12.0"
+
+[[audits.regex]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.12.3 -> 1.13.1"
+
+[[audits.regex-automata]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.4.14 -> 0.4.16"
+
+[[audits.regex-syntax]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.8.5 -> 0.8.11"
+
+[[audits.rustc-hash]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.1.3"
+
+[[audits.rustversion]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "1.0.22 -> 1.0.23"
+
+[[audits.serde]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.228 -> 1.0.229"
+
+[[audits.serde_core]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.228 -> 1.0.229"
+
+[[audits.serde_derive]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.228 -> 1.0.229"
+
+[[audits.serde_json]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "1.0.154"
+
+[[audits.syn]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "2.0.119"
+
+[[audits.syn]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "3.0.3"
+
+[[audits.thiserror]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.64 -> 2.0.21"
+
+[[audits.thiserror-impl]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.64 -> 2.0.21"
+
 [[audits.thread_local]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
 version = "1.1.10"
 notes = "Concurrency testing via loom per issue #57"
+
+[[audits.time]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.3.55"
+
+[[audits.time-core]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.1.2 -> 0.1.4"
+
+[[audits.time-macros]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "0.2.27 -> 0.2.32"
 
 [[audits.tokio]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -79,22 +384,119 @@ criteria = "safe-to-run"
 version = "0.3.23"
 notes = "Concurrency testing via loom per issue #57"
 
+[[audits.unicode-ident]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.18 -> 1.0.24"
+
+[[audits.walkdir]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "2.3.3 -> 2.4.0"
+
+[[audits.wasm-bindgen]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.2.126"
+
+[[audits.wasm-bindgen-macro]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.2.126"
+
+[[audits.wasm-bindgen-macro-support]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.2.92 -> 0.2.126"
+
+[[audits.wasm-bindgen-shared]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.2.92 -> 0.2.126"
+
+[[audits.winapi-i686-pc-windows-gnu]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.4.0"
+
+[[audits.winapi-x86_64-pc-windows-gnu]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.4.0"
+
 [[audits.windows-result]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
 version = "0.4.1"
 notes = "Concurrency testing via loom per issue #57"
 
+[[audits.windows-sys]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.61.2"
+
+[[audits.zerocopy]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.8.27 -> 0.8.55"
+
+[[audits.zerocopy-derive]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+delta = "0.8.27 -> 0.8.55"
+
+[[trusted.anstyle]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-05-18"
+end = "2027-11-05"
+
+[[trusted.assert_fs]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2019-11-29"
+end = "2027-11-05"
+
+[[trusted.bytes]]
+criteria = "safe-to-deploy"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2021-01-11"
+end = "2027-11-05"
+
+[[trusted.clap]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2021-12-08"
+end = "2027-11-05"
+
+[[trusted.clap_builder]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-03-28"
+end = "2027-11-05"
+
+[[trusted.clap_lex]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2022-04-15"
+end = "2027-11-05"
+
 [[trusted.dtt]]
 criteria = "safe-to-deploy"
-user-id = 186843
+user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2023-02-05"
 end = "2027-07-26"
 notes = "Same-author crate. user-id 186843 is Sebastien Rousseau (sebastienrousseau)."
 
+[[trusted.metadata-gen]]
+criteria = "safe-to-deploy"
+user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
+start = "2024-10-05"
+end = "2027-11-05"
+
 [[trusted.noyalib]]
 criteria = "safe-to-deploy"
-user-id = 186843
+user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2026-05-10"
 end = "2027-07-26"
 notes = "Same-author crate; pinned exactly. user-id 186843 is Sebastien Rousseau (sebastienrousseau)."
@@ -106,17 +508,53 @@ start = "2026-09-01"
 end = "2027-07-26"
 notes = "Same-author crate published through crates.io Trusted Publishing from its own release workflow."
 
+[[trusted.predicates]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2019-04-22"
+end = "2027-11-05"
+
+[[trusted.predicates-core]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2020-12-29"
+end = "2027-11-05"
+
+[[trusted.predicates-tree]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2020-12-29"
+end = "2027-11-05"
+
 [[trusted.serde_spanned]]
 criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2023-01-20"
 end = "2027-10-14"
 
+[[trusted.slab]]
+criteria = "safe-to-deploy"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2021-10-13"
+end = "2027-11-05"
+
+[[trusted.termtree]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2021-10-07"
+end = "2027-11-05"
+
 [[trusted.tokio]]
 criteria = "safe-to-deploy"
 user-id = 6741 # Alice Ryhl (Darksonn)
 start = "2020-12-25"
 end = "2027-10-14"
+
+[[trusted.tokio-macros]]
+criteria = "safe-to-deploy"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2020-10-26"
+end = "2027-11-05"
 
 [[trusted.toml]]
 criteria = "safe-to-deploy"
@@ -130,6 +568,12 @@ user-id = 6743 # Ed Page (epage)
 start = "2022-10-21"
 end = "2027-10-14"
 
+[[trusted.toml_edit]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2021-09-13"
+end = "2027-11-05"
+
 [[trusted.toml_parser]]
 criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
@@ -141,3 +585,9 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2025-07-08"
 end = "2027-10-14"
+
+[[trusted.winnow]]
+criteria = "safe-to-deploy"
+user-id = 6743 # Ed Page (epage)
+start = "2023-02-22"
+end = "2027-11-05"
