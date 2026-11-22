@@ -35,7 +35,25 @@ point 0.0.7 had; what needs action is below.
   closing `---` used to be "No valid front matter found."; it is now an
   `ExtractionError` naming the format and the fence's byte offset.
 - **`MetadataError` is `#[non_exhaustive]`.** Add a wildcard arm to
-  exhaustive matches.
+  exhaustive matches:
+
+  ```rust
+  use metadata_gen::{extract_metadata, MetadataError};
+
+  fn describe(content: &str) -> String {
+      match extract_metadata(content) {
+          Ok(_) => "ok".to_string(),
+          Err(MetadataError::Parse { format, .. }) => {
+              format!("{format} front matter did not parse")
+          }
+          Err(MetadataError::MissingFieldError(field)) => {
+              format!("missing {field}")
+          }
+          // Needed from 0.0.8 on: new variants may be added.
+          Err(other) => other.to_string(),
+      }
+  }
+  ```
 - **`From<Box<dyn Error + Send + Sync>>` is gone.** A boxed error no
   longer turns into `MetadataError::Other` through `?` by accident; call
   `MetadataError::other(err)` or build `MetadataError::Other(boxed)`
@@ -73,6 +91,15 @@ README's output-stability policy treats as breaking:
 - **`MetaTag`, `MetaTagGroups` are `#[non_exhaustive]`.** Build a tag
   with `MetaTag::new(name, content)` and groups with
   `MetaTagGroups::default()`; struct literals no longer compile.
+
+  ```rust
+  use metadata_gen::{MetaTag, MetaTagGroups};
+
+  // Was: MetaTag { name: "og:title".into(), content: "Hello".into() }
+  let tag = MetaTag::new("og:title", "Hello");
+  // Was: MetaTagGroups { primary: String::new(), .. }
+  let groups = MetaTagGroups::default();
+  ```
 - **New features, all on by default.** `std`, `yaml`, `toml`, `json`,
   `html`, `tokio`. If you set `default-features = false`, list the
   formats you parse; without `std` the crate is `no_std + alloc` and
