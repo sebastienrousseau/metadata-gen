@@ -5,6 +5,32 @@ All notable changes to `metadata-gen` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.10] - Unreleased
+
+### Security
+
+- **rustix 1.1.6** in `Cargo.lock` for RUSTSEC-2026-0486 (unsound xattr
+  functions). It is reached only through the `tempfile` dev-dependency.
+- **`ci.yml` declares read-only token permissions.** The workflow had
+  no top-level `permissions`, so every job got the repository default.
+  It now defaults to `contents: read`, and the `security` job adds
+  `security-events: write` for its CodeQL upload.
+
+### Changed
+
+- `toml` 1.2.0 and `loom` 0.7.3, and the GitHub Actions updates for
+  `Swatinem/rust-cache`, `taiki-e/install-action` 2.90.3,
+  `pipelines` `security.yml` 0.0.4, `ossf/scorecard-action` 2.5.0 and
+  `github/codeql-action/upload-sarif` 4.39.3, from Dependabot.
+- cargo-vet covers `loom` and `rustix` through their publishers
+  (Alice Ryhl, Dan Gohman), which replaces the `rustix` exemption.
+
+### Documentation
+
+- `docs/MIGRATION.md` shows the 0.0.8 `#[non_exhaustive]` migration in
+  code: a wildcard arm for `MetadataError`, and `MetaTag::new` and
+  `MetaTagGroups::default()` in place of struct literals.
+
 ## [0.0.9] - 2026-11-01
 
 ### Changed

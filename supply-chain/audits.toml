@@ -488,6 +488,12 @@ start = "2023-02-05"
 end = "2027-07-26"
 notes = "Same-author crate. user-id 186843 is Sebastien Rousseau (sebastienrousseau)."
 
+[[trusted.loom]]
+criteria = "safe-to-deploy"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2021-04-12"
+end = "2027-11-22"
+
 [[trusted.metadata-gen]]
 criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
@@ -525,6 +531,12 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2020-12-29"
 end = "2027-11-05"
+
+[[trusted.rustix]]
+criteria = "safe-to-deploy"
+user-id = 6825 # Dan Gohman (sunfishcode)
+start = "2021-10-29"
+end = "2027-11-22"
 
 [[trusted.serde_spanned]]
 criteria = "safe-to-deploy"
