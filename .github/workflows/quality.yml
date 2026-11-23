@@ -304,6 +304,29 @@ jobs:
       # default build with its cargo purl (issue #28).
       - run: python3 -I scripts/check-sbom.py
 
+  wasi-component:
+    name: WASI 0.2 component (wasm32-wasip2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+        with:
+          workspaces: wasi
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs wasmtime and wasm-tools
+        with:
+          tool: wasmtime@50.0.2,wasm-tools@1.261.0
+      # Builds the component, validates it, checks the 1 MiB budget, and
+      # calls every export under wasmtime, comparing each result with the
+      # native build's output for the same input (ADR-0009).
+      - run: python3 -I wasi/check.py
+
   complexity:
     name: complexity (per-function ceilings)
     runs-on: ubuntu-latest

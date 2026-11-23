@@ -87,6 +87,24 @@ elif own == version:
 else:
     bad("Cargo.lock", f"{own} — run cargo check to refresh")
 
+# The WASI component (ADR-0009): its package, its lock entry for this
+# crate, and the WIT package version all move with the crate version.
+wasi_manifest = root / "wasi" / "Cargo.toml"
+if wasi_manifest.is_file():
+    m = re.search(r'^version\s*=\s*"([^"]+)"', wasi_manifest.read_text(encoding="utf-8"), re.M)
+    got = m.group(1) if m else None
+    (ok if got == version else bad)("wasi/Cargo.toml", got or "no version")
+    wasi_lock = root / "wasi" / "Cargo.lock"
+    lm = re.search(rf'^name = "{re.escape(name)}"\nversion = "([^"]+)"',
+                   wasi_lock.read_text(encoding="utf-8"), re.M) if wasi_lock.is_file() else None
+    got = lm.group(1) if lm else None
+    (ok if got == version else bad)("wasi/Cargo.lock", got or "no entry; run cargo check in wasi/")
+wit = root / "wit" / "metadata-gen.wit"
+if wit.is_file():
+    m = re.search(r'^package\s+metadata-gen:lib@([^;\s]+);', wit.read_text(encoding="utf-8"), re.M)
+    got = m.group(1) if m else None
+    (ok if got == version else bad)("wit/metadata-gen.wit", got or "no package version")
+
 # First-party crates (noyalib, oxml) are pinned exactly (`=0.0.X`):
 # same-author 0.0.x lines where every release may break (ADR-0004,
 # CONTRIBUTING "First-party dependency policy"). A requirement without

@@ -33,6 +33,9 @@ path = [
     "supply-chain/**",
     "fuzz/Cargo.toml",
     "fuzz/Cargo.lock",
+    "wasi/.gitignore",
+    "wasi/Cargo.lock",
+    "wasi/cases/**",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
