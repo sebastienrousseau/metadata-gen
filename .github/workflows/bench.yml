@@ -6,8 +6,10 @@
 # the Criterion suite on the base commit, saves it as a baseline, runs
 # it again on the change and fails when any benchmark is slower than
 # the threshold at the lower bound of its confidence interval
-# (scripts/bench_compare.py). Both runs share one runner, so the
-# comparison is like for like.
+# (scripts/bench_compare.py). Both runs share one runner and the same
+# benchmark code: the baseline builds the change's benches/ against the
+# base commit's library (scripts/bench_overlay.py), so a pull request
+# that rewrites a benchmark is not reported as a library regression.
 #
 # `codspeed` adds CodSpeed's instrumented, noise-free measurements once
 # the repository is registered at codspeed.io and the CODSPEED_TOKEN
@@ -47,13 +49,22 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
-      - name: Baseline on the base commit
+      - name: Baseline on the base commit, with the change's benches
+        # A bench target that does not build against the base library
+        # gets no baseline; the gate lists its benchmarks as new.
         run: |
           set -euo pipefail
           git worktree add "$RUNNER_TEMP/base" "$BASE_SHA"
+          python3 -I scripts/bench_overlay.py "$RUNNER_TEMP/base" > "$RUNNER_TEMP/benches.txt"
           cd "$RUNNER_TEMP/base"
-          CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target" \
-            cargo bench --all-features --bench '*' -- --save-baseline base
+          export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
+          while read -r bench; do
+            if cargo bench --all-features --bench "$bench" --no-run < /dev/null; then
+              cargo bench --all-features --bench "$bench" -- --save-baseline base < /dev/null
+            else
+              echo "::notice::bench target $bench does not build on $BASE_SHA: new, no baseline"
+            fi
+          done < "$RUNNER_TEMP/benches.txt"
       - name: The change against the baseline
         # Lenient: a benchmark the base commit does not have yet is
         # measured but not compared.

@@ -18,7 +18,9 @@ Usage:
     scripts/bench_compare.py [--threshold 0.05] [--criterion-dir DIR]
 
 Writes a Markdown table to stdout (and to `$GITHUB_STEP_SUMMARY` when
-set) and exits 1 naming every regressed benchmark.
+set) and exits 1 naming every regressed benchmark. A benchmark the
+baseline run did not have (its bench target does not build on the base
+commit) has no `change/` directory; it is listed as new, not compared.
 """
 
 from __future__ import annotations
@@ -41,7 +43,19 @@ def load_changes(criterion_dir: Path) -> list[tuple[str, dict]]:
     return rows
 
 
-def render(rows: list[tuple[str, dict]], threshold: float) -> tuple[str, list[str]]:
+def load_new(criterion_dir: Path) -> list[str]:
+    """Ids measured by the change run that had no baseline to compare."""
+    ids = []
+    for path in sorted(criterion_dir.glob("**/new/estimates.json")):
+        bench_dir = path.parent.parent
+        if not (bench_dir / "change").is_dir():
+            ids.append(bench_dir.relative_to(criterion_dir).as_posix())
+    return ids
+
+
+def render(
+    rows: list[tuple[str, dict]], threshold: float, new: list[str] | None = None
+) -> tuple[str, list[str]]:
     """The summary table and the ids whose lower bound breaks `threshold`."""
     lines = [
         f"Regression threshold: {threshold:.0%} (lower bound of the 95% CI)",
@@ -61,6 +75,8 @@ def render(rows: list[tuple[str, dict]], threshold: float) -> tuple[str, list[st
         lines.append(
             f"| `{bench_id}` | {point:+.1%} | {low:+.1%} .. {high:+.1%} | {verdict} |"
         )
+    for bench_id in new or []:
+        lines.append(f"| `{bench_id}` | n/a | n/a | new, no baseline |")
     return "\n".join(lines) + "\n", regressed
 
 
@@ -76,7 +92,7 @@ def main() -> int:
     if not rows:
         print("no change/estimates.json found: run with --baseline first")
         return 1
-    table, regressed = render(rows, args.threshold)
+    table, regressed = render(rows, args.threshold, load_new(args.criterion_dir))
     print(table)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
