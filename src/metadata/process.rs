@@ -34,7 +34,27 @@ pub struct ProcessOptions {
     pub derive_slug: bool,
     /// How a slash-separated date (`01/02/2024`) is read.
     pub date_order: DateOrder,
+    /// Keys that are known but not required. Default: empty. See
+    /// [`ProcessOptions::unknown_fields`].
+    pub optional_fields: Vec<String>,
 }
+
+/// The name issue #45 asked for: a [`ProcessOptions`] used through its
+/// fluent `require` / `optional` / `process` methods.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{Metadata, MetadataError, MetadataMap, MetadataProcessor};
+///
+/// let processor = MetadataProcessor::new().require("author");
+/// let mut map = MetadataMap::new();
+/// map.insert("title".into(), "T".into());
+/// map.insert("date".into(), "2026-01-01".into());
+/// let err = processor.process(&Metadata::new(map)).unwrap_err();
+/// assert!(matches!(err, MetadataError::MissingFieldError(f) if f == "author"));
+/// ```
+pub type MetadataProcessor = ProcessOptions;
 
 /// The reading of a slash-separated date such as `01/02/2024`.
 ///
@@ -59,11 +79,112 @@ impl Default for ProcessOptions {
             ],
             derive_slug: true,
             date_order: DateOrder::DayFirst,
+            optional_fields: Vec::new(),
         }
     }
 }
 
 impl ProcessOptions {
+    /// The defaults: `title` and `date` required, slugs derived,
+    /// day-first dates. The same as [`ProcessOptions::default`].
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds one required field, keeping those already listed.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::ProcessOptions;
+    ///
+    /// let opts = ProcessOptions::new().require("author");
+    /// assert_eq!(opts.required_fields, ["title", "date", "author"]);
+    /// ```
+    #[must_use]
+    pub fn require(mut self, field: impl Into<String>) -> Self {
+        let field = field.into();
+        if !self.required_fields.contains(&field) {
+            self.required_fields.push(field);
+        }
+        self
+    }
+
+    /// Records a field as known but not required.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::ProcessOptions;
+    ///
+    /// let opts = ProcessOptions::new().optional("description");
+    /// assert_eq!(opts.optional_fields, ["description"]);
+    /// ```
+    #[must_use]
+    pub fn optional(mut self, field: impl Into<String>) -> Self {
+        let field = field.into();
+        if !self.optional_fields.contains(&field) {
+            self.optional_fields.push(field);
+        }
+        self
+    }
+
+    /// Keys of `metadata` that are neither required nor optional, sorted.
+    /// Use it to warn about typos or fields a template does not read.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::{Metadata, MetadataMap, ProcessOptions};
+    ///
+    /// let mut map = MetadataMap::new();
+    /// map.insert("title".into(), "T".into());
+    /// map.insert("draft".into(), "typo".into());
+    /// let opts = ProcessOptions::new().optional("description");
+    /// assert_eq!(opts.unknown_fields(&Metadata::new(map)), ["draft"]);
+    /// ```
+    pub fn unknown_fields<'m>(
+        &self,
+        metadata: &'m Metadata,
+    ) -> Vec<&'m str> {
+        let mut unknown: Vec<&str> =
+            metadata.keys().filter(|key| !self.is_known(key)).collect();
+        unknown.sort_unstable();
+        unknown
+    }
+
+    fn is_known(&self, key: &str) -> bool {
+        self.required_fields.iter().any(|f| f == key)
+            || self.optional_fields.iter().any(|f| f == key)
+    }
+
+    /// Runs [`process_metadata_with`] with these options.
+    ///
+    /// # Errors
+    ///
+    /// As [`process_metadata_with`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::{Metadata, MetadataMap, ProcessOptions};
+    ///
+    /// let mut map = MetadataMap::new();
+    /// map.insert("title".into(), "Hello".into());
+    /// let out = ProcessOptions::new()
+    ///     .required_fields(["title"])
+    ///     .process(&Metadata::new(map))
+    ///     .unwrap();
+    /// assert_eq!(out.get("slug").unwrap(), "hello");
+    /// ```
+    pub fn process(
+        &self,
+        metadata: &Metadata,
+    ) -> Result<Metadata, MetadataError> {
+        process_metadata_with(metadata, self)
+    }
+
     /// Replaces the required-field list.
     #[must_use]
     pub fn required_fields<I, S>(mut self, fields: I) -> Self
