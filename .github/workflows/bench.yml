@@ -33,13 +33,9 @@ env:
 
 jobs:
   regression:
-    name: bench regression (5% gate)
+    name: noyalib bisect scratch (never merged)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    env:
-      # Both runs write to one place so the second finds the baseline.
-      CRITERION_HOME: ${{ github.workspace }}/criterion
-      BASE_SHA: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -48,100 +44,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: stable
-      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
-      - name: Baseline on the base commit, with the change's benches
-        # A bench target that does not build against the base library
-        # gets no baseline; the gate lists its benchmarks as new.
-        run: |
-          set -euo pipefail
-          git worktree add "$RUNNER_TEMP/base" "$BASE_SHA"
-          python3 -I scripts/bench_overlay.py "$RUNNER_TEMP/base" > "$RUNNER_TEMP/benches.txt"
-          cd "$RUNNER_TEMP/base"
-          export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
-          while read -r bench; do
-            if cargo bench --all-features --bench "$bench" --no-run < /dev/null; then
-              cargo bench --all-features --bench "$bench" -- --save-baseline base < /dev/null
-            else
-              echo "::notice::bench target $bench does not build on $BASE_SHA: new, no baseline"
-            fi
-          done < "$RUNNER_TEMP/benches.txt"
-      - name: The change against the baseline
-        # Lenient: a benchmark the base commit does not have yet is
-        # measured but not compared.
-        run: cargo bench --all-features --bench '*' -- --baseline-lenient base
-      - name: Gate
-        run: python3 -I scripts/bench_compare.py --threshold 0.05 --criterion-dir "$CRITERION_HOME"
-      - name: Upload the Criterion reports
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: criterion
-          path: criterion
-          retention-days: 30
-
-  escape-compare:
-    name: escape_html vs v_htmlescape
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
-        with:
-          toolchain: stable
-      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
-        with:
-          workspaces: perf/escape-compare
-      # Informational: the numbers go to the job summary, nothing is
-      # asserted. perf/escape-compare is its own workspace so the SIMD
-      # reference crate never enters Cargo.lock.
-      - name: Compare on 64 KiB inputs
-        working-directory: perf/escape-compare
-        run: |
-          set -euo pipefail
-          cargo bench --bench escape_compare 2>&1 | tee bench.txt
-          {
-            echo '## escape_html vs v_htmlescape (64 KiB)'
-            echo
-            echo '```text'
-            grep -E '^escape_64KiB|thrpt:' bench.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  codspeed:
-    name: codspeed
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      CODSPEED_TOKEN: ${{ secrets.CODSPEED_TOKEN }}
-    steps:
-      - name: Skipped without a CODSPEED_TOKEN
-        if: env.CODSPEED_TOKEN == ''
-        run: echo "::notice::CODSPEED_TOKEN is not set; register the repository at codspeed.io and add the secret to enable this job."
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: env.CODSPEED_TOKEN != ''
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
-        if: env.CODSPEED_TOKEN != ''
-        with:
-          toolchain: stable
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs cargo-codspeed
-        if: env.CODSPEED_TOKEN != ''
-        with:
-          tool: cargo-codspeed
-      # CodSpeed's drop-in layer replaces Criterion for this job only.
-      # Swapping it in here keeps it out of Cargo.lock, and so out of the
-      # dependency graph cargo-vet and cargo-deny certify.
-      - name: Build the benches against codspeed-criterion-compat
-        if: env.CODSPEED_TOKEN != ''
-        run: |
-          set -euo pipefail
-          cargo add --dev --rename criterion codspeed-criterion-compat@6.1.0
-          cargo codspeed build --all-features
-      - uses: CodSpeedHQ/action@af75f77f17a054769abefaa42fe8dc2975469b5f # v5.6.3
-        if: env.CODSPEED_TOKEN != ''
-        with:
-          run: cargo codspeed run
-          token: ${{ secrets.CODSPEED_TOKEN }}
+      - run: sudo apt-get update -q && sudo apt-get install -yq valgrind
+      - run: bisect/run.sh
+        env:
+          ROUNDS: "30"
