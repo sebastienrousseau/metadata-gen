@@ -45,7 +45,12 @@ jobs:
         with:
           toolchain: stable
       - run: sudo apt-get update -q && sudo apt-get install -yq valgrind
-      - run: bisect/run5.sh
+      - run: bisect/run3.sh
         env:
-          ROUNDS: "20"
           REVS: "n60=v0.0.60 n63=v0.0.63 fix=6c717c8"
+          CARGO_PROFILE_BENCH_STRIP: "false"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: cachegrind
+          path: /tmp/bisect/cg

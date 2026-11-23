@@ -22,7 +22,7 @@ for spec in $REVS; do
 done
 valgrind --version
 for v in $names; do
-  valgrind --tool=cachegrind --cache-sim=no --cachegrind-out-file="$root/cg/$v.out" "$root/bin/$v" count block1k 300 2>&1 | grep 'I *refs'
+  valgrind --tool=cachegrind --cache-sim=yes --branch-sim=yes --cachegrind-out-file="$root/cg/$v.out" "$root/bin/$v" count block1k 300 2>&1 | grep -E 'refs|misses|mispred|Mispred'
   cg_annotate --show-percs=no --threshold=0.3 "$root/cg/$v.out" 2>&1 | sed -n '/Function summary/,/Function:file summary/p' | head -60 || true
 done
 set -- $names
