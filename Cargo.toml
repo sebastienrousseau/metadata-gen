@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# Metadata Gen - A powerful Rust library for extracting, validating, and processing metadata in YAML, TOML, and JSON formats from any content or data file.
+# metadata-gen: front matter (YAML, TOML, JSON) to metadata and HTML meta tags.
 # -----------------------------------------------------------------------------
 
 [package]
@@ -8,9 +8,7 @@ version = "0.0.9"
 edition = "2021"
 rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
-description = """
-A powerful Rust library for extracting, validating, and processing metadata in YAML, TOML, and JSON formats from any content or data file.
-"""
+description = "Extract YAML, TOML and JSON front matter into flat or typed metadata, and generate HTML meta tags for SEO."
 homepage = "https://metadata-gen.com/"
 documentation = "https://doc.metadata-gen.com/metadata_gen/"
 repository = "https://github.com/sebastienrousseau/metadata-gen"
@@ -19,11 +17,13 @@ readme = "README.md"
 # -----------------------------------------------------------------------------
 # Crate Configuration
 # -----------------------------------------------------------------------------
+# Slugs from https://crates.io/category_slugs. `no-std` because a
+# `default-features = false` build is `no_std + alloc` (ADR-0005).
 categories = [
     "parsing",
     "text-processing",
     "web-programming",
-    "data-structures",
+    "no-std",
 ]
 
 keywords = ["frontmatter", "metadata", "seo", "opengraph", "static-site"]
