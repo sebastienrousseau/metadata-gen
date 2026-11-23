@@ -60,8 +60,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   caller-supplied buffer. Both off by default.
 - `examples/schema_org_example.rs` and `examples/streaming_example.rs`.
 
+### Performance
+
+- **`escape_html` and `escape_attribute` copy unescaped runs as
+  slices** (#47) instead of pushing one char at a time; the output is
+  byte-identical to the five-`replace` chain, checked by a property
+  test and `tests/escape_corpus/`. `perf/escape-compare` benchmarks it
+  against `v_htmlescape`, and CI reports both on every pull request.
+
 ### Fixed
 
+- **A YAML block exactly `ParseLimits::max_block_bytes` long is
+  accepted.** The limit is inclusive, but the text handed to noyalib
+  gained a trailing newline, so a block at the limit failed with
+  "document exceeds maximum length". Found by mutation testing.
+- **The 1 MiB `extract_metadata` benchmark timed an error.** Its block
+  held over 1 024 keys, past the default YAML budget, so it measured
+  the budget failure, and the README's 1 MB figure came from it. The
+  size matrix now times a 1 KiB header followed by a body of the stated
+  size, a separate group grows the block to 32 KiB inside the budget,
+  and every bench unwraps its result. The 1 MB row is gone from the
+  README.
 - **`extract_typed_borrowed` leaked an internal noyalib signal.** YAML
   with a tag (`t: !x 5`) failed with the text
   `$__noyalib_streaming_fallback`; it now says the block cannot be
@@ -80,6 +99,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   0.0.4's regex detector gave "No valid front matter found."
 - `tests/test_body.rs` (#39): the body is the exact suffix of the input
   for YAML, TOML and JSON.
+- The property suite (#51) checks round trips with quotes, backslashes
+  and any printable Unicode, compares the whole extracted map, and
+  scales with `PROPTEST_CASES`: CI runs 10 000 cases per round trip and
+  100 000 for the ASCII escape involution and prints the seed.
+- Kani proofs (#55) now cover every length up to the bound, the full
+  ASCII range, and that escaped output holds no raw markup; inputs are
+  built char by char so the solver does not explore UTF-8 validation.
+- `tests/test_edge_cases.rs`: boundaries mutation testing showed were
+  untested (#54).
+- Every test target runs under Miri (#53); filesystem tests are
+  ignored there with the reason.
+
+### CI
+
+- `bench.yml` (#49, #36): a 5 % benchmark regression gate on every
+  pull request against the base commit, with Criterion reports as an
+  artifact; a CodSpeed job that activates once a `CODSPEED_TOKEN`
+  secret exists; and the `escape_html` comparison. Benches cover 1 KiB,
+  10 KiB, 1 MiB and 10 MiB, and `benches/stress_tps.rs` reports
+  `extract_metadata` transactions per second on a 1 KiB post.
+- `assurance.yml`: the Kani proofs and an OSS-Fuzz build check
+  (`fuzz/oss-fuzz/`) on every push; mutation testing of a pull
+  request's changed lines; and nightly Miri over every test target
+  with strict provenance, ten minutes of fuzzing per target with the
+  corpus carried between runs, and mutation testing of the whole crate
+  against an 85 % kill-rate floor (#52, #53, #54).
+- An embedded matrix (#61): `thumbv7em-none-eabihf` and
+  `riscv32imac-unknown-none-elf` with every format, and
+  `riscv32imc-unknown-none-elf` with JSON, since `noyalib` and `toml`
+  use `Arc` and that target has no atomics. Each row reports the
+  crate's object size.
+- `codecov.yml` holds project and patch coverage to 98 %, the number
+  the coverage job enforces (#56).
+- `make mutants` runs the mutants instead of only building them.
 
 ### Documentation
 
