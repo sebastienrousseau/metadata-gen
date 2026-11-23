@@ -87,13 +87,19 @@ elif own == version:
 else:
     bad("Cargo.lock", f"{own} — run cargo check to refresh")
 
-# noyalib and dtt are pinned exactly (`=0.0.X`): same-author 0.0.x lines where
-# every release may break. The pin and the lock entry must agree, or CI,
+# First-party crates (noyalib, oxml) are pinned exactly (`=0.0.X`):
+# same-author 0.0.x lines where every release may break (ADR-0004,
+# CONTRIBUTING "First-party dependency policy"). A requirement without
+# `=` fails here, and the pin and the lock entry must agree, or CI,
 # which builds --locked, fails on a stale lock.
 manifest = (root / "Cargo.toml").read_text(encoding="utf-8") if (root / "Cargo.toml").is_file() else ""
-for dep in ("noyalib", "oxml", "dtt"):
+for dep in ("noyalib", "oxml"):
+    declared = re.search(rf'^{dep}\s*=', manifest, re.M)
     pin = re.search(rf'^{dep}\s*=\s*(?:"=([^"]+)"|\{{\s*version\s*=\s*"=([^"]+)")', manifest, re.M)
+    if not declared:
+        continue
     if not pin:
+        bad(f"Cargo.toml {dep}", "first-party dependency is not pinned with `=`")
         continue
     pinned = pin.group(1) or pin.group(2)
     locked = locked_version(dep)
