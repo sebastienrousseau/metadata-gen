@@ -40,20 +40,48 @@ use alloc::string::String;
 /// potentially dangerous characters. However, it should not be relied upon as the sole
 /// method of sanitizing user input for use in HTML contexts.
 pub fn escape_html(value: &str) -> String {
-    // One pass, one allocation. The five-`replace` chain this replaces
-    // walked the string five times and allocated up to five
-    // intermediates; the output is byte-identical.
+    escape_with(value, html_entity)
+}
+
+/// The entity [`escape_html`] writes for `byte`, or `None` to copy it.
+const fn html_entity(byte: u8) -> Option<&'static str> {
+    match byte {
+        b'\'' => Some("&#x27;"),
+        other => attribute_entity(other),
+    }
+}
+
+/// The entity [`escape_attribute`] writes for `byte`, or `None`.
+const fn attribute_entity(byte: u8) -> Option<&'static str> {
+    match byte {
+        b'&' => Some("&amp;"),
+        b'<' => Some("&lt;"),
+        b'>' => Some("&gt;"),
+        b'"' => Some("&quot;"),
+        _ => None,
+    }
+}
+
+/// One pass over the bytes, one allocation: runs of bytes that need no
+/// escaping are copied as slices, and each special byte is replaced by
+/// its entity. Every special byte is ASCII, so each slice boundary is a
+/// char boundary and the output stays valid UTF-8. The five-`replace`
+/// chain this replaced walked the string five times and allocated up
+/// to five intermediates; the output is byte-identical.
+fn escape_with(
+    value: &str,
+    entity: fn(u8) -> Option<&'static str>,
+) -> String {
     let mut out = String::with_capacity(value.len() + value.len() / 8);
-    for ch in value.chars() {
-        match ch {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#x27;"),
-            other => out.push(other),
+    let mut copied = 0;
+    for (i, &byte) in value.as_bytes().iter().enumerate() {
+        if let Some(replacement) = entity(byte) {
+            out.push_str(&value[copied..i]);
+            out.push_str(replacement);
+            copied = i + 1;
         }
     }
+    out.push_str(&value[copied..]);
     out
 }
 
@@ -72,10 +100,7 @@ pub fn escape_html(value: &str) -> String {
 /// assert_eq!(escape_html_cow("a < b"), "a &lt; b");
 /// ```
 pub fn escape_html_cow(value: &str) -> Cow<'_, str> {
-    if value
-        .bytes()
-        .any(|b| matches!(b, b'&' | b'<' | b'>' | b'"' | b'\''))
-    {
+    if value.bytes().any(|b| html_entity(b).is_some()) {
         Cow::Owned(escape_html(value))
     } else {
         Cow::Borrowed(value)
@@ -99,17 +124,7 @@ pub fn escape_html_cow(value: &str) -> Cow<'_, str> {
 /// );
 /// ```
 pub fn escape_attribute(value: &str) -> String {
-    let mut out = String::with_capacity(value.len() + value.len() / 8);
-    for ch in value.chars() {
-        match ch {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            other => out.push(other),
-        }
-    }
-    out
+    escape_with(value, attribute_entity)
 }
 
 /// Unescapes HTML entities in a string.
@@ -403,6 +418,7 @@ mod escape_single_pass_tests {
 
     #[test]
     fn escape_html_cow_borrows_clean_input() {
+        assert!(matches!(escape_html_cow(""), Cow::Borrowed("")));
         assert!(matches!(
             escape_html_cow("plain text"),
             Cow::Borrowed(_)
