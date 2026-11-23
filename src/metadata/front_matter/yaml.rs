@@ -7,9 +7,13 @@ use super::*;
 use noyalib::ParserConfig;
 
 fn config(limits: &ParseLimits) -> ParserConfig {
+    // `check_size` has already held the block to `max_block_bytes`.
+    // Collapsing ends every line with a newline, the last one included,
+    // so the text noyalib sees can be one byte longer than the block;
+    // without the extra byte a block exactly at the limit was rejected.
     ParserConfig::strict()
         .max_depth(limits.max_depth)
-        .max_document_length(limits.max_block_bytes.max(1))
+        .max_document_length(limits.max_block_bytes.saturating_add(1))
 }
 
 fn parse_error(text: &str, e: noyalib::Error) -> MetadataError {
