@@ -124,48 +124,78 @@ fn html_document(bytes: usize) -> String {
     doc
 }
 
-/// Throughput at 1 KB, 10 KB and 1 MB (#49). The point is the slope: a
-/// regression that only shows at scale is invisible on the 200-byte
-/// fixtures above.
+/// The sizes of the throughput matrix (#49): 1 KiB, 10 KiB, 1 MiB and
+/// 10 MiB. The point is the slope: a regression that only shows at
+/// scale is invisible on the 200-byte fixtures above.
+const SIZES: [usize; 4] = [1 << 10, 10 << 10, 1 << 20, 10 << 20];
+
+/// Fewer samples for the large inputs so the whole matrix stays within
+/// the CI budget; Criterion's minimum is 10.
+fn sample_size(size: usize) -> usize {
+    if size >= 1 << 20 {
+        10
+    } else {
+        100
+    }
+}
+
+/// Benchmarks `routine` over a document of every size in [`SIZES`],
+/// reporting bytes per second.
+fn throughput_group(
+    c: &mut Criterion,
+    name: &str,
+    make: fn(usize) -> String,
+    routine: fn(&str),
+) {
+    let mut group = c.benchmark_group(name);
+    for &size in &SIZES {
+        let doc = make(size);
+        group.sample_size(sample_size(size));
+        group.throughput(Throughput::Bytes(doc.len() as u64));
+        group.bench_with_input(
+            BenchmarkId::from_parameter(size),
+            &doc,
+            |b, d| b.iter(|| routine(black_box(d))),
+        );
+    }
+    group.finish();
+}
+
+/// Text with one escapable character in every seven bytes.
+fn escapable_text(size: usize) -> String {
+    "a <b> & \"c\" 'd' plain text ".repeat(size / 28 + 1)
+}
+
+/// What [`escapable_text`] escapes to: the unescape input.
+fn escaped_text(size: usize) -> String {
+    escape_html(&escapable_text(size))
+}
+
 fn benchmark_throughput(c: &mut Criterion) {
-    let sizes = [1 << 10, 10 << 10, 1 << 20];
-
-    let mut group = c.benchmark_group("throughput/extract_metadata");
-    for &size in &sizes {
-        let doc = yaml_document(size);
-        group.throughput(Throughput::Bytes(doc.len() as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &doc,
-            |b, d| b.iter(|| extract_metadata(black_box(d))),
-        );
-    }
-    group.finish();
-
-    let mut group = c.benchmark_group("throughput/extract_meta_tags");
-    for &size in &sizes {
-        let doc = html_document(size);
-        group.throughput(Throughput::Bytes(doc.len() as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &doc,
-            |b, d| b.iter(|| extract_meta_tags(black_box(d))),
-        );
-    }
-    group.finish();
-
-    let mut group = c.benchmark_group("throughput/escape_html");
-    for &size in &sizes {
-        let text: String =
-            "a <b> & \"c\" 'd' plain text ".repeat(size / 28 + 1);
-        group.throughput(Throughput::Bytes(text.len() as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &text,
-            |b, d| b.iter(|| escape_html(black_box(d))),
-        );
-    }
-    group.finish();
+    throughput_group(
+        c,
+        "throughput/extract_metadata",
+        yaml_document,
+        |d| drop(black_box(extract_metadata(d))),
+    );
+    throughput_group(
+        c,
+        "throughput/extract_meta_tags",
+        html_document,
+        |d| drop(black_box(extract_meta_tags(d))),
+    );
+    throughput_group(
+        c,
+        "throughput/escape_html",
+        escapable_text,
+        |d| drop(black_box(escape_html(d))),
+    );
+    throughput_group(
+        c,
+        "throughput/unescape_html",
+        escaped_text,
+        |d| drop(black_box(unescape_html(d))),
+    );
 }
 
 criterion_group!(

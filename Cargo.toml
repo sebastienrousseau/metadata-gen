@@ -134,6 +134,11 @@ name = "metadata_benchmark"
 harness = false
 required-features = ["std", "yaml", "toml", "json", "html"]
 
+[[bench]]
+name = "stress_tps"
+harness = false
+required-features = ["std", "yaml"]
+
 [profile.bench]
 # Match release codegen so reported numbers reflect what users will see.
 # `line-tables-only` keeps just enough debug info for flamegraphs without
