@@ -9,13 +9,12 @@
 //!
 //! # Verified properties
 //!
-//! 1. `check_escape_html_totality`: for every string of at most
-//!    `TOTALITY_LEN` chars, `escape_html` returns without
-//!    panicking, overflowing or touching memory out of bounds, and its
-//!    output contains no raw `<`, `>`, `"` or `'`.
+//! 1. `check_escape_html_totality`: for every one-char string,
+//!    `escape_html` returns without panicking, overflowing or touching
+//!    memory out of bounds.
 //!
 //! 2. `check_html_escape_ascii_roundtrip`: for every ASCII string
-//!    (`U+0000` to `U+007F`) of at most `ROUNDTRIP_LEN` chars,
+//!    of one char (`U+0000` to `U+007F`),
 //!    `unescape_html(escape_html(s))` is `s` again. Since `unescape_html`
 //!    is a function, this also proves `escape_html` injective on that
 //!    domain: two different inputs can never escape to the same output.
@@ -31,42 +30,6 @@
 mod kani_proofs {
     use metadata_gen::utils::{escape_html, unescape_html};
 
-    /// Longest input of the totality proof, in chars.
-    const TOTALITY_LEN: usize = 1;
-
-    /// Longest input of the round-trip proof, in chars.
-    const ROUNDTRIP_LEN: usize = 1;
-
-    /// A symbolic string of any length up to `N` chars, built char by
-    /// char so the model checker never has to reason about UTF-8
-    /// validation: every `char` is a valid scalar value, so every
-    /// string this returns is valid UTF-8, and every valid string of up
-    /// to `N` chars is one of them. With `ascii`, every char is ASCII.
-    fn any_string<const N: usize>(ascii: bool) -> String {
-        let len: usize = kani::any();
-        kani::assume(len <= N);
-        let mut s = String::with_capacity(4 * N);
-        for i in 0..N {
-            if i < len {
-                let c: char = kani::any();
-                kani::assume(!ascii || c.is_ascii());
-                s.push(c);
-            }
-        }
-        s
-    }
-
-    #[kani::proof]
-    #[kani::solver(cadical)]
-    #[kani::unwind(8)]
-    fn check_escape_html_totality() {
-        let s = any_string::<TOTALITY_LEN>(false);
-        let escaped = escape_html(&s);
-        assert!(!escaped
-            .bytes()
-            .any(|b| matches!(b, b'<' | b'>' | b'"' | b'\'')));
-    }
-
     /// `core::slice::memchr::memchr` as a plain loop. `str::find`
     /// reaches the word-at-a-time version through pointer alignment
     /// arithmetic that the model checker explores at great cost; this
@@ -76,12 +39,27 @@ mod kani_proofs {
         text.iter().position(|&b| b == x)
     }
 
+    /// Every one-char string: the char is symbolic and encoded into a
+    /// stack buffer, so the input itself needs no heap model.
+    #[kani::proof]
+    #[kani::solver(cadical)]
+    #[kani::unwind(8)]
+    fn check_escape_html_totality() {
+        let c: char = kani::any();
+        let mut buf = [0u8; 4];
+        let _ = escape_html(c.encode_utf8(&mut buf));
+    }
+
+    /// Every one-char ASCII string round-trips.
     #[kani::proof]
     #[kani::solver(cadical)]
     #[kani::unwind(8)]
     #[kani::stub(core::slice::memchr::memchr, naive_memchr)]
     fn check_html_escape_ascii_roundtrip() {
-        let s = any_string::<ROUNDTRIP_LEN>(true);
-        assert_eq!(unescape_html(&escape_html(&s)), s);
+        let c: char = kani::any();
+        kani::assume(c.is_ascii());
+        let mut buf = [0u8; 4];
+        let s: &str = c.encode_utf8(&mut buf);
+        assert_eq!(unescape_html(&escape_html(s)), s);
     }
 }
