@@ -7,6 +7,7 @@ root=/tmp/bisect
 mkdir -p "$root/bin"
 export CARGO_TARGET_DIR="$PWD/target"
 REVS=${REVS:?name=rev list}
+lscpu | grep "Model name"
 git clone -q https://github.com/sebastienrousseau/noyalib "$root/noyalib"
 git -C "$root/noyalib" fetch -q origin 'refs/pull/*/head:refs/remotes/pr/*'
 names=""
