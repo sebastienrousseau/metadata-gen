@@ -3,6 +3,7 @@
 # Verification that is too slow, or too open-ended, for quality.yml:
 #
 # - kani: the escape_html proofs (#55), on every push and PR.
+# - oss-fuzz-build: OSS-Fuzz's build verifier on fuzz/oss-fuzz/ (#52).
 # - mutants-diff: mutation testing of the lines a PR changes (#54).
 # - Nightly and on demand:
 #   - miri-full: every test target under Miri with strict provenance (#53).
@@ -46,6 +47,29 @@ jobs:
         with:
           kani-version: "0.68.0"
           args: --tests --harness check_escape_html_totality --harness check_html_escape_ascii_roundtrip
+
+  oss-fuzz-build:
+    name: OSS-Fuzz build check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # OSS-Fuzz's own build verifier against this checkout: build the
+      # project image from fuzz/oss-fuzz/, build every target with the
+      # address sanitizer, then run check_build on the result.
+      - name: Build and check with OSS-Fuzz's helper
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/google/oss-fuzz "$RUNNER_TEMP/oss-fuzz"
+          mkdir -p "$RUNNER_TEMP/oss-fuzz/projects/metadata-gen"
+          cp fuzz/oss-fuzz/project.yaml fuzz/oss-fuzz/Dockerfile fuzz/oss-fuzz/build.sh \
+            "$RUNNER_TEMP/oss-fuzz/projects/metadata-gen/"
+          cd "$RUNNER_TEMP/oss-fuzz"
+          python3 infra/helper.py build_image --pull metadata-gen
+          python3 infra/helper.py build_fuzzers metadata-gen "$GITHUB_WORKSPACE"
+          python3 infra/helper.py check_build metadata-gen
 
   mutants-diff:
     name: mutants (changed lines)
