@@ -33,9 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **cargo-vet imports** (#29): `imports.mozilla` now points at the
   `mozilla/supply-chain` set the cargo-vet registry publishes (it
   pointed at Firefox's in-tree audits, kept as `firefox`), and the
-  fermyon and ariel-os sets are imported. Three agent-written audits
-  recorded under the maintainer's name (loom, rand, tokio) are covered
-  by published audits and removed. The exemption baseline moves from
+  fermyon and ariel-os sets are imported. All 86 audits that AI agents
+  had recorded under the maintainer's name are removed (three were
+  already covered by published audits); the maintainer never reviewed
+  them. The crates they covered are now unvetted until each is
+  imported or reviewed by a person. The exemption baseline moves from
   81 to the 3 exemptions that exist.
 
 ### Added
