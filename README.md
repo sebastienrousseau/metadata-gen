@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sebastienrousseau/metadata-gen/8c5ad2f5382d0c0d0daa3af1dd37022ab114c8ab/.github/demo.gif" alt="A Markdown file's YAML front matter, then the flat metadata map metadata-gen extracts from it, then an ML-DSA signature over that metadata verifying and a tampered copy being rejected" width="100%" />
+  <img src="https://raw.githubusercontent.com/sebastienrousseau/metadata-gen/bb8ce69d86bc283e2cdefce516c2f9db8d65bb05/.github/demo.gif" alt="A Markdown file's YAML front matter, then the flat metadata map metadata-gen extracts from it, then an ML-DSA signature over that metadata verifying and a tampered copy being rejected" width="100%" />
 </p>
 
 ---
