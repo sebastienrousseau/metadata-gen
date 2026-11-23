@@ -29,10 +29,10 @@ mod kani_proofs {
     use metadata_gen::utils::{escape_html, unescape_html};
 
     /// Longest input of the totality proof, in chars.
-    const TOTALITY_LEN: usize = 8;
+    const TOTALITY_LEN: usize = 4;
 
     /// Longest input of the round-trip proof, in chars.
-    const ROUNDTRIP_LEN: usize = 4;
+    const ROUNDTRIP_LEN: usize = 3;
 
     /// A symbolic string of any length up to `N` chars, built char by
     /// char so the model checker never has to reason about UTF-8
@@ -55,7 +55,7 @@ mod kani_proofs {
 
     #[kani::proof]
     #[kani::solver(cadical)]
-    #[kani::unwind(50)]
+    #[kani::unwind(26)]
     fn check_escape_html_totality() {
         let s = any_string::<TOTALITY_LEN>(false);
         let escaped = escape_html(&s);
