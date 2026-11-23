@@ -36,7 +36,7 @@ for l in sys.stdin:
     cp "$exe" "$root/bin/crit-$name"
   )
 }
-HEAD_SHA=$(git rev-parse HEAD~1)   # a11c4a7, without this scratch commit
+HEAD_SHA=$(git rev-parse a11c4a7)   # a11c4a7, without this scratch commit
 mk base 7b87c75 - 0
 mk v58 "$HEAD_SHA" 0.0.58 0
 mk v59 "$HEAD_SHA" 0.0.59 0
