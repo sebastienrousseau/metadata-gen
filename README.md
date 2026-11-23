@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sebastienrousseau/metadata-gen/bb8ce69d86bc283e2cdefce516c2f9db8d65bb05/.github/demo.gif" alt="A Markdown file's YAML front matter, then the flat metadata map metadata-gen extracts from it" width="100%" />
+  <img src="https://raw.githubusercontent.com/sebastienrousseau/metadata-gen/840ff82875aa853f6e0cc9e852350c3f921c8891/.github/demo.gif" alt="A Markdown file's YAML front matter, then the flat metadata map metadata-gen extracts from it" width="100%" />
 </p>
 
 ---
