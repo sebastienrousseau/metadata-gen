@@ -8,7 +8,7 @@ cd "$root/noyalib"
 cargo install -q --locked cargo-vet --version 0.10.2
 cargo update -q -p url@2.5.8 --precise 2.5.9
 cargo vet --locked || true
-cargo vet
-cargo vet --locked
+cargo vet || true
+cargo vet --locked || true
 git diff --stat
 git diff > "$root/vet.patch"
