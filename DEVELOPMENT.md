@@ -42,6 +42,12 @@ make            # check + clippy + test — the default gate
 | Fuzz targets, corpus replay | `make fuzz` |
 | All examples | `make examples` |
 | Benches compile and run once | `make bench-smoke` |
+| Benches against a saved baseline (5 % gate) | `make bench-gate BENCH_SAVE=1`, change, `make bench-gate` |
+| `escape_html` against `v_htmlescape` | `make bench-compare` |
+| Property tests at CI scale | `make proptest` |
+| Kani proofs | `make kani` |
+| Mutation testing (85 % kill rate) | `make mutants` |
+| Embedded builds and object sizes | `make embedded` |
 | Version-bearing files agree | `make versions` |
 | Supply chain | `make deny` / `make vet` / `make audit` |
 | Complexity ceilings | `make complexity` |
@@ -74,6 +80,13 @@ Every gate has a local equivalent:
 | `miri` (quality.yml) | `make miri` | filesystem tests are skipped by `#[cfg_attr(miri, ignore)]` |
 | `fuzz-replay` (quality.yml) | `make fuzz` | builds every target, replays corpus + regressions with `-runs=0` |
 | `cargo-vet` (quality.yml) | `make vet` | the exemption count must not exceed `supply-chain/exemptions-baseline.txt` |
+| `proptest` (quality.yml) | `make proptest` | 10 000 cases per round trip, 100 000 for the ASCII involution; the seed is printed, rerun with `PROPTEST_RNG_SEED=<seed>` |
+| `embedded` (quality.yml) | `make embedded` | `riscv32imc` has no atomic read-modify-write, so `noyalib` and `toml` (which use `Arc`) cannot build there; that row builds JSON only |
+| `bench regression` (bench.yml) | `make bench-gate` | PRs only; fails when a benchmark's 95 % interval lies wholly above +5 % against the base commit |
+| `codspeed` (bench.yml) | none | skipped until the `CODSPEED_TOKEN` secret exists |
+| `kani` (assurance.yml) | `make kani` | needs `cargo install --locked kani-verifier && cargo kani setup` |
+| `mutants (changed lines)` (assurance.yml) | `git diff main... -- src > d.diff && cargo mutants --in-diff d.diff` | PRs only; same 85 % floor |
+| `miri-full`, `fuzz-long`, `mutants-full` (assurance.yml) | `MIRIFLAGS=-Zmiri-strict-provenance cargo +nightly miri test --all-features --lib --tests`, `cargo +nightly fuzz run <target> -- -max_total_time=600`, `make mutants` | nightly schedule and manual dispatch only |
 | `release-hygiene` (quality.yml) | `make versions && make examples && make bench-smoke && make doc` | |
 | `docs-lint` | `make lint` | British spellings are house style; see `.codespellrc` |
 | `reuse-lint` | `uvx --with chardet reuse lint` | files without an inline header are covered by `REUSE.toml` |
