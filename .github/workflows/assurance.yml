@@ -33,20 +33,28 @@ env:
 
 jobs:
   kani:
-    name: kani (escape_html proofs)
+    name: kani (${{ matrix.harness }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        harness:
+          - check_escape_html_totality
+          - check_html_escape_ascii_roundtrip
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # The proofs are in tests/kani/escape_html.rs; `make kani` runs
       # the same harnesses locally. A failed proof prints the
-      # counterexample trace and fails the job.
+      # counterexample trace and fails the job. `-Z stubbing` lets the
+      # round trip replace the standard library's word-at-a-time
+      # memchr with an equivalent plain loop.
       - uses: model-checking/kani-github-action@f838096619a707b0f6b2118cf435eaccfa33e51f # v1.1
         with:
           kani-version: "0.68.0"
-          args: --tests --harness check_escape_html_totality --harness check_html_escape_ascii_roundtrip
+          args: --tests -Z stubbing --harness ${{ matrix.harness }}
 
   oss-fuzz-build:
     name: OSS-Fuzz build check

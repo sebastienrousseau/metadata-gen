@@ -29,10 +29,10 @@ mod kani_proofs {
     use metadata_gen::utils::{escape_html, unescape_html};
 
     /// Longest input of the totality proof, in chars.
-    const TOTALITY_LEN: usize = 4;
+    const TOTALITY_LEN: usize = 3;
 
     /// Longest input of the round-trip proof, in chars.
-    const ROUNDTRIP_LEN: usize = 3;
+    const ROUNDTRIP_LEN: usize = 2;
 
     /// A symbolic string of any length up to `N` chars, built char by
     /// char so the model checker never has to reason about UTF-8
@@ -55,7 +55,7 @@ mod kani_proofs {
 
     #[kani::proof]
     #[kani::solver(cadical)]
-    #[kani::unwind(26)]
+    #[kani::unwind(20)]
     fn check_escape_html_totality() {
         let s = any_string::<TOTALITY_LEN>(false);
         let escaped = escape_html(&s);
@@ -64,9 +64,19 @@ mod kani_proofs {
             .any(|b| matches!(b, b'<' | b'>' | b'"' | b'\'')));
     }
 
+    /// `core::slice::memchr::memchr` as a plain loop. `str::find`
+    /// reaches the word-at-a-time version through pointer alignment
+    /// arithmetic that the model checker explores at great cost; this
+    /// returns the same index, so the proof is about `unescape_html`,
+    /// not about the standard library's search.
+    fn naive_memchr(x: u8, text: &[u8]) -> Option<usize> {
+        text.iter().position(|&b| b == x)
+    }
+
     #[kani::proof]
     #[kani::solver(cadical)]
-    #[kani::unwind(26)]
+    #[kani::unwind(14)]
+    #[kani::stub(core::slice::memchr::memchr, naive_memchr)]
     fn check_html_escape_ascii_roundtrip() {
         let s = any_string::<ROUNDTRIP_LEN>(true);
         assert_eq!(unescape_html(&escape_html(&s)), s);

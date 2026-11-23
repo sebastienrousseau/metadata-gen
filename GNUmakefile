@@ -95,7 +95,7 @@ loom:
 	RUSTFLAGS="--cfg loom" cargo test --test loom_smoke --release
 
 kani:
-	cargo kani --tests --harness check_escape_html_totality --harness check_html_escape_ascii_roundtrip
+	cargo kani --tests -Z stubbing --harness check_escape_html_totality --harness check_html_escape_ascii_roundtrip
 
 # A full run takes a while; `cargo mutants --in-diff <file>` narrows it
 # to a diff, as the PR job does.
