@@ -4,14 +4,29 @@
 //! (YAML, TOML, JSON) and processing it into a standardized structure.
 
 use crate::error::MetadataError;
-use crate::MetadataMap;
-use alloc::string::{String, ToString};
+use alloc::string::ToString;
 
+pub mod builder;
+#[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
+mod cow;
 mod date;
+#[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(
+        feature = "yaml",
+        feature = "toml",
+        feature = "json"
+    )))
+)]
+pub mod events;
 mod front_matter;
+mod model;
 mod process;
 mod scan;
 
+#[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
+pub use cow::{extract_metadata_cow, CowMetadata};
 #[cfg(all(
     test,
     feature = "std",
@@ -21,6 +36,7 @@ mod scan;
 ))]
 use date::standardize_date;
 use front_matter::parse_block;
+pub use model::Metadata;
 #[cfg(all(
     test,
     feature = "std",
@@ -30,102 +46,10 @@ use front_matter::parse_block;
 ))]
 use process::{generate_derived_fields, generate_slug};
 pub use process::{
-    process_metadata, process_metadata_with, DateOrder, ProcessOptions,
+    process_metadata, process_metadata_with, DateOrder,
+    MetadataProcessor, ProcessOptions,
 };
 use scan::Scan;
-
-/// Represents metadata for a page or content item.
-///
-/// # Example
-///
-/// ```
-/// use metadata_gen::Metadata;
-/// use std::collections::HashMap;
-///
-/// let mut data = HashMap::new();
-/// data.insert("title".to_string(), "My Page".to_string());
-/// let metadata = Metadata::new(data);
-/// assert_eq!(metadata.get("title"), Some(&"My Page".to_string()));
-/// ```
-#[derive(Debug, Default, Clone)]
-pub struct Metadata {
-    /// The underlying key-value store for metadata fields.
-    inner: MetadataMap,
-}
-
-impl Metadata {
-    /// Creates a new `Metadata` instance with the given data.
-    ///
-    /// # Arguments
-    ///
-    /// * `data` - A [`MetadataMap`] containing the metadata key-value pairs.
-    ///
-    /// # Returns
-    ///
-    /// A new `Metadata` instance.
-    pub fn new(data: MetadataMap) -> Self {
-        Metadata { inner: data }
-    }
-
-    /// Retrieves the value associated with the given key.
-    ///
-    /// # Arguments
-    ///
-    /// * `key` - A string slice representing the key to look up.
-    ///
-    /// # Returns
-    ///
-    /// An `Option<&String>` containing the value if the key exists, or `None` otherwise.
-    pub fn get(&self, key: &str) -> Option<&String> {
-        self.inner.get(key)
-    }
-
-    /// Inserts a key-value pair into the metadata.
-    ///
-    /// # Arguments
-    ///
-    /// * `key` - The key to insert.
-    /// * `value` - The value to associate with the key.
-    ///
-    /// # Returns
-    ///
-    /// The old value associated with the key, if it existed.
-    pub fn insert(
-        &mut self,
-        key: String,
-        value: String,
-    ) -> Option<String> {
-        self.inner.insert(key, value)
-    }
-
-    /// Checks if the metadata contains the given key.
-    ///
-    /// # Arguments
-    ///
-    /// * `key` - A string slice representing the key to check for.
-    ///
-    /// # Returns
-    ///
-    /// `true` if the key exists, `false` otherwise.
-    pub fn contains_key(&self, key: &str) -> bool {
-        self.inner.contains_key(key)
-    }
-
-    /// Consumes the `Metadata` instance and returns the inner map.
-    ///
-    /// # Returns
-    ///
-    /// The inner [`MetadataMap`] containing all metadata key-value pairs.
-    pub fn into_inner(self) -> MetadataMap {
-        self.inner
-    }
-
-    /// Borrows the inner map (crate-internal; used by `sign`).
-    #[cfg(feature = "pqc-sign")]
-    pub(crate) fn as_map(&self) -> &MetadataMap {
-        &self.inner
-    }
-}
 
 /// Extracts metadata from the content string.
 ///
@@ -227,8 +151,31 @@ pub fn extract_metadata_with_limits(
     content: &str,
     limits: &ParseLimits,
 ) -> Result<Metadata, MetadataError> {
+    extract_with_offset(content, limits).map(|(metadata, _)| metadata)
+}
+
+/// One scan, one parse: the metadata and the byte offset where the body
+/// starts.
+fn extract_with_offset(
+    content: &str,
+    limits: &ParseLimits,
+) -> Result<(Metadata, usize), MetadataError> {
+    let (format, raw, body_offset) = find_block(content)?;
+    parse_block(format, raw, limits)
+        .map(|metadata| (metadata, body_offset))
+}
+
+/// The block's format, its raw text and the body offset, or the error
+/// every entry point reports when there is no usable block.
+fn find_block(
+    content: &str,
+) -> Result<(FrontMatterFormat, &str, usize), MetadataError> {
     match scan::scan(content) {
-        Scan::Found { format, raw, .. } => parse_block(format, raw, limits),
+        Scan::Found {
+            format,
+            raw,
+            body_offset,
+        } => Ok((format, raw, body_offset)),
         Scan::Unterminated { format, offset } => {
             Err(MetadataError::ExtractionError {
                 message: alloc::format!(
@@ -333,13 +280,13 @@ pub fn detect_front_matter(
 pub fn extract_metadata_with_body(
     content: &str,
 ) -> Result<(Metadata, &str), MetadataError> {
-    let metadata = extract_metadata(content)?;
-    let body_start = detect_front_matter(content)
-        .map_or(content.len(), |(_, _, start)| start);
-    let body = content[body_start..]
+    let (metadata, body_start) =
+        extract_with_offset(content, &ParseLimits::default())?;
+    let rest = &content[body_start..];
+    let body = rest
         .strip_prefix("\r\n")
-        .or_else(|| content[body_start..].strip_prefix('\n'))
-        .unwrap_or(&content[body_start..]);
+        .or_else(|| rest.strip_prefix('\n'))
+        .unwrap_or(rest);
     Ok((metadata, body))
 }
 
@@ -352,22 +299,61 @@ pub fn extract_metadata_with_body(
 ///
 /// # Errors
 ///
-/// [`MetadataError::ExtractionError`] when no front matter is found;
-/// the format's parse error (`YamlError`, `TomlError`, `JsonError`) when
-/// the block does not deserialise into `T`.
+/// [`MetadataError::ExtractionError`] when no front matter is found or
+/// the block exceeds the default [`ParseLimits`];
+/// [`MetadataError::Parse`] (with `format` set to the block's format and
+/// the parser's message, which names the offending field) when the block
+/// does not parse or does not deserialise into `T`; and
+/// [`MetadataError::UnsupportedFormatError`] when the block's format was
+/// not compiled in.
 ///
 /// # Example
+///
+/// The same struct reads YAML, TOML and JSON front matter; serde
+/// attributes such as `default` and `rename` are honoured.
 ///
 /// ```
 /// use metadata_gen::metadata::extract_typed;
 ///
 /// #[derive(serde::Deserialize)]
-/// struct Front { title: String, tags: Vec<String>, draft: bool }
+/// struct Front {
+///     title: String,
+///     tags: Vec<String>,
+///     #[serde(default)]
+///     draft: bool,
+///     #[serde(rename = "sort-order", default)]
+///     sort_order: u32,
+/// }
 ///
-/// let doc = "---\ntitle: T\ntags: [a, b]\ndraft: false\n---\nBody";
-/// let front: Front = extract_typed(doc).unwrap();
-/// assert_eq!(front.tags, ["a", "b"]);
-/// assert!(!front.draft);
+/// let yaml = "---\ntitle: T\ntags: [a, b]\nsort-order: 2\n---\nBody";
+/// let toml = "+++\ntitle = \"T\"\ntags = [\"a\", \"b\"]\n+++\nBody";
+/// let json = "{\"title\": \"T\", \"tags\": [\"a\", \"b\"], \"draft\": true}\nBody";
+///
+/// let from_yaml: Front = extract_typed(yaml).unwrap();
+/// assert_eq!(from_yaml.tags, ["a", "b"]);
+/// assert_eq!(from_yaml.sort_order, 2);
+/// assert!(!from_yaml.draft);
+///
+/// let from_toml: Front = extract_typed(toml).unwrap();
+/// assert_eq!(from_toml.title, "T");
+///
+/// let from_json: Front = extract_typed(json).unwrap();
+/// assert!(from_json.draft);
+/// ```
+///
+/// A value of the wrong type is a [`MetadataError::Parse`]:
+///
+/// ```
+/// use metadata_gen::{extract_typed, FrontMatterFormat, MetadataError};
+///
+/// #[derive(Debug, serde::Deserialize)]
+/// struct Front { tags: Vec<String> }
+///
+/// let err = extract_typed::<Front>("{\"tags\": [\"a\", 2]}\n").unwrap_err();
+/// assert!(matches!(
+///     err,
+///     MetadataError::Parse { format: FrontMatterFormat::Json, .. }
+/// ));
 /// ```
 pub fn extract_typed<T: serde::de::DeserializeOwned + 'static>(
     content: &str,

@@ -170,11 +170,10 @@ fn json(content: &str) -> Scan<'_> {
         return Scan::None;
     }
     let lead = content.len() - trimmed.len();
+    // `IgnoredAny` finds where the object ends without building it, so
+    // locating a large block costs no allocation per value.
     let mut stream = serde_json::Deserializer::from_str(trimmed)
-        .into_iter::<serde_json::Map<
-        alloc::string::String,
-        serde_json::Value,
-    >>();
+        .into_iter::<serde::de::IgnoredAny>();
     let Some(first) = stream.next() else {
         return Scan::None;
     };

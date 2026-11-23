@@ -7,7 +7,29 @@ the entries that need action.
 
 Releases increment by 0.0.1 and the crate is pre-1.0, so under semver
 every release may break. The public API was additive from 0.0.5 to
-0.0.7; 0.0.8 and 0.0.9 carry breaking changes, listed below.
+0.0.7; 0.0.8 and 0.0.9 carry breaking changes, listed below, and
+0.0.10 is additive again.
+
+## 0.0.9 to 0.0.10
+
+Additive: no signature changes and no change to what
+`extract_metadata` or `generate_metatags` produce.
+
+- **`extract_typed_borrowed` on YAML that cannot be borrowed** (a tag
+  such as `!x`) returns `MetadataError::ExtractionError` naming
+  `extract_typed`, instead of a `MetadataError::Parse` whose message
+  was `$__noyalib_streaming_fallback`. Use `extract_typed` for such
+  documents.
+- **`ProcessOptions` has a new public field, `optional_fields`.** It is
+  `#[non_exhaustive]`, so code that builds it through
+  `ProcessOptions::default()` or `ProcessOptions::new()` is unaffected.
+- New, additive: `for_each_event`, `for_each_event_with_limits`,
+  `events_into`, `events`, `Event`,
+  `Scalar`, `extract_metadata_cow`, `CowMetadata`, `Metadata::builder`,
+  `Metadata::keywords`, `Metadata::keys`, `ProcessOptions::{new,
+  require, optional, unknown_fields, process}`, `MetadataProcessor`,
+  the `schema_org` module, and the `futures-io` and
+  `embedded-io-async` features.
 
 ## 0.0.8 to 0.0.9
 

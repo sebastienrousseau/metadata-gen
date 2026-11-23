@@ -129,8 +129,11 @@ pub fn signing_key_from_seed(seed: &[u8; 32]) -> SigningKey {
 /// ```
 #[must_use]
 pub fn canonical_bytes(map: &MetadataMap) -> Vec<u8> {
-    let mut entries: Vec<(&str, &str)> =
-        map.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    encode(map.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect())
+}
+
+/// Encodes `entries` as specified in [`canonical_bytes`].
+fn encode(mut entries: Vec<(&str, &str)>) -> Vec<u8> {
     entries.sort_unstable_by(|a, b| a.0.as_bytes().cmp(b.0.as_bytes()));
     let size = entries
         .iter()
@@ -171,7 +174,11 @@ impl Metadata {
     /// ```
     #[must_use]
     pub fn canonical_bytes(&self) -> Vec<u8> {
-        canonical_bytes(self.as_map())
+        encode(
+            self.keys()
+                .filter_map(|k| self.get(k).map(|v| (k, v.as_str())))
+                .collect(),
+        )
     }
 
     /// Signs the canonical encoding with ML-DSA-65 (deterministic
