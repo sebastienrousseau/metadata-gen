@@ -93,6 +93,7 @@ Every format and integration is a feature, and all of them are on by default, so
 | `tokio` | yes | `metadata_gen::tokio` and `async_extract_metadata_from_file`; implies `std` |
 | `futures-io` | no | `metadata_gen::futures_io`: read from any `futures_io::AsyncRead` (smol, async-std, `futures`); implies `std` |
 | `embedded-io-async` | no | `metadata_gen::embedded_io`: read from an `embedded_io_async::Read` (Embassy) into a caller buffer; works without `std` |
+| `pqc-sign` | no | `metadata_gen::sign`: ML-DSA-65 (FIPS 204) signatures over the canonical encoding of the metadata; works without `std` |
 
 ```toml
 # YAML only, no standard library:
@@ -105,7 +106,7 @@ A fence whose format is not compiled in is reported as `UnsupportedFormatError`,
 
 ## Requirements
 
-- **Rust 1.89.0 or newer.** `rust-version` in `Cargo.toml` is the floor and Cargo enforces it; CI builds on stable across Linux, macOS and Windows.
+- **Rust 1.89.0 or newer.** `rust-version` in `Cargo.toml` is the floor and Cargo enforces it; a CI job builds on exactly 1.89.0, and the test suite runs on stable across Linux, macOS and Windows. The floor is the one the first-party `noyalib` and `oxml` crates declare; `time` alone needs 1.88.0 ([`docs/POLICIES.md`](docs/POLICIES.md)).
 - **`alloc`, with `std` optional.** With `default-features = false` the crate is `no_std + alloc` and `MetadataMap` is a `BTreeMap`; `cargo build --no-default-features --features yaml --target thumbv7em-none-eabihf` builds.
 - **No async runtime is required.** Every synchronous entry point works without one. The `tokio` feature adds `metadata_gen::tokio` for callers who run Tokio; the dependency is trimmed to `fs` and `io-util`.
 
@@ -129,9 +130,18 @@ let (metadata, keywords, tags) =
 assert_eq!(metadata.get("title"), Some(&"Hello, world!".to_string()));
 assert_eq!(keywords, vec!["rust", "frontmatter", "seo"]);
 assert!(tags.primary.contains("description"));
+
+// The same call reads TOML (`+++`) and JSON (`{`) front matter.
+use metadata_gen::extract_metadata;
+
+let toml = extract_metadata("+++\ntitle = \"From TOML\"\n[author]\nname = \"Ada\"\n+++\nbody").unwrap();
+assert_eq!(toml.get("author.name").unwrap(), "Ada");
+
+let json = extract_metadata("{\"title\": \"From JSON\", \"draft\": false}\nbody").unwrap();
+assert_eq!(json.get("draft").unwrap(), "false");
 ```
 
-`extract_and_prepare_metadata` detects the format, flattens the metadata into a map, extracts keywords, and generates formatted meta tags in one call.
+`extract_and_prepare_metadata` detects the format, flattens the metadata into a map, extracts keywords, and generates formatted meta tags in one call. `extract_metadata` returns only the map; `extract_typed::<T>` deserialises the block into your own struct.
 
 ---
 
@@ -161,6 +171,9 @@ The family releases along the `0.0.x` line, with each repository owning a focuse
 | Meta tag generation | Open Graph, Twitter, Apple, Microsoft, and primary tags | Stable |
 | Meta tag extraction | Single streaming pass over HTML documents with `oxml` | Stable |
 | Utilities | Single-pass HTML entity escaping and async file loading | Stable |
+| WASI 0.2 component | `extract`, `extract-meta-tags`, `escape-html` over a WIT interface (`wasi/`) | New in 0.0.10 |
+| Signed metadata | ML-DSA-65 signatures over a canonical encoding (feature `pqc-sign`) | New in 0.0.10 |
+| Agent tools | MCP server example over stdio (`examples/mcp_server.rs`) | Example |
 
 ---
 
@@ -173,9 +186,9 @@ This summary identifies API shape, not a universal winner. Workload-specific tra
 | **`metadata-gen`** | Yes | Yes | Yes | Yes | Yes | Yes |
 | `gray_matter` | Yes | Yes | Yes | Yes | Yes | No |
 | `yaml-front-matter` | Yes | No | No | Yes | Yes | No |
-| `matter` | Yes | No | No | No | Yes | No |
+| `matter` | Split only | Split only | No | No | Yes | No |
 
-The matrix reflects each crate's documented surface at the time of this release.
+The matrix reflects each crate's published source at the time of this release ("split only": the block is separated from the body but not parsed). See [`docs/COMPARISON.md`](docs/COMPARISON.md) for the evidence and the complete matrix.
 
 ---
 
@@ -211,6 +224,8 @@ Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](
 - **Processing and normalization**: `process_metadata` and `process_metadata_with` normalize dates to `YYYY-MM-DD` (`DD/MM/YYYY` by default, `MM/DD/YYYY` with `DateOrder::MonthFirst`), verify required fields, and derive URL slugs from titles.
 - **Meta tag synthesis**: `generate_metatags` creates grouped tags (`primary`, `og`, `twitter`, `apple`, `ms`); Open Graph tags use `property=`, and attribute values pass through `escape_attribute`. `MetaTag` and `MetaTagGroups::iter` give the same tags as values.
 - **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `oxml` without full DOM allocation; `extract_meta_tags_lenient` also reports where a malformed page stopped the scan.
+- **WASI 0.2 component**: `wasi/` builds the crate for `wasm32-wasip2` with the WIT interface in `wit/metadata-gen.wit`; CI checks it returns what the native crate returns. [`docs/deploy/`](docs/deploy/README.md) runs it on Cloudflare Workers.
+- **Signed metadata**: with `pqc-sign`, `Metadata::sign` and `Metadata::verify` use ML-DSA-65 over the encoding in [`docs/spec/canonical-encoding.md`](docs/spec/canonical-encoding.md).
 - **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, readers and files in `metadata_gen::io`, Tokio-backed helpers in `metadata_gen::tokio`, and runtime-agnostic async readers in `metadata_gen::futures_io` (smol, async-std) and `metadata_gen::embedded_io` (Embassy).
 
 ---
@@ -262,6 +277,10 @@ Run any example with `cargo run --example <name>`:
 | `required_fields_example` | `MetadataProcessor` with an extra required field and an unknown-field check |
 | `schema_org_example` | Schema.org `Article` and `BreadcrumbList` JSON-LD from front matter |
 | `streaming_example` | Walking a 100 000-URL manifest as events, and stopping early |
+| `mcp_server` | An MCP server over stdio exposing the crate as agent tools ([`docs/MCP.md`](docs/MCP.md)) |
+| `pqc_sign_example` | Signing front matter with ML-DSA-65 and catching a tampered copy (`--features pqc-sign`) |
+
+[`examples/deploy/cloudflare-workers/`](examples/deploy/cloudflare-workers/) is a Cloudflare Worker that runs the WASI component.
 
 `make examples` runs all examples; CI executes the same suite on every push.
 
@@ -301,6 +320,8 @@ make semver       # public API against the last release
 make hack         # every feature combination compiles
 make distcheck    # package and verify the archive
 make deny / vet / audit   # supply chain
+make sbom         # the release SBOM lists the whole default build
+make wasi         # WASI component: validate, size, native parity
 ```
 
 [`DEVELOPMENT.md`](DEVELOPMENT.md) maps each CI job to its local equivalent and explains reproduction steps. [`docs/MIGRATION.md`](docs/MIGRATION.md) lists what changes for consumers between releases.
@@ -314,9 +335,9 @@ make deny / vet / audit   # supply chain
 - `#![forbid(unsafe_code)]` proves the absence of unsafe code ([ADR-0001](docs/adr/0001-zero-unsafe-policy.md)).
 - No C dependencies, no FFI, no network I/O, no environment reads.
 - Meta-tag attribute values are escaped on generation, preventing markup injection.
-- Supply chain audited via `cargo-audit`, `cargo-deny`, and `cargo-vet` with a locked exemption baseline.
+- Supply chain checked by `cargo-audit`, `cargo-deny` and `cargo-vet` (imported audit sets, an exemption count that may only shrink); releases attach CycloneDX SBOMs with build-provenance attestations. [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md) explains each and how to verify a download.
 - Front matter is parsed under `ParseLimits` (block size and depth), with the YAML parser's strict resource budgets on every path, the typed one included.
-- The first-party dependency `noyalib` is pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)).
+- The first-party dependencies `noyalib` and `oxml` share this crate's maintainer and are pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)); that shared authorship is disclosed in [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md) so you can weigh it.
 - Property-based testing via Proptest: YAML, TOML and JSON round trips at 10 000 cases each and the ASCII escape involution at 100 000 per CI run, with the seed printed for replay.
 - Concurrency testing scaffold via Loom (`tests/loom_smoke.rs`, `MAX_PREEMPTIONS` in `tests/loom/mod.rs`) for thread schedule exploration.
 - Kani proofs ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)) on every push: `escape_html` never panics and leaves no raw markup character for any string of up to 4 chars, and `unescape_html` inverts it for any ASCII string of up to 3 chars.
@@ -335,6 +356,8 @@ The canonical entry points across the repository family:
 - **[Architecture](docs/ARCHITECTURE.md)**: module map, pipeline, design decisions
 - **[Engineering policies](docs/POLICIES.md)**: MSRV, SemVer, security, concurrency
 - **[Decision records](docs/adr/README.md)**: irreversible architectural decisions
+- **[FAQ](docs/FAQ.md)**: formats, async, `no_std`, MSRV, dates, required fields, escaping, typed structs, signing, MCP, reporting vulnerabilities
+- **[Roadmap](https://github.com/sebastienrousseau/metadata-gen/milestones)**: planned releases as GitHub milestones
 
 | Document | Covers |
 | :--- | :--- |
@@ -344,6 +367,12 @@ The canonical entry points across the repository family:
 | [`GOVERNANCE.md`](GOVERNANCE.md) | Project stewardship, how changes land |
 | [`SUPPORT.md`](SUPPORT.md) | Support channels and expectations |
 | [`AGENTS.md`](AGENTS.md) | Invariants for AI-assisted contributions |
+| [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md) | Dependencies, cargo-vet policy, SBOM and provenance verification |
+| [`docs/COMPARISON.md`](docs/COMPARISON.md) | Feature matrix against other front-matter crates, with sources |
+| [`docs/MCP.md`](docs/MCP.md) | The MCP server example: tools, errors, client registration |
+| [`docs/deploy/`](docs/deploy/README.md) | Running the WASI component on Cloudflare Workers, Spin, wasmCloud |
+| [`docs/spec/canonical-encoding.md`](docs/spec/canonical-encoding.md) | The byte encoding `pqc-sign` signs |
+| [`docs/whitepapers/`](docs/whitepapers/README.md) | Engineering write-ups on the flat map, the WASI component and property testing |
 
 ---
 
