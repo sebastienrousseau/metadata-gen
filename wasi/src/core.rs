@@ -7,8 +7,8 @@
 /// Front matter as `(key, value)` pairs sorted by key, or the error's
 /// display text.
 pub fn extract(content: &str) -> Result<Vec<(String, String)>, String> {
-    let metadata =
-        metadata_gen::extract_metadata(content).map_err(|e| e.to_string())?;
+    let metadata = metadata_gen::extract_metadata(content)
+        .map_err(|e| e.to_string())?;
     let mut entries: Vec<(String, String)> =
         metadata.into_inner().into_iter().collect();
     entries.sort();

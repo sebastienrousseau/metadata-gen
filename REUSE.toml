@@ -34,6 +34,7 @@ path = [
     "fuzz/Cargo.toml",
     "fuzz/Cargo.lock",
     "wasi/.gitignore",
+    "wasi/README.md",
     "wasi/Cargo.lock",
     "wasi/cases/**",
 ]
@@ -89,3 +90,4 @@ path = ["KEYS.asc", "LICENSES/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
 SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
