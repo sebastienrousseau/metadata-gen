@@ -28,8 +28,12 @@ mk() { # name sha noyalib-version(or -) revert-regex-toml(0/1)
     git diff --stat Cargo.lock | tail -1
     cargo build -q --locked --profile bench --all-features --example yc
     cp "$CARGO_TARGET_DIR/release/examples/yc" "$root/bin/$name"
-    cargo bench -q --locked --all-features --bench metadata_benchmark --no-run 2>&1 | tail -1
-    cp "$(ls -t "$CARGO_TARGET_DIR"/release/deps/metadata_benchmark-* | grep -v '\.d$' | head -1)" "$root/bin/crit-$name"
+    exe=$(cargo bench -q --locked --all-features --bench metadata_benchmark --no-run --message-format=json \
+      | python3 -Ic 'import sys,json
+for l in sys.stdin:
+    m = json.loads(l)
+    if m.get("executable"): print(m["executable"])')
+    cp "$exe" "$root/bin/crit-$name"
   )
 }
 HEAD_SHA=$(git rev-parse HEAD~1)   # a11c4a7, without this scratch commit
