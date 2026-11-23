@@ -74,12 +74,6 @@ user-id = 3618
 user-login = "dtolnay"
 user-name = "David Tolnay"
 
-[[publisher.libm]]
-version = "0.2.16"
-when = "2026-01-24"
-user-id = 55123
-user-login = "rust-lang-owner"
-
 [[publisher.linux-raw-sys]]
 version = "0.12.1"
 when = "2025-12-23"
@@ -109,8 +103,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.noyalib]]
-version = "0.0.58"
-when = "2026-10-15"
+version = "0.0.63"
+when = "2026-11-19"
 trusted-publisher = "github:sebastienrousseau/noyalib"
 
 [[publisher.oxml]]
@@ -147,22 +141,22 @@ user-login = "dtolnay"
 user-name = "David Tolnay"
 
 [[publisher.regex]]
-version = "1.13.1"
-when = "2026-07-15"
+version = "1.13.2"
+when = "2026-11-18"
 user-id = 189
 user-login = "BurntSushi"
 user-name = "Andrew Gallant"
 
 [[publisher.regex-automata]]
-version = "0.4.16"
-when = "2026-07-15"
+version = "0.4.19"
+when = "2026-11-18"
 user-id = 189
 user-login = "BurntSushi"
 user-name = "Andrew Gallant"
 
 [[publisher.regex-syntax]]
-version = "0.8.11"
-when = "2026-06-09"
+version = "0.8.12"
+when = "2026-11-18"
 user-id = 189
 user-login = "BurntSushi"
 user-name = "Andrew Gallant"
@@ -210,8 +204,8 @@ user-login = "dtolnay"
 user-name = "David Tolnay"
 
 [[publisher.serde_spanned]]
-version = "1.1.2"
-when = "2026-10-08"
+version = "1.1.3"
+when = "2026-11-06"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
@@ -280,15 +274,15 @@ user-login = "Darksonn"
 user-name = "Alice Ryhl"
 
 [[publisher.toml]]
-version = "1.2.0+spec-1.1.0"
-when = "2026-11-04"
+version = "1.2.1+spec-1.1.0"
+when = "2026-11-06"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
 
 [[publisher.toml_datetime]]
-version = "1.1.2+spec-1.1.0"
-when = "2026-10-08"
+version = "1.1.3+spec-1.1.0"
+when = "2026-11-06"
 user-id = 6743
 user-login = "epage"
 user-name = "Ed Page"
