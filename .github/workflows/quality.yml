@@ -51,7 +51,19 @@ jobs:
           tool: cargo-llvm-cov
       # The threshold and its rationale live in DEVELOPMENT.md. A number
       # chosen once and defended beats chasing 100%.
-      - run: cargo llvm-cov --all-features --locked --fail-under-lines 98
+      - run: cargo llvm-cov --all-features --locked --fail-under-lines 98 --lcov --output-path lcov.info
+      # Codecov reports this measurement, the one the gate enforces,
+      # under the `llvm-cov` flag; codecov.yml computes its statuses
+      # from that flag alone. ci.yml's shared Coverage job also uploads a
+      # cargo-tarpaulin report, which counts lines differently (async
+      # bodies, multi-line expressions and type aliases read as missed)
+      # and stays visible in Codecov without driving the statuses.
+      - uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5.5.4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          flags: llvm-cov
+          fail_ci_if_error: false
 
   miri:
     name: miri

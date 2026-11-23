@@ -3,13 +3,27 @@
 # One number with the CI gate: quality.yml's `coverage (98% lines)` job
 # fails under 98 % lines, so Codecov holds the project and every patch
 # to the same floor. DEVELOPMENT.md explains why 98 and not 100.
+#
+# The statuses read only the `llvm-cov` flag, which is the gate's own
+# cargo-llvm-cov report. The unflagged upload from ci.yml's shared
+# Coverage job is cargo-tarpaulin, whose line model differs, so the
+# two numbers could never agree.
 coverage:
   status:
     project:
       default:
         target: 98%
+        flags:
+          - llvm-cov
     patch:
       default:
         target: 98%
+        flags:
+          - llvm-cov
+
+flags:
+  llvm-cov:
+    paths:
+      - src/
 
 ignore: []
