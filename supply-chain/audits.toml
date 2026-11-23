@@ -15,6 +15,13 @@ user-id = 6743 # Ed Page (epage)
 start = "2019-11-29"
 end = "2027-11-05"
 
+[[trusted.bstr]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-02"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
 [[trusted.bytes]]
 criteria = "safe-to-deploy"
 user-id = 6741 # Alice Ryhl (Darksonn)
@@ -46,11 +53,46 @@ start = "2023-02-05"
 end = "2027-07-26"
 notes = "Same-author crate. user-id 186843 is Sebastien Rousseau (sebastienrousseau)."
 
+[[trusted.hashbrown]]
+criteria = "safe-to-deploy"
+user-id = 55123 # rust-lang-owner
+start = "2025-04-30"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.itoa]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-05-02"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.libm]]
+criteria = "safe-to-deploy"
+user-id = 55123 # rust-lang-owner
+start = "2024-10-26"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.linux-raw-sys]]
+criteria = "safe-to-deploy"
+user-id = 6825 # Dan Gohman (sunfishcode)
+start = "2021-06-12"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
 [[trusted.loom]]
 criteria = "safe-to-deploy"
 user-id = 6741 # Alice Ryhl (Darksonn)
 start = "2021-04-12"
 end = "2027-11-22"
+
+[[trusted.memchr]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-07-07"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
 
 [[trusted.metadata-gen]]
 criteria = "safe-to-deploy"
@@ -72,6 +114,13 @@ start = "2026-09-01"
 end = "2027-07-26"
 notes = "Same-author crate published through crates.io Trusted Publishing from its own release workflow."
 
+[[trusted.oxml]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:sebastienrousseau/oxml"
+start = "2026-10-18"
+end = "2027-11-23"
+notes = "Same-author crate, published from github:sebastienrousseau/oxml; mirrors the noyalib entry."
+
 [[trusted.predicates]]
 criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
@@ -90,11 +139,74 @@ user-id = 6743 # Ed Page (epage)
 start = "2020-12-29"
 end = "2027-11-05"
 
+[[trusted.proc-macro2]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-04-23"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.regex]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-02-27"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.regex-automata]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-02-25"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.regex-syntax]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-03-30"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
 [[trusted.rustix]]
 criteria = "safe-to-deploy"
 user-id = 6825 # Dan Gohman (sunfishcode)
 start = "2021-10-29"
 end = "2027-11-22"
+
+[[trusted.rustversion]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-07-08"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.serde]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-01"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.serde_core]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2025-09-13"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.serde_derive]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-01"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.serde_json]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-02-28"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
 
 [[trusted.serde_spanned]]
 criteria = "safe-to-deploy"
@@ -108,11 +220,39 @@ user-id = 6741 # Alice Ryhl (Darksonn)
 start = "2021-10-13"
 end = "2027-11-05"
 
+[[trusted.syn]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-03-01"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
 [[trusted.termtree]]
 criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2021-10-07"
 end = "2027-11-05"
+
+[[trusted.thiserror]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-09"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.thiserror-impl]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-09"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.thread_local]]
+criteria = "safe-to-deploy"
+user-id = 2915 # Amanieu d'Antras (Amanieu)
+start = "2019-09-07"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
 
 [[trusted.tokio]]
 criteria = "safe-to-deploy"
@@ -155,6 +295,34 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2025-07-08"
 end = "2027-10-14"
+
+[[trusted.unicode-ident]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2021-10-02"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.walkdir]]
+criteria = "safe-to-deploy"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-06-09"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.windows-result]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2024-02-02"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.windows-sys]]
+criteria = "safe-to-deploy"
+user-id = 64539 # Kenny Kerr (kennykerr)
+start = "2021-11-15"
+end = "2027-11-23"
+notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
 
 [[trusted.winnow]]
 criteria = "safe-to-deploy"
