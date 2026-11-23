@@ -353,6 +353,16 @@ mod tests {
     }
 
     #[test]
+    fn offer_with_price_only_omits_currency_and_availability() {
+        let json = json_ld(
+            SchemaType::Product,
+            &meta(&[("name", "W"), ("price", "1")]),
+        );
+        assert!(json
+            .ends_with(r#""offers":{"@type":"Offer","price":"1"}}"#));
+    }
+
+    #[test]
     fn organization_and_article_publisher() {
         let org = json_ld(
             SchemaType::Organization,
