@@ -5,9 +5,9 @@
 //!
 //! Two inputs bracket real use: prose with no character to escape (the
 //! common case for titles and descriptions) and markup-dense text with
-//! one escapable byte in seven. `v_htmlescape` also escapes `/`, so on
-//! the dense input it writes slightly more; the comparison is of
-//! throughput, not output.
+//! seven escapable bytes in every 27. `v_htmlescape` also escapes `/`,
+//! which neither input contains, so both crates write the same output
+//! here; the comparison is of throughput.
 
 use criterion::{
     criterion_group, criterion_main, BenchmarkId, Criterion, Throughput,
@@ -16,13 +16,21 @@ use std::hint::black_box;
 
 const SIZE: usize = 64 << 10;
 
+/// `unit` repeated to exactly `SIZE` bytes. The repeat count comes from
+/// the unit's own length: a hand-counted divisor once fell 2 KiB short
+/// and the slice below panicked. Both units are ASCII, so any cut is a
+/// char boundary.
+fn fill(unit: &str) -> String {
+    unit.repeat(SIZE / unit.len() + 1)[..SIZE].to_string()
+}
+
 fn inputs() -> [(&'static str, String); 2] {
-    let clean = "The quick brown fox jumps over the lazy dog. "
-        .repeat(SIZE / 45 + 1);
-    let dense = "a <b> & \"c\" 'd' plain text ".repeat(SIZE / 28 + 1);
     [
-        ("clean", clean[..SIZE].to_string()),
-        ("dense", dense[..SIZE].to_string()),
+        (
+            "clean",
+            fill("The quick brown fox jumps over the lazy dog. "),
+        ),
+        ("dense", fill("a <b> & \"c\" 'd' plain text ")),
     ]
 }
 

@@ -180,7 +180,7 @@ fn throughput_group(
     group.finish();
 }
 
-/// Text with one escapable character in every seven bytes.
+/// Text with seven escapable bytes in every 27 (about one in four).
 fn escapable_text(size: usize) -> String {
     "a <b> & \"c\" 'd' plain text ".repeat(size / 28 + 1)
 }
