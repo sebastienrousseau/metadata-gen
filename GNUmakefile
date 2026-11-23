@@ -31,7 +31,7 @@
 #   make tools     — install the cargo tools the gates above need
 #   make clean     — remove build artifacts
 
-.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke versions sbom complexity links msrv semver hack no-std dist distcheck preflight tools clean
+.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke versions sbom wasi complexity links msrv semver hack no-std dist distcheck preflight tools clean
 
 all: check clippy test
 
@@ -111,7 +111,10 @@ versions:
 # CycloneDX 1.5 JSON, the format the release workflow attaches and
 # attests. Written next to Cargo.toml as metadata-gen.cdx.json.
 sbom:
-	cargo cyclonedx --format json --all-features
+	python3 -I scripts/check-sbom.py
+
+wasi:
+	python3 -I wasi/check.py
 
 # Ceilings: cyclomatic <= 10, cognitive <= 15, Halstead difficulty <= 30,
 # <= 60 lines per function, <= 500 per file. The baseline may only shrink.

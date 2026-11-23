@@ -50,7 +50,8 @@ make            # check + clippy + test — the default gate
 | Public API against the last release | `make semver` |
 | Every feature combination | `make hack` |
 | Package and verify the archive | `make distcheck` |
-| CycloneDX SBOM | `make sbom` |
+| CycloneDX SBOM lists the whole default build | `make sbom` |
+| WASI component matches native output | `make wasi` |
 | Release preflight for a local tag | `make preflight TAG=vX.Y.Z` |
 | Install the tools the gates need | `make tools` |
 
@@ -73,7 +74,9 @@ Every gate has a local equivalent:
 | `coverage-gate` (quality.yml) | `make coverage` | needs nightly; threshold is 98 % lines |
 | `miri` (quality.yml) | `make miri` | filesystem tests are skipped by `#[cfg_attr(miri, ignore)]` |
 | `fuzz-replay` (quality.yml) | `make fuzz` | builds every target, replays corpus + regressions with `-runs=0` |
-| `cargo-vet` (quality.yml) | `make vet` | the exemption count must not exceed `supply-chain/exemptions-baseline.txt` |
+| `cargo-vet` (quality.yml) | `make vet` | the exemption count must not exceed `supply-chain/exemptions-baseline.txt`; see `docs/SUPPLY-CHAIN.md` |
+| `sbom` (quality.yml) | `make sbom` | needs `cargo-cyclonedx` 0.5.9 |
+| `wasi-component` (quality.yml) | `make wasi` | needs the `wasm32-wasip2` target, `wasm-tools` and `wasmtime` |
 | `release-hygiene` (quality.yml) | `make versions && make examples && make bench-smoke && make doc` | |
 | `docs-lint` | `make lint` | British spellings are house style; see `.codespellrc` |
 | `reuse-lint` | `uvx --with chardet reuse lint` | files without an inline header are covered by `REUSE.toml` |
@@ -125,7 +128,8 @@ release.
 A release is a signed, annotated tag `vX.Y.Z` whose subject line is
 `metadata-gen vX.Y.Z`, pushed only after `make preflight TAG=vX.Y.Z`
 passes. `release.yml` then verifies the tag and versions again, packages
-the crate, writes a CycloneDX SBOM, attests build provenance for both,
+the crate, writes CycloneDX SBOMs (JSON and XML), builds and checks the
+WASI component, attests build provenance for every asset,
 and publishes the GitHub release with the Highlights from
 `docs/releases/vX.Y.Z.md`, the generated What's Changed list, the asset
 checksums and the Full Changelog line. Publishing to crates.io stays a
