@@ -34,9 +34,6 @@ pub mod metadata;
 /// The `metatags` module contains functions for generating meta tags.
 pub mod metatags;
 pub mod schema_org;
-#[cfg(feature = "pqc-sign")]
-#[cfg_attr(docsrs, doc(cfg(feature = "pqc-sign")))]
-pub mod sign;
 /// Async file helpers on the Tokio runtime (feature `tokio`).
 #[cfg(all(feature = "tokio", not(loom)))]
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]

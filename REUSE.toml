@@ -97,12 +97,3 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
 SPDX-License-Identifier = "Apache-2.0 OR MIT"
 
-# ── ML-DSA known-answer fixtures ──────────────────────────────────
-# Copied unchanged from the RustCrypto ml-dsa 0.1.2 crate's
-# tests/examples (taken there from the IETF LAMPS dilithium-certificates
-# examples); see tests/data/ml-dsa/README.md.
-[[annotations]]
-path = ["tests/data/ml-dsa/ML-DSA-65-seed.priv", "tests/data/ml-dsa/ML-DSA-65.pub"]
-precedence = "aggregate"
-SPDX-FileCopyrightText = "RustCrypto Developers"
-SPDX-License-Identifier = "Apache-2.0 OR MIT"

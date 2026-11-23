@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sebastienrousseau/metadata-gen/bb8ce69d86bc283e2cdefce516c2f9db8d65bb05/.github/demo.gif" alt="A Markdown file's YAML front matter, then the flat metadata map metadata-gen extracts from it, then an ML-DSA signature over that metadata verifying and a tampered copy being rejected" width="100%" />
+  <img src="https://raw.githubusercontent.com/sebastienrousseau/metadata-gen/bb8ce69d86bc283e2cdefce516c2f9db8d65bb05/.github/demo.gif" alt="A Markdown file's YAML front matter, then the flat metadata map metadata-gen extracts from it" width="100%" />
 </p>
 
 ---
@@ -97,7 +97,6 @@ Every format and integration is a feature, and all of them are on by default, so
 | `tokio` | yes | `metadata_gen::tokio` and `async_extract_metadata_from_file`; implies `std` |
 | `futures-io` | no | `metadata_gen::futures_io`: read from any `futures_io::AsyncRead` (smol, async-std, `futures`); implies `std` |
 | `embedded-io-async` | no | `metadata_gen::embedded_io`: read from an `embedded_io_async::Read` (Embassy) into a caller buffer; works without `std` |
-| `pqc-sign` | no | `metadata_gen::sign`: ML-DSA-65 (FIPS 204) signatures over the canonical encoding of the metadata; works without `std` |
 
 ```toml
 # YAML only, no standard library:
@@ -176,7 +175,6 @@ The family releases along the `0.0.x` line, with each repository owning a focuse
 | Meta tag extraction | Single streaming pass over HTML documents with `oxml` | Stable |
 | Utilities | Single-pass HTML entity escaping and async file loading | Stable |
 | WASI 0.2 component | `extract`, `extract-meta-tags`, `escape-html` over a WIT interface (`wasi/`) | New in 0.0.10 |
-| Signed metadata | ML-DSA-65 signatures over a canonical encoding (feature `pqc-sign`) | New in 0.0.10 |
 | Agent tools | MCP server example over stdio (`examples/mcp_server.rs`) | Example |
 
 ---
@@ -229,7 +227,6 @@ Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](
 - **Meta tag synthesis**: `generate_metatags` creates grouped tags (`primary`, `og`, `twitter`, `apple`, `ms`); Open Graph tags use `property=`, and attribute values pass through `escape_attribute`. `MetaTag` and `MetaTagGroups::iter` give the same tags as values.
 - **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `oxml` without full DOM allocation; `extract_meta_tags_lenient` also reports where a malformed page stopped the scan.
 - **WASI 0.2 component**: `wasi/` builds the crate for `wasm32-wasip2` with the WIT interface in `wit/metadata-gen.wit`; CI checks it returns what the native crate returns. [`docs/deploy/`](docs/deploy/README.md) runs it on Cloudflare Workers.
-- **Signed metadata**: with `pqc-sign`, `Metadata::sign` and `Metadata::verify` use ML-DSA-65 over the encoding in [`docs/spec/canonical-encoding.md`](docs/spec/canonical-encoding.md).
 - **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, readers and files in `metadata_gen::io`, Tokio-backed helpers in `metadata_gen::tokio`, and runtime-agnostic async readers in `metadata_gen::futures_io` (smol, async-std) and `metadata_gen::embedded_io` (Embassy).
 
 ---
@@ -282,7 +279,6 @@ Run any example with `cargo run --example <name>`:
 | `schema_org_example` | Schema.org `Article` and `BreadcrumbList` JSON-LD from front matter |
 | `streaming_example` | Walking a 100 000-URL manifest as events, and stopping early |
 | `mcp_server` | An MCP server over stdio exposing the crate as agent tools ([`docs/MCP.md`](docs/MCP.md)) |
-| `pqc_sign_example` | Signing front matter with ML-DSA-65 and catching a tampered copy (`--features pqc-sign`) |
 
 [`examples/deploy/cloudflare-workers/`](examples/deploy/cloudflare-workers/) is a Cloudflare Worker that runs the WASI component.
 
@@ -360,7 +356,7 @@ The canonical entry points across the repository family:
 - **[Architecture](docs/ARCHITECTURE.md)**: module map, pipeline, design decisions
 - **[Engineering policies](docs/POLICIES.md)**: MSRV, SemVer, security, concurrency
 - **[Decision records](docs/adr/README.md)**: irreversible architectural decisions
-- **[FAQ](docs/FAQ.md)**: formats, async, `no_std`, MSRV, dates, required fields, escaping, typed structs, signing, MCP, reporting vulnerabilities
+- **[FAQ](docs/FAQ.md)**: formats, async, `no_std`, MSRV, dates, required fields, escaping, typed structs, MCP, reporting vulnerabilities
 - **[Roadmap](https://github.com/sebastienrousseau/metadata-gen/milestones)**: planned releases as GitHub milestones
 
 | Document | Covers |
@@ -375,7 +371,6 @@ The canonical entry points across the repository family:
 | [`docs/COMPARISON.md`](docs/COMPARISON.md) | Feature matrix against other front-matter crates, with sources |
 | [`docs/MCP.md`](docs/MCP.md) | The MCP server example: tools, errors, client registration |
 | [`docs/deploy/`](docs/deploy/README.md) | Running the WASI component on Cloudflare Workers, Spin, wasmCloud |
-| [`docs/spec/canonical-encoding.md`](docs/spec/canonical-encoding.md) | The byte encoding `pqc-sign` signs |
 | [`docs/whitepapers/`](docs/whitepapers/README.md) | Engineering write-ups on the flat map, the WASI component and property testing |
 
 ---
