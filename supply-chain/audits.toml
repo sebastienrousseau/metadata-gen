@@ -163,12 +163,6 @@ who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
 delta = "0.4.29 -> 0.4.33"
 
-[[audits.loom]]
-who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
-criteria = "safe-to-run"
-version = "0.7.2"
-notes = "Concurrency testing via loom per issue #57"
-
 [[audits.memchr]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
@@ -247,12 +241,6 @@ notes = "Transitive dev-dependency via getrandom for property testing"
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-run"
 delta = "5.3.0 -> 6.0.0"
-
-[[audits.rand]]
-who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
-criteria = "safe-to-run"
-version = "0.9.5"
-notes = "Transitive dev-dependency for proptest"
 
 [[audits.rand]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
@@ -359,12 +347,6 @@ delta = "0.1.2 -> 0.1.4"
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
 criteria = "safe-to-deploy"
 delta = "0.2.27 -> 0.2.32"
-
-[[audits.tokio]]
-who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
-criteria = "safe-to-deploy"
-version = "1.53.3"
-notes = "Tokio 1.53.3 security patch for RUSTSEC-2026-0386."
 
 [[audits.tracing]]
 who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
