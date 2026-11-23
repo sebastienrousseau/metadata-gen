@@ -97,7 +97,7 @@ through Sigstore by the release workflow's OIDC identity. Verify a
 download with the GitHub CLI:
 
 ```bash
-gh attestation verify metadata-gen-0.0.9.cdx.json \
+gh attestation verify metadata-gen-0.0.10.cdx.json \
   --repo sebastienrousseau/metadata-gen
 ```
 

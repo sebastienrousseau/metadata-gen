@@ -5,7 +5,7 @@
 ///
 /// The package version follows the crate version: a change here is a
 /// change to the component's public API (ADR-0009).
-package metadata-gen:lib@0.0.9;
+package metadata-gen:lib@0.0.10;
 
 /// Front-matter extraction and HTML helpers, the same functions the
 /// Rust crate exposes, with the same output.
