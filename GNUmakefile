@@ -37,7 +37,7 @@
 #   make tools     — install the cargo tools the gates above need
 #   make clean     — remove build artifacts
 
-.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke bench-gate bench-compare embedded versions sbom wasi complexity links msrv semver hack no-std dist distcheck preflight tools clean
+.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke bench-gate bench-compare embedded versions sbom wasi demo complexity links msrv semver hack no-std dist distcheck preflight tools clean
 
 all: check clippy test
 
@@ -152,6 +152,11 @@ sbom:
 
 wasi:
 	python3 -I wasi/check.py
+
+# Re-renders .github/demo.gif from .github/demo.tape (needs vhs).
+demo:
+	cargo build --quiet --all-features --example mcp_server --example pqc_sign_example
+	vhs .github/demo.tape
 
 # Ceilings: cyclomatic <= 10, cognitive <= 15, Halstead difficulty <= 30,
 # <= 60 lines per function, <= 500 per file. The baseline may only shrink.
