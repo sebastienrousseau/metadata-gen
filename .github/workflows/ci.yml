@@ -16,7 +16,7 @@ jobs:
   ci:
     # Pinned to a SHA (immutable) rather than @main (mutable). Bump
     # deliberately when upstream rust-ci.yml changes are worth absorbing.
-    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@83114142d0a14e9c6302a9ba9e716a0cc53e4e01 # v0.0.3
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@3f9978aba68e59da1bd5a58d12fbaf142679fe5f # v0.0.4
     with:
       rust-version: 'stable'
       run-coverage: true
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+      - uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2.1.3
         with:
           command: check all
           arguments: --all-features
