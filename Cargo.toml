@@ -51,6 +51,9 @@ path = "src/lib.rs"
 # build (`default-features = false, features = ["yaml"]`) gets a tree
 # that never names `std`.
 memchr = { version = "2.7", default-features = false }
+# `pqc-sign` only: FIPS 204 ML-DSA (RustCrypto). Off by default, so a
+# consumer that does not opt in has no ML-DSA crate in its tree.
+ml-dsa = { version = "0.1.2", default-features = false, features = ["alloc"], optional = true }
 noyalib = { version = "=0.0.58", default-features = false, optional = true }
 oxml = { version = "=0.0.13", default-features = false, optional = true }
 serde = { version = "1.0.228", default-features = false, features = ["derive", "alloc"] }
@@ -113,6 +116,11 @@ path = "examples/metatags_example.rs"
 required-features = ["std", "yaml", "toml", "json", "html"]
 
 [[example]]
+name = "pqc_sign_example"
+path = "examples/pqc_sign_example.rs"
+required-features = ["yaml", "pqc-sign"]
+
+[[example]]
 name = "utils_example"
 path = "examples/utils_example.rs"
 required-features = ["std", "yaml", "toml", "json", "html", "tokio"]
@@ -133,6 +141,11 @@ path = "tests/kani/escape_html.rs"
 name = "metadata_benchmark"
 harness = false
 required-features = ["std", "yaml", "toml", "json", "html"]
+
+[[bench]]
+name = "sign_benchmark"
+harness = false
+required-features = ["std", "yaml", "pqc-sign"]
 
 [profile.bench]
 # Match release codegen so reported numbers reflect what users will see.
@@ -175,6 +188,9 @@ json = ["dep:serde_json"]
 html = ["std", "dep:oxml"]
 # `metadata_gen::tokio`: async file helpers on the Tokio runtime.
 tokio = ["std", "dep:tokio"]
+# `metadata_gen::sign`: ML-DSA-65 signatures over the canonical encoding
+# of a `Metadata` map (docs/spec/canonical-encoding.md). Not default.
+pqc-sign = ["dep:ml-dsa"]
 
 # -----------------------------------------------------------------------------
 # Release Profile

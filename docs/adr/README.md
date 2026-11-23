@@ -31,6 +31,7 @@ Nothing is silently rewritten.
 | [0007](./0007-front-matter-detection-order.md) | Front matter is detected by its opening delimiter: YAML, then TOML, then JSON | accepted | 2026-11-23 |
 | [0008](./0008-noyalib-for-yaml.md) | YAML front matter is parsed by `noyalib` | accepted | 2026-04-18 |
 | [0009](./0009-wasi-component-shape.md) | The WASI build is a separate component package with a three-function WIT interface | accepted | 2026-11-23 |
+| [0010](./0010-pqc-canonical-encoding.md) | Metadata is signed with ML-DSA-65 over a length-prefixed, key-sorted encoding | accepted | 2026-11-23 |
 
 Numbers are sequential and four digits wide. A superseded ADR keeps
 its text; only its status line changes, in the same change that adds

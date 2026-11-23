@@ -119,6 +119,12 @@ impl Metadata {
     pub fn into_inner(self) -> MetadataMap {
         self.inner
     }
+
+    /// Borrows the inner map (crate-internal; used by `sign`).
+    #[cfg(feature = "pqc-sign")]
+    pub(crate) fn as_map(&self) -> &MetadataMap {
+        &self.inner
+    }
 }
 
 /// Extracts metadata from the content string.
