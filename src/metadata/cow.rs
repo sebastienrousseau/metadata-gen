@@ -21,6 +21,17 @@ use core::ops::ControlFlow;
 /// nested keys (`author.name`), sequences (`[a, b]`), numbers, booleans
 /// and unescaped strings are owned. The map cannot outlive the document;
 /// [`CowMetadata::into_owned`] gives a `'static` [`Metadata`].
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::extract_metadata_cow;
+///
+/// let doc = "---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody";
+/// let meta = extract_metadata_cow(doc).unwrap();
+/// assert_eq!(meta.get("title"), Some("Hello"));
+/// assert_eq!(meta.get("author.name"), Some("Ada"));
+/// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CowMetadata<'a> {
     inner: BTreeMap<Cow<'a, str>, Cow<'a, str>>,
@@ -28,32 +39,95 @@ pub struct CowMetadata<'a> {
 
 impl<'a> CowMetadata<'a> {
     /// The value under `key`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata_cow;
+    ///
+    /// let doc = "---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody";
+    /// let meta = extract_metadata_cow(doc).unwrap();
+    /// assert_eq!(meta.get("title"), Some("Hello"));
+    /// assert_eq!(meta.get("missing"), None);
+    /// ```
     pub fn get(&self, key: &str) -> Option<&str> {
         self.inner.get(key).map(|v| &**v)
     }
 
     /// The value under `key`, keeping whether it is borrowed.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata_cow;
+    /// use std::borrow::Cow;
+    ///
+    /// let doc = "---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody";
+    /// let meta = extract_metadata_cow(doc).unwrap();
+    /// assert!(matches!(meta.get_cow("title"), Some(Cow::Borrowed("Hello"))));
+    /// ```
     pub fn get_cow(&self, key: &str) -> Option<&Cow<'a, str>> {
         self.inner.get(key)
     }
 
     /// The number of entries.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata_cow;
+    ///
+    /// let doc = "---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody";
+    /// let meta = extract_metadata_cow(doc).unwrap();
+    /// assert_eq!(meta.len(), 2);
+    /// ```
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
     /// True when there are no entries.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata_cow;
+    ///
+    /// let doc = "---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody";
+    /// let meta = extract_metadata_cow(doc).unwrap();
+    /// assert!(!meta.is_empty());
+    /// ```
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
 
     /// Entries in key order.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata_cow;
+    ///
+    /// let doc = "---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody";
+    /// let meta = extract_metadata_cow(doc).unwrap();
+    /// let keys: Vec<&str> = meta.iter().map(|(k, _)| k).collect();
+    /// assert_eq!(keys, ["author.name", "title"]);
+    /// ```
     pub fn iter(&self) -> impl Iterator<Item = (&str, &str)> + '_ {
         self.inner.iter().map(|(k, v)| (&**k, &**v))
     }
 
     /// How many values are borrowed from the document rather than
     /// allocated.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata_cow;
+    ///
+    /// let doc = "---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody";
+    /// let meta = extract_metadata_cow(doc).unwrap();
+    /// assert!(meta.borrowed_values() >= 1);
+    /// ```
     pub fn borrowed_values(&self) -> usize {
         self.inner
             .values()
@@ -62,12 +136,35 @@ impl<'a> CowMetadata<'a> {
     }
 
     /// The underlying map.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata_cow;
+    ///
+    /// let doc = "---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody";
+    /// let meta = extract_metadata_cow(doc).unwrap();
+    /// let map = meta.into_inner();
+    /// assert_eq!(map.len(), 2);
+    /// ```
     pub fn into_inner(self) -> BTreeMap<Cow<'a, str>, Cow<'a, str>> {
         self.inner
     }
 
     /// Copies every entry into an owned [`Metadata`], for callers that
     /// must keep the metadata after the document is gone.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::{extract_metadata_cow, Metadata};
+    ///
+    /// let owned: Metadata = {
+    ///     let doc = String::from("---\ntitle: Hello\n---\n");
+    ///     extract_metadata_cow(&doc).unwrap().into_owned()
+    /// };
+    /// assert_eq!(owned.get("title").unwrap(), "Hello");
+    /// ```
     pub fn into_owned(self) -> Metadata {
         let map: MetadataMap = self
             .inner

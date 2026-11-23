@@ -24,6 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `github/codeql-action/upload-sarif` 4.39.3, from Dependabot.
 - cargo-vet covers `loom` and `rustix` through their publishers
   (Alice Ryhl, Dan Gohman), which replaces the `rustix` exemption.
+- **crates.io metadata** (#33): the description is now one 106-character
+  sentence instead of 137 characters starting "A powerful", and the
+  `data-structures` category gives way to `no-std`.
+- **First-party pins are enforced** (#37):
+  `scripts/verify-release-versions.sh` fails when `noyalib` or `oxml`
+  is required without `=`, not only when the lock disagrees.
+- **cargo-vet imports** (#29): `imports.mozilla` now points at the
+  `mozilla/supply-chain` set the cargo-vet registry publishes (it
+  pointed at Firefox's in-tree audits, kept as `firefox`), and the
+  fermyon and ariel-os sets are imported. Three agent-written audits
+  recorded under the maintainer's name (loom, rand, tokio) are covered
+  by published audits and removed. The exemption baseline moves from
+  81 to the 3 exemptions that exist.
 
 ### Added
 
@@ -59,6 +72,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for Embassy and other `no_std` executors, reading into a
   caller-supplied buffer. Both off by default.
 - `examples/schema_org_example.rs` and `examples/streaming_example.rs`.
+- **WASI 0.2 component** (#62): `wasi/` builds the crate for
+  `wasm32-wasip2` with the WIT interface `wit/metadata-gen.wit`
+  (`extract`, `extract-meta-tags`, `escape-html`). `wasi/check.py`
+  validates it, holds it under 1 MiB (634,763 bytes today) and checks
+  every export returns byte for byte what the native crate returns;
+  the release attaches it as `metadata-gen-<version>.wasm`. ADR-0009.
+- **Signed metadata** (#64): feature `pqc-sign` (off by default) adds
+  `metadata_gen::sign`, with `Metadata::sign` and `Metadata::verify`
+  using ML-DSA-65 (FIPS 204, RustCrypto `ml-dsa`, deterministic
+  variant) over the canonical encoding in
+  `docs/spec/canonical-encoding.md`. A LAMPS known-answer key pair,
+  tamper tests, `examples/pqc_sign_example.rs` and
+  `benches/sign_benchmark.rs`. ADR-0010.
+- **MCP server example** (#65): `examples/mcp_server.rs` exposes
+  `extract_metadata`, `extract_meta_tags` and `escape_html` as Model
+  Context Protocol tools over stdio, with structured tool errors;
+  `tests/test_mcp.rs` drives it in process and `docs/MCP.md` shows
+  how to register it.
+- **Deploy guides** (#63): `docs/deploy/` for Cloudflare Workers
+  (sample in `examples/deploy/cloudflare-workers/`, checked locally
+  with `wrangler dev`, not deployed), Spin and wasmCloud (not run;
+  marked so).
 
 ### Performance
 
@@ -133,6 +168,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `codecov.yml` holds project and patch coverage to 98 %, the number
   the coverage job enforces (#56).
 - `make mutants` runs the mutants instead of only building them.
+- **SBOM check** (#28): a `CycloneDX SBOM` job fails unless the SBOM
+  lists every crate of the default build with its purl. Releases now
+  attach CycloneDX 1.5 JSON and XML for the default feature set (was
+  1.3 JSON of `--all-features`), with build provenance.
+- A `WASI 0.2 component` job runs `wasi/check.py`.
+- `make examples` runs each example with stdin from `/dev/null`.
 
 ### Documentation
 
@@ -143,6 +184,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/MIGRATION.md` shows the 0.0.8 `#[non_exhaustive]` migration in
   code: a wildcard arm for `MetadataError`, and `MetaTag::new` and
   `MetaTagGroups::default()` in place of struct literals.
+- **Every public function has a runnable example** (#34); 61 were
+  added. The outer docs on four `pub mod` lines are gone, which made
+  intra-doc links fail one of the stable or nightly doc builds.
+- **README** (#32): the demo GIF rendered from `.github/demo.tape`
+  (`make demo`), TOML and JSON in the Quick Start, the new features,
+  a corrected comparison backed by `docs/COMPARISON.md`, the
+  first-party disclosure, and links to `docs/FAQ.md` (13 questions)
+  and the milestones.
+- **ADRs** (#66): 0006 (`oxml` for `<meta>` extraction, superseding
+  0003, which still described quick-xml), 0007 (detection order), 0008
+  (noyalib), 0009 (WASI component), 0010 (PQC encoding), 0011
+  (borrowed values); the index has dates.
+- `docs/SUPPLY-CHAIN.md` (#29, #37): dependencies, the shared
+  maintainer of noyalib and oxml, the cargo-vet policy, and how to
+  verify release assets with `gh attestation verify`.
+- `docs/whitepapers/` (#67): three engineering write-ups from
+  repository evidence. Not published elsewhere.
 
 ## [0.0.9] - 2026-11-01
 

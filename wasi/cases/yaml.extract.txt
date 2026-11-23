@@ -1,0 +1,7 @@
+---
+title: Hello
+author:
+  name: Ada
+tags: [rust, wasm]
+---
+body

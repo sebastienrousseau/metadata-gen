@@ -28,6 +28,23 @@ use core::fmt;
 use core::ops::ControlFlow;
 
 /// One step of a front-matter walk.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{for_each_event, Event};
+/// use std::ops::ControlFlow;
+///
+/// let mut keys = Vec::new();
+/// for_each_event("---\ntitle: Hi\ntags: [a]\n---\n", |event| {
+///     if let Event::Key(k) = event {
+///         keys.push(k.into_owned());
+///     }
+///     ControlFlow::Continue(())
+/// })
+/// .unwrap();
+/// assert_eq!(keys, ["title", "tags"]);
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum Event<'a> {
@@ -46,6 +63,15 @@ pub enum Event<'a> {
 }
 
 /// A scalar value as the parser typed it.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metadata::events::Scalar;
+///
+/// assert_eq!(Scalar::Int(3).to_text(), "3");
+/// assert_eq!(Scalar::Bool(true).to_text(), "true");
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum Scalar<'a> {
@@ -66,6 +92,15 @@ pub enum Scalar<'a> {
 impl Scalar<'_> {
     /// The scalar as text, the way `extract_metadata` renders leaves:
     /// strings as-is, `null` as the word `null`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::metadata::events::Scalar;
+    ///
+    /// assert_eq!(Scalar::Str("hi".into()).to_text(), "hi");
+    /// assert_eq!(Scalar::Null.to_text(), "null");
+    /// ```
     pub fn to_text(&self) -> String {
         match self {
             Scalar::Str(s) => s.to_string(),

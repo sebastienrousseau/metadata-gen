@@ -1,6 +1,6 @@
 # 0003. `<meta>` extraction is a streaming `quick-xml` pass, not a DOM
 
-- **Status:** accepted
+- **Status:** superseded by [ADR-0006](0006-meta-extraction-on-oxml.md) (0.0.9 moved the scan to `memchr` and `oxml`)
 - **Date:** 2026-06-28 (recorded 2026-09-06)
 
 ## Context

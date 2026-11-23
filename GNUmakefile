@@ -37,7 +37,7 @@
 #   make tools     — install the cargo tools the gates above need
 #   make clean     — remove build artifacts
 
-.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke bench-gate bench-compare embedded versions sbom complexity links msrv semver hack no-std dist distcheck preflight tools clean
+.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke bench-gate bench-compare embedded versions sbom wasi demo complexity links msrv semver hack no-std dist distcheck preflight tools clean
 
 all: check clippy test
 
@@ -114,7 +114,7 @@ fuzz:
 examples:
 	@for f in examples/*.rs; do \
 	  name=$$(basename "$$f" .rs); \
-	  echo "== $$name"; cargo run --quiet --all-features --example "$$name" || exit 1; \
+	  echo "== $$name"; cargo run --quiet --all-features --example "$$name" < /dev/null || exit 1; \
 	done
 
 bench-smoke:
@@ -148,7 +148,17 @@ versions:
 # CycloneDX 1.5 JSON, the format the release workflow attaches and
 # attests. Written next to Cargo.toml as metadata-gen.cdx.json.
 sbom:
-	cargo cyclonedx --format json --all-features
+	python3 -I scripts/check-sbom.py
+
+wasi:
+	python3 -I wasi/check.py
+
+# Re-renders .github/demo.gif from .github/demo.tape (needs vhs). The
+# README links the GIF by commit SHA, so it resolves before the commit
+# reaches main; point it at the new commit after re-rendering.
+demo:
+	cargo build --quiet --all-features --example mcp_server --example pqc_sign_example
+	vhs .github/demo.tape
 
 # Ceilings: cyclomatic <= 10, cognitive <= 15, Halstead difficulty <= 30,
 # <= 60 lines per function, <= 500 per file. The baseline may only shrink.

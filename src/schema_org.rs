@@ -3,10 +3,10 @@
 
 //! Schema.org structured data as JSON-LD.
 //!
-//! [`json_ld`](crate::schema_org::json_ld) maps flat front matter onto an `Article`, `Product` or
-//! `Organization` object, and [`breadcrumb_list`](crate::schema_org::breadcrumb_list) builds a
+//! [`json_ld`] maps flat front matter onto an `Article`, `Product` or
+//! `Organization` object, and [`breadcrumb_list`] builds a
 //! `BreadcrumbList` from a trail of pages. Both return the JSON text;
-//! [`json_ld_script`](crate::schema_org::json_ld_script) wraps it in the `<script>` element a page embeds.
+//! [`json_ld_script`] wraps it in the `<script>` element a page embeds.
 //! The JSON is written by hand, so the module needs no JSON dependency
 //! and works in a `no_std + alloc` build. Keys that are absent from the
 //! metadata are left out; nothing is invented.
@@ -32,6 +32,17 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 /// The Schema.org type [`json_ld`] produces.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::schema_org::{json_ld, SchemaType};
+/// use metadata_gen::MetadataMap;
+///
+/// let mut metadata = MetadataMap::new();
+/// metadata.insert("name".into(), "Acme".into());
+/// assert!(json_ld(SchemaType::Organization, &metadata).contains(r#""@type":"Organization""#));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum SchemaType {
@@ -89,6 +100,20 @@ const ORGANIZATION: Mapping = &[
 /// (from `author`) and `publisher` as an `Organization` (from
 /// `publisher`); a `Product` gets `brand` as a `Brand` (from `brand`) and
 /// `offers` as an `Offer` (from `price`, `currency`, `availability`).
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::schema_org::{json_ld, SchemaType};
+/// use metadata_gen::MetadataMap;
+///
+/// let mut metadata = MetadataMap::new();
+/// metadata.insert("title".into(), "Widget".into());
+/// metadata.insert("price".into(), "9.99".into());
+/// let json = json_ld(SchemaType::Product, &metadata);
+/// assert!(json.contains(r#""name":"Widget""#));
+/// assert!(json.contains(r#""@type":"Offer""#));
+/// ```
 pub fn json_ld(kind: SchemaType, metadata: &MetadataMap) -> String {
     let (name, mapping) = match kind {
         SchemaType::Article => ("Article", ARTICLE),
@@ -142,6 +167,16 @@ pub fn breadcrumb_list(trail: &[(&str, &str)]) -> String {
 /// The JSON this module writes escapes `<`, so it cannot close the
 /// element early; pass only JSON from [`json_ld`] or
 /// [`breadcrumb_list`], or JSON escaped the same way.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::schema_org::{breadcrumb_list, json_ld_script};
+///
+/// let script = json_ld_script(&breadcrumb_list(&[("Home", "/")]));
+/// assert!(script.starts_with(r#"<script type="application/ld+json">"#));
+/// assert!(script.ends_with("</script>"));
+/// ```
 pub fn json_ld_script(json: &str) -> String {
     alloc::format!(
         "<script type=\"application/ld+json\">{json}</script>"

@@ -60,6 +60,19 @@ pub type MetadataProcessor = ProcessOptions;
 ///
 /// ISO 8601 and RFC 3339 dates are unambiguous and are accepted whatever
 /// this is set to.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{process_metadata_with, DateOrder, Metadata, ProcessOptions};
+///
+/// let mut meta = Metadata::default();
+/// meta.insert("title".into(), "T".into());
+/// meta.insert("date".into(), "01/02/2024".into());
+/// let us = ProcessOptions::default().date_order(DateOrder::MonthFirst);
+/// let out = process_metadata_with(&meta, &us).unwrap();
+/// assert_eq!(out.get("date").unwrap(), "2024-01-02");
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[non_exhaustive]
 pub enum DateOrder {
@@ -87,6 +100,15 @@ impl Default for ProcessOptions {
 impl ProcessOptions {
     /// The defaults: `title` and `date` required, slugs derived,
     /// day-first dates. The same as [`ProcessOptions::default`].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::ProcessOptions;
+    ///
+    /// let options = ProcessOptions::new().require("author");
+    /// let _ = options;
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -186,6 +208,17 @@ impl ProcessOptions {
     }
 
     /// Replaces the required-field list.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::{process_metadata_with, Metadata, ProcessOptions};
+    ///
+    /// let options = ProcessOptions::default().required_fields(["title"]);
+    /// let mut meta = Metadata::default();
+    /// meta.insert("title".into(), "T".into());
+    /// assert!(process_metadata_with(&meta, &options).is_ok());
+    /// ```
     #[must_use]
     pub fn required_fields<I, S>(mut self, fields: I) -> Self
     where
@@ -198,6 +231,20 @@ impl ProcessOptions {
     }
 
     /// Turns slug derivation on or off.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::{process_metadata_with, Metadata, ProcessOptions};
+    ///
+    /// let mut meta = Metadata::default();
+    /// meta.insert("title".into(), "Hello World".into());
+    /// meta.insert("date".into(), "2026-01-01".into());
+    /// let on = process_metadata_with(&meta, &ProcessOptions::default()).unwrap();
+    /// assert_eq!(on.get("slug").unwrap(), "hello-world");
+    /// let off = ProcessOptions::default().derive_slug(false);
+    /// assert!(process_metadata_with(&meta, &off).unwrap().get("slug").is_none());
+    /// ```
     #[must_use]
     pub const fn derive_slug(mut self, on: bool) -> Self {
         self.derive_slug = on;
@@ -232,6 +279,18 @@ impl ProcessOptions {
 /// [`MetadataError::DateParseError`] for an unparseable `date`;
 /// [`MetadataError::MissingFieldError`] naming the first required field
 /// that is absent.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{process_metadata_with, Metadata, MetadataError, ProcessOptions};
+///
+/// let mut meta = Metadata::default();
+/// meta.insert("title".into(), "T".into());
+/// let options = ProcessOptions::default().required_fields(["title", "author"]);
+/// let err = process_metadata_with(&meta, &options).unwrap_err();
+/// assert!(matches!(err, MetadataError::MissingFieldError(f) if f == "author"));
+/// ```
 pub fn process_metadata_with(
     metadata: &Metadata,
     options: &ProcessOptions,
@@ -270,6 +329,17 @@ pub fn process_metadata_with(
 /// # Errors
 ///
 /// Returns a `MetadataError` if date standardization fails or if required fields are missing.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{extract_metadata, process_metadata};
+///
+/// let meta = extract_metadata("---\ntitle: Hello World\ndate: 2026-01-02\n---\n").unwrap();
+/// let out = process_metadata(&meta).unwrap();
+/// assert_eq!(out.get("date").unwrap(), "2026-01-02");
+/// assert_eq!(out.get("slug").unwrap(), "hello-world");
+/// ```
 pub fn process_metadata(
     metadata: &Metadata,
 ) -> Result<Metadata, MetadataError> {

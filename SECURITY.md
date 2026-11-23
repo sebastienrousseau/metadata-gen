@@ -77,11 +77,14 @@ found.
 
 - Runtime deps audited in CI: `cargo-deny` (licences, advisories,
   sources) and `cargo-audit`.
-- Dependency provenance recorded with `cargo-vet`
-  (`supply-chain/`); exemptions are regenerated on every dependency
-  change, never added by hand.
-- The first-party crate `noyalib` is pinned exactly (`=0.0.X`); a
-  bump is a deliberate release of this crate (ADR-0004).
+- Dependency provenance recorded with `cargo-vet` (`supply-chain/`):
+  published audit sets are imported, exemptions may only shrink, and
+  audits are recorded by the person who did the review. See
+  [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md).
+- The first-party crates `noyalib` and `oxml` share a maintainer with
+  this crate and are pinned exactly (`=0.0.X`); a bump is a
+  deliberate release of this crate (ADR-0004).
+- Releases attach CycloneDX SBOMs with build-provenance attestations.
 - Front matter is untrusted input: every parse runs under
   `ParseLimits` (block size, nesting depth), and the YAML parser gets
   its strict resource budgets on the flat and typed paths alike.
