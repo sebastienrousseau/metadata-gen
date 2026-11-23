@@ -45,7 +45,7 @@ make            # check + clippy + test — the default gate
 | Benches against a saved baseline (5 % gate) | `make bench-gate BENCH_SAVE=1`, change, `make bench-gate` |
 | `escape_html` against `v_htmlescape` | `make bench-compare` |
 | Property tests at CI scale | `make proptest` |
-| Kani proofs | `make kani` |
+| Kani proof | `make kani` |
 | Mutation testing (85 % kill rate) | `make mutants` |
 | Embedded builds and object sizes | `make embedded` |
 | Version-bearing files agree | `make versions` |

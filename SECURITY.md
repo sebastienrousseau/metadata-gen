@@ -64,10 +64,12 @@ found.
 
 ### Verification
 
-- Kani proves, for every input within a stated bound, that
-  `escape_html` never panics and leaves no raw `<`, `>`, `"` or `'`,
-  and that `unescape_html` inverts it on ASCII
-  ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)).
+- Kani proves that `escape_html` never panics on any one-char string
+  ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)), and
+  exhaustive enumeration proves that it leaves no raw `<`, `>`, `"` or
+  `'` and that `unescape_html` inverts it, for every Unicode char and
+  every ASCII string of up to three chars
+  ([`tests/test_escape_exhaustive.rs`](tests/test_escape_exhaustive.rs)).
 - Miri runs the unit tests on every push and every test target with
   `-Zmiri-strict-provenance` nightly.
 - Mutation testing (`cargo-mutants`) holds an 85 % kill-rate floor:

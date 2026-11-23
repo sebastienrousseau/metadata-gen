@@ -133,11 +133,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and any printable Unicode, compares the whole extracted map, and
   scales with `PROPTEST_CASES`: CI runs 10 000 cases per round trip and
   100 000 for the ASCII escape involution and prints the seed.
-- Kani proofs (#55) run in CI and check that escaped output holds no
-  raw markup as well as totality and the ASCII round trip. On a hosted
-  runner they finish only for one-char inputs, so
-  `tests/test_escape_exhaustive.rs` enumerates every Unicode char and
-  every ASCII string of up to three chars for the same properties.
+- A Kani proof (#55) runs in CI: `escape_html` never panics on any
+  one-char string. A round-trip harness made CBMC run out of memory
+  even for one ASCII char, so `tests/test_escape_exhaustive.rs` proves
+  the round trip and the absence of raw markup by enumeration instead,
+  over every Unicode char and every ASCII string of up to three chars.
 - `tests/test_edge_cases.rs`: boundaries mutation testing showed were
   untested (#54).
 - Every test target runs under Miri (#53); filesystem tests are
@@ -151,7 +151,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   secret exists; and the `escape_html` comparison. Benches cover 1 KiB,
   10 KiB, 1 MiB and 10 MiB, and `benches/stress_tps.rs` reports
   `extract_metadata` transactions per second on a 1 KiB post.
-- `assurance.yml`: the Kani proofs and an OSS-Fuzz build check
+- `assurance.yml`: the Kani proof and an OSS-Fuzz build check
   (`fuzz/oss-fuzz/`) on every push; mutation testing of a pull
   request's changed lines; and nightly Miri over every test target
   with strict provenance, ten minutes of fuzzing per target with the
