@@ -25,8 +25,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - cargo-vet covers `loom` and `rustix` through their publishers
   (Alice Ryhl, Dan Gohman), which replaces the `rustix` exemption.
 
+### Added
+
+- **Streaming events** (#50): `for_each_event` walks the front matter as
+  `Event`s (`MapStart`, `Key`, `Scalar`, `SeqStart`, `SeqEnd`, `MapEnd`)
+  through the format's own serde deserialiser without building a map;
+  returning `ControlFlow::Break` stops the walk and nothing after it is
+  parsed. `for_each_event_with_limits` takes explicit `ParseLimits`,
+  `events_into` appends to a caller-owned buffer and `events`
+  collects. YAML and JSON are parsed incrementally; TOML is parsed
+  whole by the `toml` crate, then walked.
+- **Zero-copy flat map** (#46): `extract_metadata_cow` returns
+  `CowMetadata`, the dotted-key map with values borrowed from the
+  document where no unescaping was needed, and `into_owned()` for a
+  `'static` `Metadata`. 100 plain YAML scalars give 100 borrowed values
+  (`tests/test_events.rs`).
+- **`Metadata::builder()`** (#41): a typestate builder whose `build()`
+  only compiles once `title` and `date` are set, with the error
+  "missing required field: date". `Metadata::keywords()` and
+  `Metadata::keys()`.
+- **Configurable required fields** (#45): `ProcessOptions::new`,
+  `require`, `optional`, `unknown_fields` and `process`, the
+  `optional_fields` option, the `MetadataProcessor` alias and
+  `examples/required_fields_example.rs`.
+- **Schema.org JSON-LD** (#10): `schema_org::json_ld` for `Article`,
+  `Product` (with `Brand` and `Offer`) and `Organization`,
+  `schema_org::breadcrumb_list`, and `schema_org::json_ld_script`.
+  No JSON dependency; available without `std`.
+- **Runtime-agnostic async readers** (#59, #60): feature `futures-io`
+  adds `metadata_gen::futures_io::extract_from_reader` for any
+  `futures_io::AsyncRead` (smol, async-std); feature
+  `embedded-io-async` adds `metadata_gen::embedded_io::extract_from_reader`
+  for Embassy and other `no_std` executors, reading into a
+  caller-supplied buffer. Both off by default.
+- `examples/schema_org_example.rs` and `examples/streaming_example.rs`.
+
+### Fixed
+
+- **`extract_typed_borrowed` leaked an internal noyalib signal.** YAML
+  with a tag (`t: !x 5`) failed with the text
+  `$__noyalib_streaming_fallback`; it now says the block cannot be
+  borrowed and names `extract_typed`, and malformed YAML still reports
+  the parser's error.
+- `extract_metadata_with_body` scans the document once instead of twice.
+- Locating JSON front matter skips over the object with serde's
+  `IgnoredAny` instead of building a `serde_json::Map` that was thrown
+  away; the block found is unchanged.
+
+### Tests
+
+- `tests/test_json_nested.rs` (#26): nested objects, arrays of objects,
+  a body holding `{` and `}`, an unmatched brace, and a property test
+  over random nested objects. The same nested document read with
+  0.0.4's regex detector gave "No valid front matter found."
+- `tests/test_body.rs` (#39): the body is the exact suffix of the input
+  for YAML, TOML and JSON.
+
 ### Documentation
 
+- `extract_typed` documents `MetadataError::Parse` instead of the
+  `YamlError`, `TomlError` and `JsonError` variants it stopped
+  returning in 0.0.8, and its examples cover all three formats,
+  `#[serde(default)]` and `#[serde(rename)]`.
 - `docs/MIGRATION.md` shows the 0.0.8 `#[non_exhaustive]` migration in
   code: a wildcard arm for `MetadataError`, and `MetaTag::new` and
   `MetaTagGroups::default()` in place of struct literals.
