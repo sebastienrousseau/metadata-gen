@@ -64,7 +64,7 @@
 
 ```toml
 [dependencies]
-metadata-gen = "0.0.9"
+metadata-gen = "0.0.10"
 ```
 
 Or from the command line:
@@ -100,7 +100,7 @@ Every format and integration is a feature, and all of them are on by default, so
 
 ```toml
 # YAML only, no standard library:
-metadata-gen = { version = "0.0.9", default-features = false, features = ["yaml"] }
+metadata-gen = { version = "0.0.10", default-features = false, features = ["yaml"] }
 ```
 
 A fence whose format is not compiled in is reported as `UnsupportedFormatError`, not as missing front matter.

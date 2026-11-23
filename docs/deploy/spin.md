@@ -26,7 +26,7 @@ directory, and add the import to the app's world:
 
 ```wit
 world frontmatter {
-    import metadata-gen:lib/metadata@0.0.9;
+    import metadata-gen:lib/metadata@0.0.10;
 }
 ```
 

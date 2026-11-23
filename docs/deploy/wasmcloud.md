@@ -22,7 +22,7 @@ cargo build --locked --release --target wasm32-wasip2 --lib
 Start from a wasmCloud Rust HTTP template (`wash new component
 frontmatter --template-name hello-world-rust`), copy
 `wit/metadata-gen.wit` into its `wit/` directory, add
-`import metadata-gen:lib/metadata@0.0.9;` to its world, and call
+`import metadata-gen:lib/metadata@0.0.10;` to its world, and call
 `metadata::extract` from the `wasi:http` handler. Build it with
 `wash build`.
 
