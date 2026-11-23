@@ -23,15 +23,18 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-// Key strategy: non-empty alphanumeric identifiers suitable for all 3 formats.
+// Key strategy: identifiers every format accepts as a bare key.
 fn valid_key() -> impl Strategy<Value = String> {
     "[a-z][a-z0-9_]{0,10}"
-        .prop_filter("keys must not be empty", |k| !k.is_empty())
 }
 
-// Value strategy: printable strings without control characters, quotes, or newlines.
+// Value strategy: any printable Unicode, quotes and backslashes
+// included, so the serialisers below must escape correctly. No
+// leading or trailing whitespace: a quoted scalar keeps it, but the
+// flat map is documented as trimmed text.
 fn valid_value() -> impl Strategy<Value = String> {
-    "[a-zA-Z0-9 .,!?-]{1,30}"
+    "\\PC{0,30}"
+        .prop_filter("no surrounding whitespace", |v| v.trim() == v)
 }
 
 fn metadata_map_strategy(
@@ -39,20 +42,71 @@ fn metadata_map_strategy(
     hash_map(valid_key(), valid_value(), 1..=8)
 }
 
+/// A double-quoted scalar for YAML and a basic string for TOML: both
+/// take `\\` and `\"` as escapes, and everything else printable as is.
+fn quoted(v: &str) -> String {
+    format!("\"{}\"", v.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
+/// `PROPTEST_CASES`, when set. CI's proptest job sets 10 000.
+fn configured_cases() -> Option<u32> {
+    std::env::var("PROPTEST_CASES").ok()?.parse().ok()
+}
+
+/// Cases per round-trip property: `PROPTEST_CASES` when set, otherwise
+/// 1 000 so a plain `cargo test` stays quick. Under Miri a handful is
+/// enough to exercise the code paths.
+fn round_trip_cases() -> u32 {
+    if cfg!(miri) {
+        return 4;
+    }
+    configured_cases().unwrap_or(1_000)
+}
+
+/// The ASCII involution is cheap per case, so a configured run gives it
+/// ten times as many: 100 000 when CI sets `PROPTEST_CASES=10000`.
+fn involution_cases() -> u32 {
+    match configured_cases() {
+        Some(cases) if !cfg!(miri) => cases.saturating_mul(10),
+        _ => round_trip_cases(),
+    }
+}
+
+/// Extracts `doc` and asserts the flat map equals `map` exactly: no key
+/// lost, none invented, every value unchanged.
+fn assert_round_trip(
+    doc: &str,
+    map: &HashMap<String, String>,
+) -> Result<(), TestCaseError> {
+    let extracted = extract_metadata(doc);
+    prop_assert!(extracted.is_ok(), "extraction failed for: {doc}");
+    let result_map: HashMap<String, String> =
+        extracted.unwrap().into_inner().into_iter().collect();
+    prop_assert_eq!(&result_map, map, "document: {}", doc);
+    Ok(())
+}
+
 proptest! {
     #![proptest_config(ProptestConfig {
-        cases: 1000,
+        cases: involution_cases(),
         .. ProptestConfig::default()
     })]
 
     /// HTML escape involution property on ASCII strings:
     /// unescape_html(escape_html(s)) == s
     #[test]
-    fn test_html_escape_involution_ascii(ref s in "[\\x20-\\x7E]{0,256}") {
+    fn test_html_escape_involution_ascii(ref s in "[\\x00-\\x7F]{0,256}") {
         let escaped = escape_html(s);
         let unescaped = unescape_html(&escaped);
         prop_assert_eq!(s.as_str(), unescaped.as_str());
     }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig {
+        cases: round_trip_cases(),
+        .. ProptestConfig::default()
+    })]
 
     /// HTML escape involution property on general Unicode strings:
     /// unescape_html(escape_html(s)) == s
@@ -63,61 +117,101 @@ proptest! {
         prop_assert_eq!(s.as_str(), unescaped.as_str());
     }
 
-    /// YAML front-matter round-trip property:
-    /// Generating valid key-value pairs formatted as YAML front-matter
-    /// round-trips through extract_metadata to an equivalent map.
+    /// Escaping never leaves a raw markup character behind.
+    #[test]
+    fn test_escape_html_output_has_no_raw_specials(ref s in "\\PC{0,128}") {
+        let escaped = escape_html(s);
+        prop_assert!(!escaped.contains(['<', '>', '"', '\'']));
+    }
+
+    /// YAML: a map serialised as double-quoted front matter extracts to
+    /// the same map.
     #[test]
     fn test_yaml_front_matter_round_trip(map in metadata_map_strategy()) {
-        let mut yaml_text = String::from("---\n");
+        let mut doc = String::from("---\n");
         for (k, v) in &map {
-            // Escape any embedded quotes for safe YAML string literal
-            let escaped_v = v.replace('"', "\\\"");
-            yaml_text.push_str(&format!("{}: \"{}\"\n", k, escaped_v));
+            doc.push_str(&format!("{k}: {}\n", quoted(v)));
         }
-        yaml_text.push_str("---\n# Body follows\nContent.\n");
-
-        let extracted = extract_metadata(&yaml_text);
-        prop_assert!(extracted.is_ok(), "YAML extraction failed for: {}", yaml_text);
-        let result_map = extracted.unwrap().into_inner();
-        for (k, v) in &map {
-            prop_assert_eq!(result_map.get(k), Some(v));
-        }
+        doc.push_str("---\n# Body follows\nContent.\n");
+        assert_round_trip(&doc, &map)?;
     }
 
-    /// TOML front-matter round-trip property:
-    /// Generating valid key-value pairs formatted as TOML front-matter
-    /// round-trips through extract_metadata to an equivalent map.
+    /// TOML: a map serialised as basic strings extracts to the same map.
     #[test]
     fn test_toml_front_matter_round_trip(map in metadata_map_strategy()) {
-        let mut toml_text = String::from("+++\n");
+        let mut doc = String::from("+++\n");
         for (k, v) in &map {
-            let escaped_v = v.replace('"', "\\\"");
-            toml_text.push_str(&format!("{} = \"{}\"\n", k, escaped_v));
+            doc.push_str(&format!("{k} = {}\n", quoted(v)));
         }
-        toml_text.push_str("+++\n# Body follows\nContent.\n");
-
-        let extracted = extract_metadata(&toml_text);
-        prop_assert!(extracted.is_ok(), "TOML extraction failed for: {}", toml_text);
-        let result_map = extracted.unwrap().into_inner();
-        for (k, v) in &map {
-            prop_assert_eq!(result_map.get(k), Some(v));
-        }
+        doc.push_str("+++\n# Body follows\nContent.\n");
+        assert_round_trip(&doc, &map)?;
     }
 
-    /// JSON front-matter round-trip property:
-    /// Generating valid key-value pairs formatted as JSON front-matter
-    /// round-trips through extract_metadata to an equivalent map.
+    /// JSON: a map serialised by serde_json extracts to the same map.
     #[test]
     fn test_json_front_matter_round_trip(map in metadata_map_strategy()) {
         let json_obj = serde_json::to_string_pretty(&map).unwrap();
-        let doc = format!("{}\n# Body follows\nContent.\n", json_obj);
+        let doc = format!("{json_obj}\n# Body follows\nContent.\n");
+        assert_round_trip(&doc, &map)?;
+    }
+}
 
-        let extracted = extract_metadata(&doc);
-        prop_assert!(extracted.is_ok(), "JSON extraction failed for: {}", doc);
-        let result_map = extracted.unwrap().into_inner();
-        for (k, v) in &map {
-            prop_assert_eq!(result_map.get(k), Some(v));
-        }
+/// The five-`replace` chain `escape_html` replaced; its output is the
+/// contract (#47), so the single-pass version must match it byte for byte.
+fn replace_chain(v: &str) -> String {
+    v.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#x27;")
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig {
+        cases: round_trip_cases(),
+        .. ProptestConfig::default()
+    })]
+
+    /// `escape_html` is byte-identical to the replace chain it replaced.
+    #[test]
+    fn test_escape_html_matches_replace_chain(ref s in "\\PC{0,128}") {
+        prop_assert_eq!(escape_html(s), replace_chain(s));
+    }
+}
+
+/// Every file in `dir`, skipping dotfiles, as `(path, contents)`.
+fn corpus(dir: &str) -> Vec<(std::path::PathBuf, String)> {
+    let mut files: Vec<_> = fs::read_dir(Path::new(dir))
+        .unwrap_or_else(|e| panic!("reading {dir}: {e}"))
+        .map(|entry| entry.expect("directory entry").path())
+        .filter(|path| {
+            path.is_file()
+                && !path
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .starts_with('.')
+        })
+        .map(|path| {
+            let text = fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("reading {path:?}: {e}"));
+            (path, text)
+        })
+        .collect();
+    files.sort();
+    files
+}
+
+/// Escape corpus replay (#47): each committed input escapes exactly as
+/// the replace chain did and unescapes back to itself.
+#[test]
+fn test_escape_corpus_replay() {
+    let files = corpus("tests/escape_corpus");
+    assert!(!files.is_empty(), "tests/escape_corpus is empty");
+    for (path, content) in files {
+        let escaped = escape_html(&content);
+        assert_eq!(escaped, replace_chain(&content), "{path:?}");
+        assert_eq!(unescape_html(&escaped), content, "{path:?}");
     }
 }
 
