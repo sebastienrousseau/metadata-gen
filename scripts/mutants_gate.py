@@ -12,7 +12,7 @@ and are left out. A timeout counts as killed: the mutant changed
 behaviour enough to hang the suite, which the suite noticed.
 
 Usage:
-    scripts/mutants_gate.py [--min 0.85] [--outcomes PATH]
+    scripts/mutants_gate.py [--min 0.85] [--outcomes PATH ...]
 
 Prints the counts and every missed mutant, appends them to
 `$GITHUB_STEP_SUMMARY` when set, and exits 1 below the floor.
@@ -28,13 +28,16 @@ from collections import Counter
 from pathlib import Path
 
 
-def tally(outcomes_path: Path) -> tuple[Counter, list[str]]:
-    """Counts per summary kind, and the names of the missed mutants."""
-    with outcomes_path.open(encoding="utf-8") as handle:
-        data = json.load(handle)
+def tally(outcomes_paths: list[Path]) -> tuple[Counter, list[str]]:
+    """Counts per summary kind over every file (one per shard), and the
+    names of the missed mutants."""
+    outcomes = []
+    for path in outcomes_paths:
+        with path.open(encoding="utf-8") as handle:
+            outcomes += json.load(handle)["outcomes"]
     counts: Counter = Counter()
     missed = []
-    for outcome in data["outcomes"]:
+    for outcome in outcomes:
         scenario = outcome["scenario"]
         if scenario == "Baseline":
             continue
@@ -54,7 +57,11 @@ def main() -> int:
         help="pass when no viable mutant was generated (a PR diff)",
     )
     parser.add_argument(
-        "--outcomes", type=Path, default=Path("mutants.out/outcomes.json")
+        "--outcomes",
+        type=Path,
+        nargs="+",
+        default=[Path("mutants.out/outcomes.json")],
+        help="one outcomes.json per shard",
     )
     args = parser.parse_args()
 

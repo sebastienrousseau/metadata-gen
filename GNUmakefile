@@ -100,7 +100,7 @@ kani:
 # A full run takes a while; `cargo mutants --in-diff <file>` narrows it
 # to a diff, as the PR job does.
 mutants:
-	cargo mutants --no-shuffle || [ $$? -eq 2 ]
+	cargo mutants --no-shuffle || { rc=$$?; [ $$rc -eq 2 ] || [ $$rc -eq 3 ]; }
 	python3 -I scripts/mutants_gate.py --min 0.85
 
 # Build every target, then replay the seed corpus and the regression

@@ -71,11 +71,18 @@ jobs:
           python3 infra/helper.py build_fuzzers metadata-gen "$GITHUB_WORKSPACE"
           python3 infra/helper.py check_build metadata-gen
 
+  # Mutation testing is split into shards that run in parallel, each
+  # uploading its outcomes; the gate job merges them and applies the
+  # 85% floor to the whole set.
   mutants-diff:
-    name: mutants (changed lines)
+    name: mutants (changed lines, shard ${{ matrix.shard }}/4)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -91,6 +98,7 @@ jobs:
       - name: Mutate the lines this PR changes
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          SHARD: ${{ matrix.shard }}
         run: |
           set -euo pipefail
           git diff "$BASE_SHA"...HEAD -- src > pr.diff
@@ -98,16 +106,41 @@ jobs:
             echo "No change under src/; nothing to mutate."
             exit 0
           fi
-          # Exit 2 means mutants survived; the gate below decides.
-          cargo mutants --no-shuffle --in-diff pr.diff || [ $? -eq 2 ]
-          python3 -I scripts/mutants_gate.py --min 0.85 --allow-empty
+          # Exit 2 (mutants survived) and 3 (some timed out) leave the
+          # verdict to the gate job; anything else is a real failure.
+          cargo mutants --no-shuffle --in-diff pr.diff --shard "$SHARD/4" \
+            || { rc=$?; [ "$rc" -eq 2 ] || [ "$rc" -eq 3 ]; }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
         with:
-          name: mutants-diff
+          name: mutants-diff-${{ matrix.shard }}
           path: mutants.out
           if-no-files-found: ignore
           retention-days: 30
+
+  mutants-diff-gate:
+    name: mutants (changed lines, 85% floor)
+    if: github.event_name == 'pull_request'
+    needs: mutants-diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: mutants-diff-*
+          path: shards
+      - name: Kill rate over every shard
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(shards/*/outcomes.json)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No change under src/; nothing was mutated."
+            exit 0
+          fi
+          python3 -I scripts/mutants_gate.py --min 0.85 --allow-empty --outcomes "${files[@]}"
 
   miri-full:
     name: miri (all test targets, strict provenance)
@@ -181,10 +214,14 @@ jobs:
           retention-days: 30
 
   mutants-full:
-    name: mutants (whole crate, 85% floor)
+    name: mutants (whole crate, shard ${{ matrix.shard }}/8)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -196,14 +233,32 @@ jobs:
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs cargo-mutants
         with:
           tool: cargo-mutants@27.1.0
-      - name: Mutate src/
+      - name: Mutate one shard of src/
+        env:
+          SHARD: ${{ matrix.shard }}
+        # Exit 2 (survivors) and 3 (timeouts) are the gate job's call.
         run: |
-          set -euo pipefail
-          cargo mutants --no-shuffle || [ $? -eq 2 ]
-          python3 -I scripts/mutants_gate.py --min 0.85
+          cargo mutants --no-shuffle --shard "$SHARD/8" \
+            || { rc=$?; [ "$rc" -eq 2 ] || [ "$rc" -eq 3 ]; }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
         with:
-          name: mutants-full
+          name: mutants-full-${{ matrix.shard }}
           path: mutants.out
           retention-days: 90
+
+  mutants-full-gate:
+    name: mutants (whole crate, 85% floor)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: mutants-full
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: mutants-full-*
+          path: shards
+      - name: Kill rate over every shard
+        run: python3 -I scripts/mutants_gate.py --min 0.85 --outcomes shards/*/outcomes.json
