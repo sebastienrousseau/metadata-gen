@@ -113,9 +113,10 @@ the contract rather than bugs waiting to be reported.
 
 ## What the numbers say, and do not say
 
-The README reports Criterion measurements of the flat path on an
-Apple A18 Pro with rustc 1.98.0: `extract_metadata` takes 631 µs on a
-1 KB YAML document and 1.81 ms on 10 KB. Those numbers
+The README reports Criterion measurements of the flat path on a
+GitHub-hosted `ubuntu-latest` runner with rustc 1.100.0:
+`extract_metadata` takes 19.4 µs on a 1 KiB YAML block and 588 µs on
+32 KiB. Those numbers
 describe the owned path only. No benchmark in the repository compares
 `extract_metadata` with `extract_metadata_cow` or `for_each_event` on
 the same input, so this paper makes no speed claim for the newer

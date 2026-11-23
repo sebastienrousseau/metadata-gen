@@ -196,16 +196,22 @@ The matrix reflects each crate's published source at the time of this release ("
 
 ## Benchmarks
 
-Measured with Criterion on an Apple A18 Pro, rustc 1.98.0, single thread. Middle estimate of the confidence interval; run `cargo bench` to reproduce on your own hardware.
+Measured with Criterion on a GitHub-hosted `ubuntu-latest` runner (Ubuntu 26.04, x86_64), rustc 1.100.0, single thread, on 2026-11-23 ([Bench run 45157730562](https://github.com/sebastienrousseau/metadata-gen/actions/runs/45157730562), its `criterion` artifact). Mean of the samples from each benchmark's `estimates.json`. Shared CI runners are noisy, so read these as orders of magnitude; run `cargo bench` to measure on your own hardware.
 
 | Scenario | Result | Environment |
 | :--- | ---: | :--- |
-| `extract_metadata` (YAML, 1 KB) | 631 µs (1.5 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_metadata` (YAML, 10 KB) | 1.81 ms (5.4 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_meta_tags` (1 KB) | 50 µs (18.7 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_meta_tags` (1 MB) | 34.9 ms (28.7 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `escape_html` (10 KB) | 31.9 µs (295 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_and_prepare_metadata` (~250 B) | 23 µs | Apple A18 Pro, rustc 1.98.0 |
+| `extract_metadata` (1 KiB YAML block) | 19.4 µs (49.5 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `extract_metadata` (32 KiB YAML block) | 588 µs (53.1 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `extract_metadata` (1 KiB header, 10 MiB document) | 20.2 µs | ubuntu-latest, rustc 1.100.0 |
+| `extract_meta_tags` (1 KiB) | 21.4 µs (43.3 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `extract_meta_tags` (1 MiB) | 23.9 ms (41.9 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `escape_html` (10 KiB) | 17.0 µs (554 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `escape_html` (10 MiB) | 18.6 ms (519 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `unescape_html` (10 KiB) | 22.8 µs (873 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `extract_and_prepare_metadata` (292 B) | 4.95 µs | ubuntu-latest, rustc 1.100.0 |
+| Sustained `extract_metadata` (1 KiB post) | 38,400 per second | ubuntu-latest, rustc 1.100.0 |
+
+The 10 MiB `extract_metadata` row costs the same as the 1 KiB one: extraction reads the front matter, not the body.
 
 Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](benches/).
 

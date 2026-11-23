@@ -153,6 +153,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   secret exists; and the `escape_html` comparison. Benches cover 1 KiB,
   10 KiB, 1 MiB and 10 MiB, and `benches/stress_tps.rs` reports
   `extract_metadata` transactions per second on a 1 KiB post.
+- The bench gate compares like with like: the baseline run builds the
+  pull request's `benches/` against the base commit's library
+  (`scripts/bench_overlay.py`), so a rewritten benchmark is no longer
+  reported as a library regression, and a bench target the base cannot
+  build is listed as new, with no baseline. The README benchmark table
+  is re-measured on the CI runner, with the run linked.
 - `assurance.yml`: the Kani proof and an OSS-Fuzz build check
   (`fuzz/oss-fuzz/`) on every push; mutation testing of a pull
   request's changed lines; and nightly Miri over every test target
