@@ -53,11 +53,11 @@ jobs:
           git worktree add "$RUNNER_TEMP/base" "$BASE_SHA"
           cd "$RUNNER_TEMP/base"
           CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target" \
-            cargo bench --all-features --benches -- --save-baseline base
+            cargo bench --all-features --bench '*' -- --save-baseline base
       - name: The change against the baseline
         # Lenient: a benchmark the base commit does not have yet is
         # measured but not compared.
-        run: cargo bench --all-features --benches -- --baseline-lenient base
+        run: cargo bench --all-features --bench '*' -- --baseline-lenient base
       - name: Gate
         run: python3 -I scripts/bench_compare.py --threshold 0.05 --criterion-dir "$CRITERION_HOME"
       - name: Upload the Criterion reports

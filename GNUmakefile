@@ -124,9 +124,9 @@ bench-smoke:
 # BENCH_SAVE=1`), change the code, then run `make bench-gate`.
 bench-gate:
 ifdef BENCH_SAVE
-	cargo bench --all-features --benches -- --save-baseline base
+	cargo bench --all-features --bench '*' -- --save-baseline base
 else
-	cargo bench --all-features --benches -- --baseline-lenient base
+	cargo bench --all-features --bench '*' -- --baseline-lenient base
 	python3 -I scripts/bench_compare.py --threshold 0.05
 endif
 
@@ -138,6 +138,7 @@ bench-compare:
 # once. Mirrors the `embedded` CI matrix.
 embedded:
 	./scripts/embedded_size.sh thumbv7em-none-eabihf yaml,toml,json
+	./scripts/embedded_size.sh thumbv7em-none-eabihf yaml
 	./scripts/embedded_size.sh riscv32imac-unknown-none-elf yaml,toml,json
 	./scripts/embedded_size.sh riscv32imc-unknown-none-elf json
 

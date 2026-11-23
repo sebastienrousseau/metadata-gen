@@ -301,16 +301,19 @@ jobs:
       - run: cargo test --lib --locked --no-default-features --features yaml
 
   embedded:
-    name: embedded (${{ matrix.target }})
+    name: embedded (${{ matrix.target }}, ${{ matrix.features }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Arm Cortex-M4F: every format.
+          # Arm Cortex-M4F: every format, and YAML alone for the size
+          # budget #61 sets on a yaml-only build.
           - target: thumbv7em-none-eabihf
             features: yaml,toml,json
+          - target: thumbv7em-none-eabihf
+            features: yaml
           # RISC-V with atomics: every format.
           - target: riscv32imac-unknown-none-elf
             features: yaml,toml,json
