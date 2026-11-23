@@ -99,7 +99,7 @@ fuzz:
 examples:
 	@for f in examples/*.rs; do \
 	  name=$$(basename "$$f" .rs); \
-	  echo "== $$name"; cargo run --quiet --all-features --example "$$name" || exit 1; \
+	  echo "== $$name"; cargo run --quiet --all-features --example "$$name" < /dev/null || exit 1; \
 	done
 
 bench-smoke:

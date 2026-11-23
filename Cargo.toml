@@ -108,6 +108,11 @@ path = "examples/lib_example.rs"
 required-features = ["std", "yaml", "toml", "json", "html", "tokio"]
 
 [[example]]
+name = "mcp_server"
+path = "examples/mcp_server.rs"
+required-features = ["std", "yaml", "toml", "json", "html"]
+
+[[example]]
 name = "metadata_example"
 path = "examples/metadata_example.rs"
 required-features = ["std", "yaml", "toml", "json", "html"]
@@ -153,6 +158,11 @@ required-features = ["std", "yaml", "toml", "json", "html", "tokio"]
 [[test]]
 name = "kani_escape_html"
 path = "tests/kani/escape_html.rs"
+
+[[test]]
+name = "test_mcp"
+path = "tests/test_mcp.rs"
+required-features = ["std", "yaml", "toml", "json", "html"]
 
 [[bench]]
 name = "metadata_benchmark"
