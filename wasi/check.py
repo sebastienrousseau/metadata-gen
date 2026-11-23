@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 """Build the WASI component and prove it matches the native crate.
 
+The package must be rustfmt-clean and clippy-clean (warnings denied).
 For every file in wasi/cases/<name>.<function>.txt, the component is
 called under wasmtime with the file's contents and its output must be
 byte-for-byte what the native `expect` binary prints for the same
@@ -30,6 +31,10 @@ def wave(text):
 
 
 def main():
+    run(["cargo", "fmt", "--", "--check"])
+    for target in ("wasm32-wasip2", None):
+        flags = ["--target", target, "--lib"] if target else ["--all-targets"]
+        run(["cargo", "clippy", "--locked", "--release", *flags, "--", "-D", "warnings"])
     run(["cargo", "build", "--locked", "--release", "--target", "wasm32-wasip2", "--lib"])
     run(["cargo", "build", "--locked", "--release", "--bin", "expect"])
     run(["wasm-tools", "validate", str(WASM)])

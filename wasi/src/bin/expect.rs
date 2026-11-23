@@ -31,11 +31,19 @@ fn wave_string(s: &str) -> String {
     out
 }
 
-fn wave_records(pairs: &[(String, String)], k: &str, v: &str) -> String {
+fn wave_records(
+    pairs: &[(String, String)],
+    k: &str,
+    v: &str,
+) -> String {
     let items: Vec<String> = pairs
         .iter()
         .map(|(a, b)| {
-            format!("{{{k}: {}, {v}: {}}}", wave_string(a), wave_string(b))
+            format!(
+                "{{{k}: {}, {v}: {}}}",
+                wave_string(a),
+                wave_string(b)
+            )
         })
         .collect();
     format!("[{}]", items.join(", "))
@@ -47,11 +55,15 @@ fn main() {
         eprintln!("usage: expect <function> <input-file>");
         std::process::exit(2);
     };
-    let input = std::fs::read_to_string(path).expect("readable input file");
+    let input =
+        std::fs::read_to_string(path).expect("readable input file");
     let out = match func.as_str() {
         "extract" => match core::extract(&input) {
             Ok(entries) => {
-                format!("ok({})", wave_records(&entries, "key", "value"))
+                format!(
+                    "ok({})",
+                    wave_records(&entries, "key", "value")
+                )
             }
             Err(message) => format!("err({})", wave_string(&message)),
         },
