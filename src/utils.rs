@@ -40,57 +40,20 @@ use alloc::string::String;
 /// potentially dangerous characters. However, it should not be relied upon as the sole
 /// method of sanitizing user input for use in HTML contexts.
 pub fn escape_html(value: &str) -> String {
-    escape_with::<true>(value)
-}
-
-/// Whether `escape_with::<APOS>` replaces `byte`: `&`, `<`, `>` and `"`
-/// always, `'` only when `APOS` is set ([`escape_html`], not
-/// [`escape_attribute`]).
-const fn needs_escape<const APOS: bool>(byte: u8) -> bool {
-    matches!(byte, b'&' | b'<' | b'>' | b'"') || (APOS && byte == b'\'')
-}
-
-/// Appends the entity for `byte`, which [`needs_escape`] accepted. Each
-/// arm pushes a literal, so the compiler writes a fixed-size store
-/// instead of calling `memcpy` with a length known only at run time;
-/// returning the entity as a `&str` for the caller to push cost dense
-/// input 40 % of its throughput.
-fn push_entity(out: &mut String, byte: u8) {
-    match byte {
-        b'&' => out.push_str("&amp;"),
-        b'<' => out.push_str("&lt;"),
-        b'>' => out.push_str("&gt;"),
-        b'"' => out.push_str("&quot;"),
-        _ => out.push_str("&#x27;"),
-    }
-}
-
-/// One pass over the bytes, one allocation: runs of bytes that need no
-/// escaping are copied as slices, and each special byte is replaced by
-/// its entity. Every special byte is ASCII, so each slice boundary is a
-/// char boundary and the output stays valid UTF-8. The five-`replace`
-/// chain this replaced walked the string five times and allocated up
-/// to five intermediates; the output is byte-identical.
-///
-/// A one-byte run is pushed as a `char` rather than a slice: it lies
-/// between two ASCII bytes (or the start), so it is a whole char and
-/// itself ASCII, and markup-dense text is mostly such runs.
-fn escape_with<const APOS: bool>(value: &str) -> String {
-    let bytes = value.as_bytes();
+    // One pass, one allocation. The five-`replace` chain this replaces
+    // walked the string five times and allocated up to five
+    // intermediates; the output is byte-identical.
     let mut out = String::with_capacity(value.len() + value.len() / 8);
-    let mut copied = 0;
-    for (i, &byte) in bytes.iter().enumerate() {
-        if needs_escape::<APOS>(byte) {
-            if i - copied == 1 {
-                out.push(char::from(bytes[copied]));
-            } else {
-                out.push_str(&value[copied..i]);
-            }
-            push_entity(&mut out, byte);
-            copied = i + 1;
+    for ch in value.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#x27;"),
+            other => out.push(other),
         }
     }
-    out.push_str(&value[copied..]);
     out
 }
 
@@ -109,7 +72,10 @@ fn escape_with<const APOS: bool>(value: &str) -> String {
 /// assert_eq!(escape_html_cow("a < b"), "a &lt; b");
 /// ```
 pub fn escape_html_cow(value: &str) -> Cow<'_, str> {
-    if value.bytes().any(needs_escape::<true>) {
+    if value
+        .bytes()
+        .any(|b| matches!(b, b'&' | b'<' | b'>' | b'"' | b'\''))
+    {
         Cow::Owned(escape_html(value))
     } else {
         Cow::Borrowed(value)
@@ -133,7 +99,17 @@ pub fn escape_html_cow(value: &str) -> Cow<'_, str> {
 /// );
 /// ```
 pub fn escape_attribute(value: &str) -> String {
-    escape_with::<false>(value)
+    let mut out = String::with_capacity(value.len() + value.len() / 8);
+    for ch in value.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 /// Unescapes HTML entities in a string.

@@ -92,11 +92,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance
 
-- **`escape_html` and `escape_attribute` copy unescaped runs as
-  slices** (#47) instead of pushing one char at a time; the output is
-  byte-identical to the five-`replace` chain, checked by a property
-  test and `tests/escape_corpus/`. `perf/escape-compare` benchmarks it
-  against `v_htmlescape`, and CI reports both on every pull request.
+- **`escape_html` is benchmarked against `v_htmlescape`** (#47):
+  `perf/escape-compare` reports both on every pull request, and the
+  output is checked against the five-`replace` chain by a property
+  test and `tests/escape_corpus/`. Copying unescaped runs as slices
+  was tried and reverted: on the CI runner it was 10-16% slower than
+  the per-char loop on markup-dense input, which the bench gate
+  rejects.
 
 ### Fixed
 
