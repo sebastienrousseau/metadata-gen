@@ -23,5 +23,10 @@ exclude_re = [
     ".*::test_.*",
 ]
 
+# Build and test with every feature, so code behind an optional
+# feature (the async readers, signing) is mutated against the tests
+# that exercise it rather than against none.
+all_features = true
+
 # Baseline build timeout multiplier
 timeout_multiplier = 2.0

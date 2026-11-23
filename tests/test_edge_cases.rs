@@ -130,3 +130,38 @@ fn an_element_whose_name_only_starts_with_meta_is_not_meta() {
     assert_eq!(tags.len(), 1);
     assert_eq!(tags[0].name, "c");
 }
+
+#[test]
+fn a_breadcrumb_trail_is_a_valid_json_array() {
+    let json = metadata_gen::schema_org::breadcrumb_list(&[
+        ("Home", "https://example.com/"),
+        ("Blog", "https://example.com/blog/"),
+    ]);
+    let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+    let items = value["itemListElement"].as_array().unwrap();
+    assert_eq!(items.len(), 2);
+    assert_eq!(items[1]["position"], 2);
+    assert_eq!(items[1]["name"], "Blog");
+}
+
+#[test]
+fn borrowed_metadata_exposes_every_entry() {
+    let doc = "---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody";
+    let meta = metadata_gen::extract_metadata_cow(doc).unwrap();
+    assert!(!meta.is_empty());
+    assert_eq!(meta.len(), 2);
+    let pairs: Vec<(&str, &str)> = meta.iter().collect();
+    assert_eq!(pairs, [("author.name", "Ada"), ("title", "Hello")]);
+    let map = meta.into_inner();
+    let owned: Vec<(String, String)> = map
+        .into_iter()
+        .map(|(k, v)| (k.into_owned(), v.into_owned()))
+        .collect();
+    assert_eq!(
+        owned,
+        [
+            ("author.name".to_string(), "Ada".to_string()),
+            ("title".to_string(), "Hello".to_string())
+        ]
+    );
+}
