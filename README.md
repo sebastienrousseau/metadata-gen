@@ -20,6 +20,10 @@
   <a href="docs/POLICIES.md"><img src="https://img.shields.io/badge/MSRV-1.89.0-93450a.svg?style=for-the-badge&logo=rust" alt="MSRV 1.89.0" /></a>
 </p>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sebastienrousseau/metadata-gen/8c5ad2f5382d0c0d0daa3af1dd37022ab114c8ab/.github/demo.gif" alt="A Markdown file's YAML front matter, then the flat metadata map metadata-gen extracts from it, then an ML-DSA signature over that metadata verifying and a tampered copy being rejected" width="100%" />
+</p>
+
 ---
 
 ## Contents

@@ -153,7 +153,9 @@ sbom:
 wasi:
 	python3 -I wasi/check.py
 
-# Re-renders .github/demo.gif from .github/demo.tape (needs vhs).
+# Re-renders .github/demo.gif from .github/demo.tape (needs vhs). The
+# README links the GIF by commit SHA, so it resolves before the commit
+# reaches main; point it at the new commit after re-rendering.
 demo:
 	cargo build --quiet --all-features --example mcp_server --example pqc_sign_example
 	vhs .github/demo.tape
