@@ -1,49 +1,65 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Kani formal verification proofs for HTML escaping and unescaping.
+//! Kani proofs for HTML escaping (#55).
 //!
-//! # Verified Properties
+//! Kani checks a harness for every possible value of its symbolic
+//! inputs, not a sample of them, so within the stated bound these are
+//! proofs rather than tests. Run them with `make kani`; CI runs them in
+//! the `kani` job of `.github/workflows/assurance.yml`.
 //!
-//! 1. `check_escape_html_totality`:
-//!    Proves in plain English that `escape_html` is total (never panics, crashes,
-//!    or exhibits undefined behavior) for any arbitrary UTF-8 byte sequence
-//!    within the verified bound.
+//! # Verified properties
 //!
-//! 2. `check_html_escape_ascii_roundtrip`:
-//!    Proves in plain English that for every valid ASCII input slice up to length N,
-//!    the composition `unescape_html(escape_html(s))` produces the exact original slice `s`.
-//!    This formally verifies that `unescape_html` is the inverse of `escape_html`
-//!    on all valid ASCII strings.
+//! 1. `check_escape_html_totality`: for every valid UTF-8 string of at
+//!    most [`TOTALITY_LEN`] bytes, `escape_html` returns without
+//!    panicking, overflowing or touching memory out of bounds, and its
+//!    output contains no raw `<`, `>`, `"` or `'`.
+//!
+//! 2. `check_html_escape_ascii_roundtrip`: for every ASCII string
+//!    (bytes `0x00` to `0x7F`) of at most [`ROUNDTRIP_LEN`] bytes,
+//!    `unescape_html(escape_html(s))` is `s` again. Since `unescape_html`
+//!    is a function, this also proves `escape_html` injective on that
+//!    domain: two different inputs can never escape to the same output.
+//!
+//! The bounds are what the model checker can explore exhaustively in a
+//! few minutes. Longer inputs are covered statistically by the proptest
+//! suite (`tests/test_proptest.rs`) and the `fuzz_html_escape` target.
 
 #[cfg(kani)]
 mod kani_proofs {
     use metadata_gen::utils::{escape_html, unescape_html};
 
-    /// Property 1: `escape_html` totality.
-    /// Proves that `escape_html` will execute safely and never panic for any
-    /// well-formed UTF-8 input string.
+    /// Longest input of the totality proof, in bytes.
+    const TOTALITY_LEN: usize = 8;
+
+    /// Longest input of the round-trip proof, in bytes.
+    const ROUNDTRIP_LEN: usize = 4;
+
+    /// A symbolic string of any length up to `N` over `bytes`, or
+    /// `None` when the bytes are not valid UTF-8.
+    fn any_prefix<const N: usize>(bytes: &[u8; N]) -> Option<&str> {
+        let len: usize = kani::any();
+        kani::assume(len <= N);
+        core::str::from_utf8(&bytes[..len]).ok()
+    }
+
     #[kani::proof]
-    #[kani::unwind(16)]
+    #[kani::unwind(50)]
     fn check_escape_html_totality() {
-        let input: [u8; 8] = kani::any();
-        if let Ok(s) = std::str::from_utf8(&input) {
-            let _ = escape_html(s);
+        let bytes: [u8; TOTALITY_LEN] = kani::any();
+        if let Some(s) = any_prefix(&bytes) {
+            let escaped = escape_html(s);
+            assert!(!escaped
+                .bytes()
+                .any(|b| matches!(b, b'<' | b'>' | b'"' | b'\'')));
         }
     }
 
-    /// Property 2: `escape_html` and `unescape_html` roundtrip on ASCII.
-    /// Proves that unescaping the result of escaping an ASCII string always
-    /// yields the original input string without modification or loss.
     #[kani::proof]
-    #[kani::unwind(32)]
+    #[kani::unwind(28)]
     fn check_html_escape_ascii_roundtrip() {
-        let input: [u8; 8] = kani::any();
-        // Constrain input to printable ASCII range
-        kani::assume(input.iter().all(|&b| b >= 0x20 && b <= 0x7E));
-        if let Ok(s) = std::str::from_utf8(&input) {
-            let escaped = escape_html(s);
-            let unescaped = unescape_html(&escaped);
-            assert_eq!(s, unescaped.as_str());
-        }
+        let bytes: [u8; ROUNDTRIP_LEN] = kani::any();
+        kani::assume(bytes.iter().all(u8::is_ascii));
+        let s = any_prefix(&bytes).expect("ASCII is valid UTF-8");
+        assert_eq!(unescape_html(&escape_html(s)), s);
     }
 }
