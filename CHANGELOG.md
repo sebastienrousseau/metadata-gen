@@ -78,13 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validates it, holds it under 1 MiB (634,763 bytes today) and checks
   every export returns byte for byte what the native crate returns;
   the release attaches it as `metadata-gen-<version>.wasm`. ADR-0009.
-- **Signed metadata** (#64): feature `pqc-sign` (off by default) adds
-  `metadata_gen::sign`, with `Metadata::sign` and `Metadata::verify`
-  using ML-DSA-65 (FIPS 204, RustCrypto `ml-dsa`, deterministic
-  variant) over the canonical encoding in
-  `docs/spec/canonical-encoding.md`. A LAMPS known-answer key pair,
-  tamper tests, `examples/pqc_sign_example.rs` and
-  `benches/sign_benchmark.rs`. ADR-0010.
 - **MCP server example** (#65): `examples/mcp_server.rs` exposes
   `extract_metadata`, `extract_meta_tags` and `escape_html` as Model
   Context Protocol tools over stdio, with structured tool errors;
@@ -194,7 +187,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the milestones.
 - **ADRs** (#66): 0006 (`oxml` for `<meta>` extraction, superseding
   0003, which still described quick-xml), 0007 (detection order), 0008
-  (noyalib), 0009 (WASI component), 0010 (PQC encoding), 0011
+  (noyalib), 0009 (WASI component), 0010 (PQC encoding, rejected), 0011
   (borrowed values); the index has dates.
 - `docs/SUPPLY-CHAIN.md` (#29, #37): dependencies, the shared
   maintainer of noyalib and oxml, the cargo-vet policy, and how to

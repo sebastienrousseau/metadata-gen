@@ -27,6 +27,3 @@ Type "./.github/demo/extract.sh .github/demo/post.md"
 Enter
 Sleep 2.5s
 
-Type "./target/debug/examples/pqc_sign_example"
-Enter
-Sleep 3s

@@ -81,13 +81,6 @@ Derive `serde::Deserialize` and call `extract_typed::<T>(content)`;
 instead of allocating. The flat map (`extract_metadata`) loses types by
 design ([ADR-0002](adr/0002-flat-string-metadata.md)).
 
-## Can I sign front matter?
-
-With the `pqc-sign` feature, `Metadata::sign` and `Metadata::verify`
-use ML-DSA-65 (FIPS 204) over a documented canonical encoding
-([`spec/canonical-encoding.md`](spec/canonical-encoding.md)). The
-signature covers the extracted metadata, not the document body.
-
 ## Can an AI agent call it?
 
 `examples/mcp_server.rs` is a Model Context Protocol server over stdio

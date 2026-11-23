@@ -2,7 +2,7 @@
 
 # 0010. Metadata is signed with ML-DSA-65 over a length-prefixed, key-sorted encoding
 
-- **Status:** accepted
+- **Status:** rejected (the `pqc-sign` feature was withdrawn before release, 2026-11-23: its ML-DSA dependency tree could not pass the repository's strict cargo-vet policy; see #64)
 - **Date:** 2026-11-23
 
 ## Context
@@ -28,7 +28,7 @@ Alternatives for the algorithm: Ed25519 (classical only), SLH-DSA
 ## Decision
 
 - The encoding is the fixed binary layout in
-  [`docs/spec/canonical-encoding.md`](../spec/canonical-encoding.md):
+  `docs/spec/canonical-encoding.md` (removed with the feature):
   a magic, an entry count, and entries sorted by key bytes, each field
   length-prefixed with a big-endian `u64`. It needs no dependency and
   is the same in `std` and `no_std` builds.

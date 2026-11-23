@@ -157,7 +157,7 @@ wasi:
 # README links the GIF by commit SHA, so it resolves before the commit
 # reaches main; point it at the new commit after re-rendering.
 demo:
-	cargo build --quiet --all-features --example mcp_server --example pqc_sign_example
+	cargo build --quiet --all-features --example mcp_server
 	vhs .github/demo.tape
 
 # Ceilings: cyclomatic <= 10, cognitive <= 15, Halstead difficulty <= 30,

@@ -53,9 +53,6 @@ path = "src/lib.rs"
 embedded-io-async = { version = "0.7", default-features = false, optional = true }
 futures-io = { version = "0.3.31", default-features = false, features = ["std"], optional = true }
 memchr = { version = "2.7", default-features = false }
-# `pqc-sign` only: FIPS 204 ML-DSA (RustCrypto). Off by default, so a
-# consumer that does not opt in has no ML-DSA crate in its tree.
-ml-dsa = { version = "0.1.2", default-features = false, features = ["alloc"], optional = true }
 noyalib = { version = "=0.0.58", default-features = false, optional = true }
 oxml = { version = "=0.0.13", default-features = false, optional = true }
 serde = { version = "1.0.228", default-features = false, features = ["derive", "alloc"] }
@@ -123,11 +120,6 @@ path = "examples/metatags_example.rs"
 required-features = ["std", "yaml", "toml", "json", "html"]
 
 [[example]]
-name = "pqc_sign_example"
-path = "examples/pqc_sign_example.rs"
-required-features = ["yaml", "pqc-sign"]
-
-[[example]]
 name = "required_fields_example"
 path = "examples/required_fields_example.rs"
 required-features = ["yaml"]
@@ -168,11 +160,6 @@ required-features = ["std", "yaml", "toml", "json", "html"]
 name = "metadata_benchmark"
 harness = false
 required-features = ["std", "yaml", "toml", "json", "html"]
-
-[[bench]]
-name = "sign_benchmark"
-harness = false
-required-features = ["std", "yaml", "pqc-sign"]
 
 [[bench]]
 name = "stress_tps"
@@ -220,9 +207,6 @@ json = ["dep:serde_json"]
 html = ["std", "dep:oxml"]
 # `metadata_gen::tokio`: async file helpers on the Tokio runtime.
 tokio = ["std", "dep:tokio"]
-# `metadata_gen::sign`: ML-DSA-65 signatures over the canonical encoding
-# of a `Metadata` map (docs/spec/canonical-encoding.md). Not default.
-pqc-sign = ["dep:ml-dsa"]
 # `metadata_gen::futures_io`: read from any `futures_io::AsyncRead`
 # (smol, async-std, the `futures` crate) without naming a runtime.
 futures-io = ["std", "dep:futures-io"]
