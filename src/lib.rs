@@ -17,13 +17,11 @@ extern crate alloc;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
-/// Async reading for embedded executors (feature `embedded-io-async`).
 #[cfg(feature = "embedded-io-async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "embedded-io-async")))]
 pub mod embedded_io;
 /// The `error` module contains error types for metadata processing.
 pub mod error;
-/// Runtime-agnostic async reading (feature `futures-io`).
 #[cfg(feature = "futures-io")]
 #[cfg_attr(docsrs, doc(cfg(feature = "futures-io")))]
 pub mod futures_io;
@@ -35,9 +33,7 @@ pub mod io;
 pub mod metadata;
 /// The `metatags` module contains functions for generating meta tags.
 pub mod metatags;
-/// Schema.org structured data (JSON-LD).
 pub mod schema_org;
-/// ML-DSA-65 signatures over metadata (feature `pqc-sign`).
 #[cfg(feature = "pqc-sign")]
 #[cfg_attr(docsrs, doc(cfg(feature = "pqc-sign")))]
 pub mod sign;

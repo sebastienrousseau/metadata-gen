@@ -3,8 +3,8 @@
 
 //! Runtime-agnostic async reading (feature `futures-io`).
 //!
-//! [`extract_from_reader`](crate::futures_io::extract_from_reader) takes
-//! any [`AsyncRead`](::futures_io::AsyncRead), the trait
+//! [`extract_from_reader`] takes
+//! any [`AsyncRead`], the trait
 //! smol, async-std and the `futures` crate share: a `smol::fs::File`, an
 //! `async_net::TcpStream` or an in-memory `futures::io::Cursor` all work
 //! without an adapter, and no executor is named. Tokio's readers

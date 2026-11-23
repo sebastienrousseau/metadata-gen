@@ -66,6 +66,16 @@ use scan::Scan;
 /// # Errors
 ///
 /// Returns a `MetadataError::ExtractionError` if no valid front matter is found.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::extract_metadata;
+///
+/// let meta = extract_metadata("---\ntitle: Hello\nauthor:\n  name: Ada\n---\nbody").unwrap();
+/// assert_eq!(meta.get("title").unwrap(), "Hello");
+/// assert_eq!(meta.get("author.name").unwrap(), "Ada");
+/// ```
 pub fn extract_metadata(
     content: &str,
 ) -> Result<Metadata, MetadataError> {
@@ -113,6 +123,15 @@ impl Default for ParseLimits {
 
 impl ParseLimits {
     /// Sets the largest block size, in bytes, a parser will be given.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::{extract_metadata_with_limits, ParseLimits};
+    ///
+    /// let tight = ParseLimits::default().max_block_bytes(8);
+    /// assert!(extract_metadata_with_limits("---\ntitle: far too long\n---\n", &tight).is_err());
+    /// ```
     #[must_use]
     pub const fn max_block_bytes(mut self, bytes: usize) -> Self {
         self.max_block_bytes = bytes;
@@ -120,6 +139,15 @@ impl ParseLimits {
     }
 
     /// Sets the deepest nesting the YAML parser accepts.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::ParseLimits;
+    ///
+    /// let limits = ParseLimits::default().max_depth(8);
+    /// assert_eq!(limits.max_depth, 8);
+    /// ```
     #[must_use]
     pub const fn max_depth(mut self, depth: usize) -> Self {
         self.max_depth = depth;
@@ -196,6 +224,15 @@ fn find_block(
 ///
 /// Returned by [`detect_front_matter`]; the byte offset is the first byte
 /// after the closing delimiter, so `&content[body_start..]` is the body.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{detect_front_matter, FrontMatterFormat};
+///
+/// let found = detect_front_matter("+++\ntitle = \"T\"\n+++\nbody").unwrap();
+/// assert_eq!(found.0, FrontMatterFormat::Toml);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum FrontMatterFormat {
@@ -209,6 +246,14 @@ pub enum FrontMatterFormat {
 
 impl FrontMatterFormat {
     /// The format's lower-case name: `yaml`, `toml` or `json`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::FrontMatterFormat;
+    ///
+    /// assert_eq!(FrontMatterFormat::Yaml.as_str(), "yaml");
+    /// ```
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Yaml => "yaml",

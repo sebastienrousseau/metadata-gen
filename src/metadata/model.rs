@@ -37,6 +37,17 @@ impl Metadata {
     /// # Returns
     ///
     /// A new `Metadata` instance.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::{Metadata, MetadataMap};
+    ///
+    /// let mut map = MetadataMap::new();
+    /// map.insert("title".to_string(), "Hello".to_string());
+    /// let meta = Metadata::new(map);
+    /// assert_eq!(meta.get("title").unwrap(), "Hello");
+    /// ```
     pub fn new(data: MetadataMap) -> Self {
         Metadata { inner: data }
     }
@@ -50,6 +61,16 @@ impl Metadata {
     /// # Returns
     ///
     /// An `Option<&String>` containing the value if the key exists, or `None` otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata;
+    ///
+    /// let meta = extract_metadata("---\ntitle: Hello\n---\n").unwrap();
+    /// assert_eq!(meta.get("title").map(String::as_str), Some("Hello"));
+    /// assert!(meta.get("missing").is_none());
+    /// ```
     pub fn get(&self, key: &str) -> Option<&String> {
         self.inner.get(key)
     }
@@ -64,6 +85,16 @@ impl Metadata {
     /// # Returns
     ///
     /// The old value associated with the key, if it existed.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::Metadata;
+    ///
+    /// let mut meta = Metadata::default();
+    /// assert_eq!(meta.insert("title".into(), "A".into()), None);
+    /// assert_eq!(meta.insert("title".into(), "B".into()), Some("A".to_string()));
+    /// ```
     pub fn insert(
         &mut self,
         key: String,
@@ -81,11 +112,32 @@ impl Metadata {
     /// # Returns
     ///
     /// `true` if the key exists, `false` otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata;
+    ///
+    /// let meta = extract_metadata("---\ntitle: Hello\n---\n").unwrap();
+    /// assert!(meta.contains_key("title"));
+    /// assert!(!meta.contains_key("date"));
+    /// ```
     pub fn contains_key(&self, key: &str) -> bool {
         self.inner.contains_key(key)
     }
 
     /// The keys present, in the map's iteration order.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata;
+    ///
+    /// let meta = extract_metadata("---\nb: 2\na: 1\n---\n").unwrap();
+    /// let mut keys: Vec<&str> = meta.keys().collect();
+    /// keys.sort_unstable();
+    /// assert_eq!(keys, ["a", "b"]);
+    /// ```
     pub fn keys(&self) -> impl Iterator<Item = &str> + '_ {
         self.inner.keys().map(String::as_str)
     }
@@ -119,6 +171,15 @@ impl Metadata {
 
     /// Starts a [`builder::MetadataBuilder`]. `title` and `date` must be
     /// set before `build` compiles; see the [`builder`] module.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::Metadata;
+    ///
+    /// let meta = Metadata::builder().title("T").date("2026-01-01").build();
+    /// assert!(meta.contains_key("title"));
+    /// ```
     pub fn builder(
     ) -> builder::MetadataBuilder<builder::Missing, builder::Missing>
     {
@@ -130,6 +191,15 @@ impl Metadata {
     /// # Returns
     ///
     /// The inner [`MetadataMap`] containing all metadata key-value pairs.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::extract_metadata;
+    ///
+    /// let map = extract_metadata("---\ntitle: Hello\n---\n").unwrap().into_inner();
+    /// assert_eq!(map.get("title").map(String::as_str), Some("Hello"));
+    /// ```
     pub fn into_inner(self) -> MetadataMap {
         self.inner
     }

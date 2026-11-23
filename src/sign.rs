@@ -3,15 +3,17 @@
 
 //! Post-quantum signatures over front matter (feature `pqc-sign`).
 //!
-//! A [`Metadata`] map is turned into a deterministic byte string, its
-//! *canonical encoding* (see [`canonical_bytes`] and
-//! `docs/spec/canonical-encoding.md`), and that string is signed with
+//! A [`Metadata`] map is turned into a deterministic
+//! byte string, its canonical encoding ([`canonical_bytes`])
+//! (specified in `docs/spec/canonical-encoding.md`), and that string is
+//! signed with
 //! ML-DSA-65 as specified in FIPS 204, using the RustCrypto
 //! [`ml_dsa`] crate. Signing uses FIPS 204's deterministic variant, so
 //! the same key and the same metadata always give the same signature,
 //! and no random number generator is needed. Every signature is bound
-//! to the context string [`CONTEXT`], so it cannot be replayed as a
-//! signature over some other kind of message under the same key.
+//! to a fixed context string, [`CONTEXT`], so it cannot be
+//! replayed as a signature over some other kind of message under the
+//! same key.
 //!
 //! The feature is off by default; without it, no ML-DSA crate is in the
 //! dependency tree.
@@ -41,12 +43,52 @@ use core::fmt;
 pub use ml_dsa;
 
 /// The FIPS 204 parameter set used here: ML-DSA-65 (NIST category 3).
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::sign::{ml_dsa::MlDsaParams, Params};
+///
+/// // The parameter set is ML-DSA-65; see `ml_dsa::MlDsa65`.
+/// fn assert_params<P: MlDsaParams>() {}
+/// assert_params::<Params>();
+/// ```
 pub type Params = ml_dsa::MlDsa65;
 /// An ML-DSA-65 signing (private) key.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::sign::{signing_key_from_seed, SigningKey};
+///
+/// let key: SigningKey = signing_key_from_seed(&[1u8; 32]);
+/// let _ = key;
+/// ```
 pub type SigningKey = ml_dsa::SigningKey<Params>;
 /// An ML-DSA-65 verifying (public) key.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::sign::{ml_dsa::Keypair, signing_key_from_seed, VerifyingKey};
+///
+/// let public: VerifyingKey = signing_key_from_seed(&[1u8; 32]).verifying_key();
+/// assert_eq!(public.encode().len(), 1952);
+/// ```
 pub type VerifyingKey = ml_dsa::VerifyingKey<Params>;
 /// An ML-DSA-65 signature (3,309 bytes when encoded).
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::extract_metadata;
+/// use metadata_gen::sign::{signing_key_from_seed, Signature};
+///
+/// let meta = extract_metadata("---\ntitle: T\n---\n").unwrap();
+/// let sig: Signature = meta.sign(&signing_key_from_seed(&[1u8; 32])).unwrap();
+/// let bytes = sig.encode();
+/// assert_eq!(Signature::decode(&bytes), Some(sig));
+/// ```
 pub type Signature = ml_dsa::Signature<Params>;
 
 /// The FIPS 204 context string every signature is bound to.
@@ -61,6 +103,14 @@ pub const MAGIC: &[u8; 8] = b"MDGCAN01";
 /// Signing failed. With the fixed, short [`CONTEXT`] this happens only
 /// if ML-DSA's rejection sampling gives up, which FIPS 204 bounds to a
 /// negligible probability.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::sign::SignError;
+///
+/// assert_eq!(SignError.to_string(), "ML-DSA signing failed");
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SignError;
 
@@ -74,6 +124,18 @@ impl core::error::Error for SignError {}
 
 /// The signature does not match the metadata and key: the metadata was
 /// changed, the signature was made by another key, or it is corrupt.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::extract_metadata;
+/// use metadata_gen::sign::{ml_dsa::Keypair, signing_key_from_seed, VerifyError};
+///
+/// let key = signing_key_from_seed(&[1u8; 32]);
+/// let sig = extract_metadata("---\na: 1\n---\n").unwrap().sign(&key).unwrap();
+/// let other = extract_metadata("---\na: 2\n---\n").unwrap();
+/// assert_eq!(other.verify(&key.verifying_key(), &sig), Err(VerifyError));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VerifyError;
 

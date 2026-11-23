@@ -40,14 +40,51 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 
 /// Typestate marker: the field has not been set.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metadata::builder::{MetadataBuilder, Missing, Present};
+/// use metadata_gen::Metadata;
+///
+/// // Before `title` is set the builder's first parameter is `Missing`.
+/// let start: MetadataBuilder<Missing, Missing> = Metadata::builder();
+/// let titled: MetadataBuilder<Present, Missing> = start.title("T");
+/// let _ = titled;
+/// ```
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Missing;
 
 /// Typestate marker: the field has been set.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metadata::builder::{MetadataBuilder, Present};
+/// use metadata_gen::Metadata;
+///
+/// let ready: MetadataBuilder<Present, Present> =
+///     Metadata::builder().title("T").date("2026-01-01");
+/// assert_eq!(ready.build().get("title").unwrap(), "T");
+/// ```
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Present;
 
 /// Implemented only for [`Present`]: `title` has been set.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metadata::builder::{DateSet, MetadataBuilder, TitleSet};
+/// use metadata_gen::Metadata;
+///
+/// // A helper that accepts only builders whose required fields are set.
+/// fn finish<T: TitleSet, D: DateSet>(b: MetadataBuilder<T, D>) -> Metadata {
+///     b.build()
+/// }
+/// let meta = finish(Metadata::builder().title("T").date("2026-01-01"));
+/// assert!(meta.contains_key("date"));
+/// ```
 #[diagnostic::on_unimplemented(
     message = "missing required field: title",
     label = "call `.title(..)` before `.build()`"
@@ -55,6 +92,16 @@ pub struct Present;
 pub trait TitleSet: sealed::Sealed {}
 
 /// Implemented only for [`Present`]: `date` has been set.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::metadata::builder::{DateSet, MetadataBuilder, Present};
+/// use metadata_gen::Metadata;
+///
+/// fn has_date<D: DateSet>(_: &MetadataBuilder<Present, D>) {}
+/// has_date(&Metadata::builder().title("T").date("2026-01-01"));
+/// ```
 #[diagnostic::on_unimplemented(
     message = "missing required field: date",
     label = "call `.date(..)` before `.build()`"
@@ -73,6 +120,19 @@ mod sealed {
 /// Builds a [`Metadata`]; start it with [`Metadata::builder`].
 ///
 /// `T` and `D` record whether `title` and `date` are set.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::Metadata;
+///
+/// let meta = Metadata::builder()
+///     .title("Hello")
+///     .date("2026-01-01")
+///     .field("author", "Ada")
+///     .build();
+/// assert_eq!(meta.get("author").unwrap(), "Ada");
+/// ```
 #[derive(Debug, Clone)]
 #[must_use]
 pub struct MetadataBuilder<T, D> {
@@ -103,6 +163,15 @@ impl<T, D> MetadataBuilder<T, D> {
     }
 
     /// Sets `title`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::Metadata;
+    ///
+    /// let meta = Metadata::builder().title("Hello").date("2026-01-01").build();
+    /// assert_eq!(meta.get("title").unwrap(), "Hello");
+    /// ```
     pub fn title(
         self,
         title: impl Into<String>,
@@ -112,6 +181,15 @@ impl<T, D> MetadataBuilder<T, D> {
 
     /// Sets `date`, stored as given (run [`crate::process_metadata`] to
     /// normalise it).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::Metadata;
+    ///
+    /// let meta = Metadata::builder().date("01/02/2026").title("T").build();
+    /// assert_eq!(meta.get("date").unwrap(), "01/02/2026");
+    /// ```
     pub fn date(
         self,
         date: impl Into<String>,
@@ -120,12 +198,38 @@ impl<T, D> MetadataBuilder<T, D> {
     }
 
     /// Sets `description`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::Metadata;
+    ///
+    /// let meta = Metadata::builder()
+    ///     .title("T")
+    ///     .date("2026-01-01")
+    ///     .description("A post")
+    ///     .build();
+    /// assert_eq!(meta.get("description").unwrap(), "A post");
+    /// ```
     pub fn description(self, description: impl Into<String>) -> Self {
         self.with("description", description.into())
     }
 
     /// Sets `keywords`, stored as `[a, b]`, the shape a front-matter
     /// sequence flattens to. [`Metadata::keywords`] gives the list back.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::Metadata;
+    ///
+    /// let meta = Metadata::builder()
+    ///     .title("T")
+    ///     .date("2026-01-01")
+    ///     .keywords(["rust", "yaml"])
+    ///     .build();
+    /// assert_eq!(meta.get("keywords").unwrap(), "[rust, yaml]");
+    /// ```
     pub fn keywords<I, S>(self, keywords: I) -> Self
     where
         I: IntoIterator<Item = S>,
@@ -137,6 +241,19 @@ impl<T, D> MetadataBuilder<T, D> {
     }
 
     /// Sets any other field.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::Metadata;
+    ///
+    /// let meta = Metadata::builder()
+    ///     .title("T")
+    ///     .date("2026-01-01")
+    ///     .field("og:image", "/cover.png")
+    ///     .build();
+    /// assert_eq!(meta.get("og:image").unwrap(), "/cover.png");
+    /// ```
     pub fn field(
         self,
         key: impl Into<String>,
@@ -150,6 +267,15 @@ impl<T, D> MetadataBuilder<T, D> {
 impl<T, D> MetadataBuilder<T, D> {
     /// Finishes the builder. Only compiles once `title` and `date` are
     /// set; otherwise the error names the missing field.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use metadata_gen::Metadata;
+    ///
+    /// let meta = Metadata::builder().title("T").date("2026-01-01").build();
+    /// assert_eq!(meta.keys().count(), 2);
+    /// ```
     #[must_use]
     pub fn build(self) -> Metadata
     where

@@ -5,7 +5,7 @@
 //!
 //! Embassy and other `no_std` executors read through
 //! [`embedded_io_async::Read`].
-//! [`extract_from_reader`](crate::embedded_io::extract_from_reader)
+//! [`extract_from_reader`]
 //! reads into a buffer the caller provides, so it allocates nothing
 //! for the input and works without `std`.
 
