@@ -47,7 +47,7 @@ jobs:
       - run: sudo apt-get update -q && sudo apt-get install -yq valgrind
       - run: bisect/run3.sh
         env:
-          REVS: "n63=v0.0.63 f1=origin/scratch/yaml-path-perf"
+          REVS: "n63=v0.0.63 f2=origin/scratch/yaml-path-perf-2"
           CARGO_PROFILE_BENCH_STRIP: "false"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
