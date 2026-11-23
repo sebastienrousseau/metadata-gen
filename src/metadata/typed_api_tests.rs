@@ -242,3 +242,17 @@ fn month_first_dates() {
         "{err:?}"
     );
 }
+
+#[test]
+fn borrowed_yaml_with_a_tag_explains_itself() {
+    // noyalib's borrowing deserialiser answers a tag with an internal
+    // fallback signal; it used to surface as the error text
+    // "$__noyalib_streaming_fallback".
+    let err = extract_typed_borrowed::<
+        std::collections::BTreeMap<&str, &str>,
+    >("---\nt: !x 5\n---\n")
+    .unwrap_err();
+    let msg = err.to_string();
+    assert!(!msg.contains("$__noyalib"), "{msg}");
+    assert!(msg.contains("extract_typed"), "{msg}");
+}

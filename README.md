@@ -91,6 +91,8 @@ Every format and integration is a feature, and all of them are on by default, so
 | `json` | yes | JSON-object front matter (`serde_json`) |
 | `html` | yes | `extract_meta_tags` (`oxml`); implies `std` |
 | `tokio` | yes | `metadata_gen::tokio` and `async_extract_metadata_from_file`; implies `std` |
+| `futures-io` | no | `metadata_gen::futures_io`: read from any `futures_io::AsyncRead` (smol, async-std, `futures`); implies `std` |
+| `embedded-io-async` | no | `metadata_gen::embedded_io`: read from an `embedded_io_async::Read` (Embassy) into a caller buffer; works without `std` |
 
 ```toml
 # YAML only, no standard library:
@@ -201,13 +203,16 @@ Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](
 - **Dual extraction APIs**:
   - `extract_metadata`: returns flat `Metadata` (`HashMap<String, String>`) with dot-separated keys (`author.name`), ideal for templates.
   - `extract_typed::<T>`: hands the raw block to serde, returning your strongly typed struct; `extract_typed_borrowed` lets `&str` fields point into the document.
+- **Zero-copy and streaming**: `extract_metadata_cow` returns the same dotted keys with values borrowed from the document where no unescaping was needed; `for_each_event` walks the block as `Event`s (keys, scalars, container boundaries) without building a map, and stops parsing when the callback returns `ControlFlow::Break`. `events_into` fills a buffer you own.
+- **Builder**: `Metadata::builder()` is a typestate builder; `build()` does not compile until `title` and `date` are set.
+- **Schema.org JSON-LD**: `schema_org::json_ld` maps front matter onto `Article`, `Product` or `Organization`, and `schema_org::breadcrumb_list` builds a `BreadcrumbList`; no JSON dependency, works without `std`.
 - **Document body access**: `extract_metadata_with_body` returns `(Metadata, &str)` with the body following the closing delimiter. `detect_front_matter` exposes format, raw block, and byte offset without parsing.
 - **Bounded parsing**: every parse runs under `ParseLimits` (block size, nesting depth); the YAML parser gets its strict budget preset on the flat and typed paths alike. `extract_metadata_with_limits` takes your own limits.
 - **Errors that locate the fault**: `MetadataError::Parse` carries the format, the byte span inside the block and the parser's error; an unclosed fence reports its byte offset.
 - **Processing and normalization**: `process_metadata` and `process_metadata_with` normalize dates to `YYYY-MM-DD` (`DD/MM/YYYY` by default, `MM/DD/YYYY` with `DateOrder::MonthFirst`), verify required fields, and derive URL slugs from titles.
 - **Meta tag synthesis**: `generate_metatags` creates grouped tags (`primary`, `og`, `twitter`, `apple`, `ms`); Open Graph tags use `property=`, and attribute values pass through `escape_attribute`. `MetaTag` and `MetaTagGroups::iter` give the same tags as values.
 - **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `oxml` without full DOM allocation; `extract_meta_tags_lenient` also reports where a malformed page stopped the scan.
-- **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, readers and files in `metadata_gen::io`, and Tokio-backed helpers in `metadata_gen::tokio`.
+- **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, readers and files in `metadata_gen::io`, Tokio-backed helpers in `metadata_gen::tokio`, and runtime-agnostic async readers in `metadata_gen::futures_io` (smol, async-std) and `metadata_gen::embedded_io` (Embassy).
 
 ---
 
@@ -236,6 +241,9 @@ assert!(!processed.contains_key("slug"));
 | `required_fields` | `["title", "date"]` | Missing field returns `MissingFieldError` naming it |
 | `derive_slug` | `true` | Derives `slug` from `title` when absent |
 | `date_order` | `DateOrder::DayFirst` | How a slash-separated date such as `01/02/2024` is read |
+| `optional_fields` | `[]` | Known but not required; `unknown_fields` lists keys outside both lists |
+
+The same options read fluently as a processor: `MetadataProcessor::new().require("author").optional("description").process(&metadata)`.
 
 `ProcessOptions` is `#[non_exhaustive]`, so options can be added without breaking releases.
 
@@ -252,6 +260,9 @@ Run any example with `cargo run --example <name>`:
 | `metatags_example` | Generating `<meta>` groups and reading them back |
 | `utils_example` | HTML escape/unescape and the async file helper |
 | `error_example` | Every `MetadataError` variant and how to recover |
+| `required_fields_example` | `MetadataProcessor` with an extra required field and an unknown-field check |
+| `schema_org_example` | Schema.org `Article` and `BreadcrumbList` JSON-LD from front matter |
+| `streaming_example` | Walking a 100 000-URL manifest as events, and stopping early |
 
 `make examples` runs all examples; CI executes the same suite on every push.
 

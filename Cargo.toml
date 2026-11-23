@@ -50,6 +50,8 @@ path = "src/lib.rs"
 # feature switches their std support back on, so a `no_std + alloc`
 # build (`default-features = false, features = ["yaml"]`) gets a tree
 # that never names `std`.
+embedded-io-async = { version = "0.7", default-features = false, optional = true }
+futures-io = { version = "0.3.31", default-features = false, features = ["std"], optional = true }
 memchr = { version = "2.7", default-features = false }
 noyalib = { version = "=0.0.58", default-features = false, optional = true }
 oxml = { version = "=0.0.13", default-features = false, optional = true }
@@ -111,6 +113,21 @@ required-features = ["std", "yaml", "toml", "json", "html"]
 name = "metatags_example"
 path = "examples/metatags_example.rs"
 required-features = ["std", "yaml", "toml", "json", "html"]
+
+[[example]]
+name = "required_fields_example"
+path = "examples/required_fields_example.rs"
+required-features = ["yaml"]
+
+[[example]]
+name = "schema_org_example"
+path = "examples/schema_org_example.rs"
+required-features = ["yaml"]
+
+[[example]]
+name = "streaming_example"
+path = "examples/streaming_example.rs"
+required-features = ["yaml"]
 
 [[example]]
 name = "utils_example"
@@ -180,6 +197,12 @@ json = ["dep:serde_json"]
 html = ["std", "dep:oxml"]
 # `metadata_gen::tokio`: async file helpers on the Tokio runtime.
 tokio = ["std", "dep:tokio"]
+# `metadata_gen::futures_io`: read from any `futures_io::AsyncRead`
+# (smol, async-std, the `futures` crate) without naming a runtime.
+futures-io = ["std", "dep:futures-io"]
+# `metadata_gen::embedded_io`: read from an `embedded_io_async::Read`
+# (Embassy and other `no_std` executors) into a caller-supplied buffer.
+embedded-io-async = ["dep:embedded-io-async"]
 
 # -----------------------------------------------------------------------------
 # Release Profile
