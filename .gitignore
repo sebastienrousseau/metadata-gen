@@ -15,3 +15,9 @@ tarpaulin-report.html
 SBOM.txt
 SHA256SUMS
 release-notes.md
+
+# perf/escape-compare is a throwaway comparison workspace: its lockfile
+# is not committed, so its benchmark-only dependencies never reach the
+# repository's dependency graph or its Dependabot alerts.
+/perf/escape-compare/Cargo.lock
+/perf/escape-compare/target/

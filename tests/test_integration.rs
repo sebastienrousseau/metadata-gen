@@ -112,6 +112,10 @@ Just plain content without --- markers.
     ///
     /// This async test ensures that metadata can be extracted from a file and meta tags generated correctly.
     #[cfg(feature = "tokio")]
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[tokio::test]
     async fn test_async_metadata_and_metatags_integration() {
         use tempfile::tempdir;

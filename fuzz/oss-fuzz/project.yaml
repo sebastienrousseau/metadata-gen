@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# OSS-Fuzz project definition (#52). Submitting it is a pull request to
+# google/oss-fuzz adding projects/metadata-gen/ with this file, the
+# Dockerfile and build.sh beside it; that submission is the maintainer's.
+# Check it first from a google/oss-fuzz checkout with these three files
+# in projects/metadata-gen/:
+#   python3 infra/helper.py build_image metadata-gen
+#   python3 infra/helper.py build_fuzzers metadata-gen
+#   python3 infra/helper.py check_build metadata-gen
+homepage: "https://metadata-gen.com/"
+main_repo: "https://github.com/sebastienrousseau/metadata-gen"
+language: rust
+primary_contact: "sebastian.rousseau@gmail.com"
+sanitizers:
+  - address
+fuzzing_engines:
+  - libfuzzer

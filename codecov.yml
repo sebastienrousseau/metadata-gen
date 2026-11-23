@@ -1,12 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# One number with the CI gate: quality.yml's `coverage (98% lines)` job
+# fails under 98 % lines, so Codecov holds the project and every patch
+# to the same floor. DEVELOPMENT.md explains why 98 and not 100.
 coverage:
   status:
     project:
       default:
-        target: 80%
-        threshold: 5%
+        target: 98%
     patch:
       default:
-        target: 80%
-        threshold: 5%
+        target: 98%
 
 ignore: []

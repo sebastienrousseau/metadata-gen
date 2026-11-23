@@ -1,0 +1,209 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Verification that is too slow, or too open-ended, for quality.yml:
+#
+# - kani: the escape_html proofs (#55), on every push and PR.
+# - oss-fuzz-build: OSS-Fuzz's build verifier on fuzz/oss-fuzz/ (#52).
+# - mutants-diff: mutation testing of the lines a PR changes (#54).
+# - Nightly and on demand:
+#   - miri-full: every test target under Miri with strict provenance (#53).
+#   - fuzz-long: each fuzz target for ten minutes, the corpus carried
+#     from run to run in the Actions cache (#52).
+#   - mutants-full: the whole crate, gated at an 85% kill rate (#54).
+
+name: Assurance
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  kani:
+    name: kani (escape_html proofs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The proofs are in tests/kani/escape_html.rs; `make kani` runs
+      # the same harnesses locally. A failed proof prints the
+      # counterexample trace and fails the job.
+      - uses: model-checking/kani-github-action@f838096619a707b0f6b2118cf435eaccfa33e51f # v1.1
+        with:
+          kani-version: "0.68.0"
+          args: --tests --harness check_escape_html_totality --harness check_html_escape_ascii_roundtrip
+
+  oss-fuzz-build:
+    name: OSS-Fuzz build check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # OSS-Fuzz's own build verifier against this checkout: build the
+      # project image from fuzz/oss-fuzz/, build every target with the
+      # address sanitizer, then run check_build on the result.
+      - name: Build and check with OSS-Fuzz's helper
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/google/oss-fuzz "$RUNNER_TEMP/oss-fuzz"
+          mkdir -p "$RUNNER_TEMP/oss-fuzz/projects/metadata-gen"
+          cp fuzz/oss-fuzz/project.yaml fuzz/oss-fuzz/Dockerfile fuzz/oss-fuzz/build.sh \
+            "$RUNNER_TEMP/oss-fuzz/projects/metadata-gen/"
+          cd "$RUNNER_TEMP/oss-fuzz"
+          python3 infra/helper.py build_image --pull metadata-gen
+          python3 infra/helper.py build_fuzzers metadata-gen "$GITHUB_WORKSPACE"
+          python3 infra/helper.py check_build metadata-gen
+
+  mutants-diff:
+    name: mutants (changed lines)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs cargo-mutants
+        with:
+          tool: cargo-mutants@27.1.0
+      - name: Mutate the lines this PR changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          git diff "$BASE_SHA"...HEAD -- src > pr.diff
+          if [ ! -s pr.diff ]; then
+            echo "No change under src/; nothing to mutate."
+            exit 0
+          fi
+          # Exit 2 means mutants survived; the gate below decides.
+          cargo mutants --no-shuffle --in-diff pr.diff || [ $? -eq 2 ]
+          python3 -I scripts/mutants_gate.py --min 0.85 --allow-empty
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mutants-diff
+          path: mutants.out
+          if-no-files-found: ignore
+          retention-days: 30
+
+  miri-full:
+    name: miri (all test targets, strict provenance)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MIRIFLAGS: -Zmiri-strict-provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: nightly
+          components: miri
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+      # Filesystem tests carry #[cfg_attr(miri, ignore)]: Miri's
+      # isolation forbids open(). The per-push `miri` job in quality.yml
+      # covers the unit tests; this adds the integration suites.
+      - run: cargo +nightly miri test --all-features --lib --tests
+
+  fuzz-long:
+    name: fuzz (10 min per target)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: nightly
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+        with:
+          workspaces: fuzz
+      # From source, as in quality.yml: the prebuilt musl binary
+      # mis-infers the fuzz target triple.
+      - run: cargo install --locked cargo-fuzz
+      # The corpus grown by earlier runs; a new key each run so the
+      # cache always moves forward, restored from the latest one.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: fuzz/grown
+          key: fuzz-corpus-${{ github.run_id }}
+          restore-keys: fuzz-corpus-
+      - name: Fuzz every target
+        working-directory: fuzz
+        run: |
+          set -euo pipefail
+          for target in $(cargo +nightly fuzz list); do
+            echo "== $target"
+            mkdir -p "grown/$target"
+            # The first directory collects new inputs; the rest seed it:
+            # the committed corpus, every fixed-bug reproducer, and the
+            # escape fixtures the test suite replays.
+            seeds=("corpus/$target" ../tests/regression_corpus ../tests/escape_corpus)
+            [ -d "regressions/$target" ] && seeds+=("regressions/$target")
+            cargo +nightly fuzz run "$target" "grown/$target" "${seeds[@]}" -- \
+              -max_total_time=600 -rss_limit_mb=2048
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: fuzz-corpus-and-artifacts
+          path: |
+            fuzz/grown
+            fuzz/artifacts
+          if-no-files-found: ignore
+          retention-days: 30
+
+  mutants-full:
+    name: mutants (whole crate, 85% floor)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs cargo-mutants
+        with:
+          tool: cargo-mutants@27.1.0
+      - name: Mutate src/
+        run: |
+          set -euo pipefail
+          cargo mutants --no-shuffle || [ $? -eq 2 ]
+          python3 -I scripts/mutants_gate.py --min 0.85
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mutants-full
+          path: mutants.out
+          retention-days: 90

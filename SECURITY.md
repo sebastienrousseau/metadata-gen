@@ -48,8 +48,30 @@ handling untrusted input of unbounded size should cap it before calling
 
 `fuzz/` holds libFuzzer targets for `extract_metadata`,
 `extract_meta_tags` and the HTML escape pair. A committed seed corpus
-and every fixed-bug reproducer are replayed on each push; see
-[`DEVELOPMENT.md`](DEVELOPMENT.md) for how to run the targets locally.
+and every fixed-bug reproducer are replayed on each push, and a
+nightly job fuzzes each target for ten minutes, carrying the grown
+corpus from one run to the next. To fuzz locally (nightly Rust and
+`cargo install --locked cargo-fuzz`):
+
+```sh
+cd fuzz
+cargo +nightly fuzz run fuzz_extract_metadata -- -max_total_time=3600
+```
+
+A crash found by fuzzing is fixed, with its input committed under
+`fuzz/regressions/<target>/` as a regression, within 14 days of being
+found.
+
+### Verification
+
+- Kani proves, for every input within a stated bound, that
+  `escape_html` never panics and leaves no raw `<`, `>`, `"` or `'`,
+  and that `unescape_html` inverts it on ASCII
+  ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)).
+- Miri runs the unit tests on every push and every test target with
+  `-Zmiri-strict-provenance` nightly.
+- Mutation testing (`cargo-mutants`) holds an 85 % kill-rate floor:
+  on the lines a pull request changes, and nightly on the whole crate.
 
 ### Supply Chain
 

@@ -11,6 +11,10 @@ exclude_globs = [
     "examples/**",
     "fuzz/**",
     "tests/**",
+    # Unit-test modules kept in their own files under src/: mutating a
+    # test only measures whether the test still compiles.
+    "src/**/tests.rs",
+    "src/**/*_tests.rs",
 ]
 
 # Exclude functions that are purely formatting, debugging, or vacuous fallbacks

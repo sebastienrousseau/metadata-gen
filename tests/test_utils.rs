@@ -52,6 +52,10 @@ mod tests {
 
     /// Test async file-based metadata extraction.
     #[cfg(feature = "tokio")]
+    #[cfg_attr(
+        miri,
+        ignore = "touches the filesystem; Miri isolation forbids it"
+    )]
     #[tokio::test]
     async fn test_async_extract_metadata_from_file() {
         use tempfile::tempdir;

@@ -117,7 +117,22 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
-      - run: cargo test --test test_proptest -- --nocapture
+      # 10 000 cases per round-trip property and 100 000 for the ASCII
+      # escape involution, optimised so the job stays quick. The seed is
+      # printed first: rerun a failure with the same PROPTEST_RNG_SEED.
+      # A shrunken counterexample is written to
+      # tests/test_proptest.proptest-regressions; commit it and it
+      # replays first on every later run.
+      - name: Properties with a recorded seed
+        env:
+          PROPTEST_CASES: "10000"
+          CARGO_PROFILE_TEST_OPT_LEVEL: "3"
+        run: |
+          set -euo pipefail
+          PROPTEST_RNG_SEED="$(od -An -N8 -tu8 /dev/urandom | tr -d ' ')"
+          export PROPTEST_RNG_SEED
+          echo "PROPTEST_RNG_SEED=$PROPTEST_RNG_SEED" | tee -a "$GITHUB_STEP_SUMMARY"
+          cargo test --test test_proptest -- --nocapture
 
   loom:
     name: loom concurrency check
@@ -326,6 +341,50 @@ jobs:
       # calls every export under wasmtime, comparing each result with the
       # native build's output for the same input (ADR-0009).
       - run: python3 -I wasi/check.py
+
+  embedded:
+    name: embedded (${{ matrix.target }}, ${{ matrix.features }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Arm Cortex-M4F: every format, and YAML alone for the size
+          # budget #61 sets on a yaml-only build.
+          - target: thumbv7em-none-eabihf
+            features: yaml,toml,json
+          - target: thumbv7em-none-eabihf
+            features: yaml
+          # RISC-V with atomics: every format.
+          - target: riscv32imac-unknown-none-elf
+            features: yaml,toml,json
+          # RISC-V without atomic read-modify-write: `alloc::sync` does
+          # not exist there, and both `noyalib` and `toml` use `Arc`, so
+          # only JSON builds. This row proves the crate itself needs no
+          # atomics.
+          - target: riscv32imc-unknown-none-elf
+            features: json
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+          components: llvm-tools
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+        with:
+          key: ${{ matrix.target }}
+      # Without `std` the build fails on anything that names it.
+      - name: Build
+        run: cargo build --lib --release --locked --no-default-features --features "${{ matrix.features }}" --target "${{ matrix.target }}"
+      # The crate's own code size, optimised for size without LTO, as
+      # llvm-size reports the rlib's text + data + bss. Dependencies are
+      # measured separately because a linker keeps only what is called.
+      - name: Object size
+        run: ./scripts/embedded_size.sh "${{ matrix.target }}" "${{ matrix.features }}" | tee -a "$GITHUB_STEP_SUMMARY"
 
   complexity:
     name: complexity (per-function ceilings)

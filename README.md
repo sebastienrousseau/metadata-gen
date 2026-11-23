@@ -187,7 +187,6 @@ Measured with Criterion on an Apple A18 Pro, rustc 1.98.0, single thread. Middle
 | :--- | ---: | :--- |
 | `extract_metadata` (YAML, 1 KB) | 631 µs (1.5 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
 | `extract_metadata` (YAML, 10 KB) | 1.81 ms (5.4 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_metadata` (YAML, 1 MB) | 181 ms (5.5 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
 | `extract_meta_tags` (1 KB) | 50 µs (18.7 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
 | `extract_meta_tags` (1 MB) | 34.9 ms (28.7 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
 | `escape_html` (10 KB) | 31.9 µs (295 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
@@ -318,11 +317,12 @@ make deny / vet / audit   # supply chain
 - Supply chain audited via `cargo-audit`, `cargo-deny`, and `cargo-vet` with a locked exemption baseline.
 - Front matter is parsed under `ParseLimits` (block size and depth), with the YAML parser's strict resource budgets on every path, the typed one included.
 - The first-party dependency `noyalib` is pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)).
-- Property-based testing via Proptest for parser round-trips and HTML escape involution.
-- Concurrency testing scaffold via Loom (`tests/loom_smoke.rs`) for thread schedule exploration.
-- Formal verification via Kani (`tests/kani/`) proving HTML escape totality and ASCII round-trip.
-- Mutation testing via `cargo-mutants` configured with `.cargo/mutants.toml`.
-- Three fuzz targets replaying seed and regression corpora per push.
+- Property-based testing via Proptest: YAML, TOML and JSON round trips at 10 000 cases each and the ASCII escape involution at 100 000 per CI run, with the seed printed for replay.
+- Concurrency testing scaffold via Loom (`tests/loom_smoke.rs`, `MAX_PREEMPTIONS` in `tests/loom/mod.rs`) for thread schedule exploration.
+- Kani proofs ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)) on every push: `escape_html` never panics and leaves no raw markup character for any string of up to 4 chars, and `unescape_html` inverts it for any ASCII string of up to 3 chars.
+- Miri on the unit tests per push, and on every test target with `-Zmiri-strict-provenance` nightly.
+- Mutation testing via `cargo-mutants` (`.cargo/mutants.toml`), gated at an 85 % kill rate on each pull request's changed lines and nightly on the whole crate.
+- Three fuzz targets replaying seed and regression corpora per push and fuzzed for ten minutes each nightly; `fuzz/oss-fuzz/` is ready for OSS-Fuzz.
 
 ---
 
