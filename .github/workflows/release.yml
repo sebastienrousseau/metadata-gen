@@ -2,7 +2,8 @@
 #
 # Tag-driven release. Pushing a signed, annotated `vX.Y.Z` tag that passed
 # scripts/release-preflight.sh locally produces the GitHub release:
-# the packaged crate, a CycloneDX SBOM, build provenance for both, and
+# the packaged crate, CycloneDX SBOMs (JSON and XML), build provenance
+# for every asset, and
 # release notes in the repository-standard shape (hand-written Highlights
 # from docs/releases/vX.Y.Z.md, generated What's Changed, checksums,
 # Full Changelog).
@@ -74,7 +75,7 @@ jobs:
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
       - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
         with:
-          tool: cargo-cyclonedx
+          tool: cargo-cyclonedx@0.5.9
       - name: Package the crate and generate the SBOM
         run: |
           set -euo pipefail
@@ -82,8 +83,12 @@ jobs:
           mkdir -p dist
           cargo package --locked
           cp "target/package/metadata-gen-${version}.crate" dist/
-          cargo cyclonedx --format json --all-features --override-filename "metadata-gen-${version}.cdx"
-          mv "metadata-gen-${version}.cdx.json" dist/
+          # The default feature set: what `cargo add metadata-gen` gives.
+          # CycloneDX JSON and XML, so a consumer can ingest either.
+          for fmt in json xml; do
+            cargo cyclonedx --spec-version 1.5 --format "${fmt}" --override-filename "metadata-gen-${version}.cdx"
+            mv "metadata-gen-${version}.cdx.${fmt}" dist/
+          done
           (cd dist && sha256sum -- * > ../SHA256SUMS)
           cat SHA256SUMS
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
