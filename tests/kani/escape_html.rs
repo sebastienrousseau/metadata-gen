@@ -20,19 +20,22 @@
 //!    is a function, this also proves `escape_html` injective on that
 //!    domain: two different inputs can never escape to the same output.
 //!
-//! The bounds are what the model checker can explore exhaustively in a
-//! few minutes. Longer inputs are covered statistically by the proptest
-//! suite (`tests/test_proptest.rs`) and the `fuzz_html_escape` target.
+//! The bounds are what the model checker finishes on a hosted runner:
+//! at two or three chars the String reallocations it must model ran
+//! past 15 minutes or out of memory. Larger domains are covered by
+//! enumeration in `tests/test_escape_exhaustive.rs` (every char, every
+//! ASCII string of up to three chars) and, beyond that, statistically
+//! by the proptest suite and the `fuzz_html_escape` target.
 
 #[cfg(kani)]
 mod kani_proofs {
     use metadata_gen::utils::{escape_html, unescape_html};
 
     /// Longest input of the totality proof, in chars.
-    const TOTALITY_LEN: usize = 3;
+    const TOTALITY_LEN: usize = 1;
 
     /// Longest input of the round-trip proof, in chars.
-    const ROUNDTRIP_LEN: usize = 2;
+    const ROUNDTRIP_LEN: usize = 1;
 
     /// A symbolic string of any length up to `N` chars, built char by
     /// char so the model checker never has to reason about UTF-8
@@ -55,7 +58,7 @@ mod kani_proofs {
 
     #[kani::proof]
     #[kani::solver(cadical)]
-    #[kani::unwind(20)]
+    #[kani::unwind(8)]
     fn check_escape_html_totality() {
         let s = any_string::<TOTALITY_LEN>(false);
         let escaped = escape_html(&s);
@@ -75,7 +78,7 @@ mod kani_proofs {
 
     #[kani::proof]
     #[kani::solver(cadical)]
-    #[kani::unwind(14)]
+    #[kani::unwind(8)]
     #[kani::stub(core::slice::memchr::memchr, naive_memchr)]
     fn check_html_escape_ascii_roundtrip() {
         let s = any_string::<ROUNDTRIP_LEN>(true);

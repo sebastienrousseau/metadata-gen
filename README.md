@@ -340,7 +340,7 @@ make wasi         # WASI component: validate, size, native parity
 - The first-party dependencies `noyalib` and `oxml` share this crate's maintainer and are pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)); that shared authorship is disclosed in [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md) so you can weigh it.
 - Property-based testing via Proptest: YAML, TOML and JSON round trips at 10 000 cases each and the ASCII escape involution at 100 000 per CI run, with the seed printed for replay.
 - Concurrency testing scaffold via Loom (`tests/loom_smoke.rs`, `MAX_PREEMPTIONS` in `tests/loom/mod.rs`) for thread schedule exploration.
-- Kani proofs ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)) on every push: `escape_html` never panics and leaves no raw markup character for any string of up to 3 chars, and `unescape_html` inverts it for any ASCII string of up to 2 chars.
+- Kani proofs ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)) on every push that `escape_html` never panics, leaves no raw markup character and is inverted by `unescape_html`, symbolically for one-char inputs, and by enumeration ([`tests/test_escape_exhaustive.rs`](tests/test_escape_exhaustive.rs)) for every Unicode char and every ASCII string of up to three chars.
 - Miri on the unit tests per push, and on every test target with `-Zmiri-strict-provenance` nightly.
 - Mutation testing via `cargo-mutants` (`.cargo/mutants.toml`), gated at an 85 % kill rate on each pull request's changed lines and nightly on the whole crate.
 - Three fuzz targets replaying seed and regression corpora per push and fuzzed for ten minutes each nightly; `fuzz/oss-fuzz/` is ready for OSS-Fuzz.

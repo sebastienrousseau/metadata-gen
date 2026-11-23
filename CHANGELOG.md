@@ -133,9 +133,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and any printable Unicode, compares the whole extracted map, and
   scales with `PROPTEST_CASES`: CI runs 10 000 cases per round trip and
   100 000 for the ASCII escape involution and prints the seed.
-- Kani proofs (#55) now cover every length up to the bound, the full
-  ASCII range, and that escaped output holds no raw markup; inputs are
-  built char by char so the solver does not explore UTF-8 validation.
+- Kani proofs (#55) run in CI and check that escaped output holds no
+  raw markup as well as totality and the ASCII round trip. On a hosted
+  runner they finish only for one-char inputs, so
+  `tests/test_escape_exhaustive.rs` enumerates every Unicode char and
+  every ASCII string of up to three chars for the same properties.
 - `tests/test_edge_cases.rs`: boundaries mutation testing showed were
   untested (#54).
 - Every test target runs under Miri (#53); filesystem tests are
