@@ -45,10 +45,7 @@ jobs:
         with:
           toolchain: stable
       - run: sudo apt-get update -q && sudo apt-get install -yq valgrind
-      - run: bisect/run2.sh
+      - run: bisect/run5.sh
         env:
-          ROUNDS: "30"
+          ROUNDS: "20"
           REVS: "n60=v0.0.60 n63=v0.0.63 fix=6c717c8"
-      - run: bisect/run4.sh
-        env:
-          FIX: 6c717c8
