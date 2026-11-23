@@ -72,6 +72,17 @@ fn involution_cases() -> u32 {
     }
 }
 
+/// The suite's configuration with `cases` cases. Under Miri failures are
+/// not persisted: proptest's file persistence calls `getcwd`, which
+/// Miri's isolation forbids.
+fn config(cases: u32) -> ProptestConfig {
+    let mut config = ProptestConfig::with_cases(cases);
+    if cfg!(miri) {
+        config.failure_persistence = None;
+    }
+    config
+}
+
 /// Extracts `doc` and asserts the flat map equals `map` exactly: no key
 /// lost, none invented, every value unchanged.
 fn assert_round_trip(
@@ -87,10 +98,7 @@ fn assert_round_trip(
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig {
-        cases: involution_cases(),
-        .. ProptestConfig::default()
-    })]
+    #![proptest_config(config(involution_cases()))]
 
     /// HTML escape involution property on ASCII strings:
     /// unescape_html(escape_html(s)) == s
@@ -103,10 +111,7 @@ proptest! {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig {
-        cases: round_trip_cases(),
-        .. ProptestConfig::default()
-    })]
+    #![proptest_config(config(round_trip_cases()))]
 
     /// HTML escape involution property on general Unicode strings:
     /// unescape_html(escape_html(s)) == s
@@ -167,10 +172,7 @@ fn replace_chain(v: &str) -> String {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig {
-        cases: round_trip_cases(),
-        .. ProptestConfig::default()
-    })]
+    #![proptest_config(config(round_trip_cases()))]
 
     /// `escape_html` is byte-identical to the replace chain it replaced.
     #[test]
@@ -205,6 +207,7 @@ fn corpus(dir: &str) -> Vec<(std::path::PathBuf, String)> {
 /// Escape corpus replay (#47): each committed input escapes exactly as
 /// the replace chain did and unescapes back to itself.
 #[test]
+#[cfg_attr(miri, ignore = "reads tests/; Miri isolation forbids it")]
 fn test_escape_corpus_replay() {
     let files = corpus("tests/escape_corpus");
     assert!(!files.is_empty(), "tests/escape_corpus is empty");
@@ -219,6 +222,7 @@ fn test_escape_corpus_replay() {
 /// Every committed counterexample in `tests/regression_corpus/` must pass
 /// the HTML escape involution property.
 #[test]
+#[cfg_attr(miri, ignore = "reads tests/; Miri isolation forbids it")]
 fn test_regression_corpus_replay() {
     let corpus_dir = Path::new("tests/regression_corpus");
     if !corpus_dir.exists() {
