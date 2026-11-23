@@ -1,0 +1,17 @@
+{
+  "name": "metadata-gen-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "sh ./build.sh",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@bytecodealliance/jco": "1.42.0",
+    "wrangler": "4.162.0"
+  },
+  "dependencies": {
+    "@bytecodealliance/preview2-shim": "0.31.1"
+  }
+}

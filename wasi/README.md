@@ -49,3 +49,5 @@ the file is over 1 MiB, and calls every export under `wasmtime` with
 each input in [`cases/`](cases/), comparing the result byte for byte
 with what the native build (`src/bin/expect.rs`) prints for the same
 input. CI runs it in the `WASI 0.2 component` job.
+
+Deploy guides for hosts: [`docs/deploy/`](../docs/deploy/README.md).

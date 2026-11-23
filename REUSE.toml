@@ -35,6 +35,9 @@ path = [
     "fuzz/Cargo.lock",
     "wasi/.gitignore",
     "wasi/README.md",
+    "examples/deploy/cloudflare-workers/.gitignore",
+    "examples/deploy/cloudflare-workers/package.json",
+    "examples/deploy/cloudflare-workers/wrangler.jsonc",
     "wasi/Cargo.lock",
     "wasi/cases/**",
 ]
