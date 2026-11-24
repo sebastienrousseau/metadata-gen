@@ -103,8 +103,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.noyalib]]
-version = "0.0.63"
-when = "2026-11-19"
+version = "0.0.64"
+when = "2026-11-23"
 trusted-publisher = "github:sebastienrousseau/noyalib"
 
 [[publisher.oxml]]

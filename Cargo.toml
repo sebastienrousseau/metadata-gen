@@ -53,7 +53,7 @@ path = "src/lib.rs"
 embedded-io-async = { version = "0.7", default-features = false, optional = true }
 futures-io = { version = "0.3.31", default-features = false, features = ["std"], optional = true }
 memchr = { version = "2.7", default-features = false }
-noyalib = { version = "=0.0.63", default-features = false, optional = true }
+noyalib = { version = "=0.0.64", default-features = false, optional = true }
 oxml = { version = "=0.0.13", default-features = false, optional = true }
 serde = { version = "1.0.228", default-features = false, features = ["derive", "alloc"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"], optional = true }

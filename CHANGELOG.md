@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **noyalib `=0.0.64`**, which screens printable-ASCII scalars before
+  the byte-level printable checks noyalib 0.0.62 added. Those checks
+  made the YAML benchmarks about 10% slower on x86_64 after the bump
+  from 0.0.58 and failed the 5% bench gate.
 - `toml` 1.2.0 and `loom` 0.7.3, and the GitHub Actions updates for
   `Swatinem/rust-cache`, `taiki-e/install-action` 2.90.3,
   `pipelines` `security.yml` 0.0.4, `ossf/scorecard-action` 2.5.0 and
