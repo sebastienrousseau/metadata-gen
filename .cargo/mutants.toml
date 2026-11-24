@@ -11,6 +11,10 @@ exclude_globs = [
     "examples/**",
     "fuzz/**",
     "tests/**",
+    # Unit-test modules kept in their own files under src/: mutating a
+    # test only measures whether the test still compiles.
+    "src/**/tests.rs",
+    "src/**/*_tests.rs",
 ]
 
 # Exclude functions that are purely formatting, debugging, or vacuous fallbacks
@@ -18,6 +22,11 @@ exclude_re = [
     ".*::fmt",
     ".*::test_.*",
 ]
+
+# Build and test with every feature, so code behind an optional
+# feature (the async readers) is mutated against the tests
+# that exercise it rather than against none.
+all_features = true
 
 # Baseline build timeout multiplier
 timeout_multiplier = 2.0

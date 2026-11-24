@@ -56,10 +56,27 @@ make           # check + clippy + test
 make fmt       # rustfmt --check
 make lint      # markdownlint + codespell + REUSE
 make deny      # cargo-deny supply-chain audit
-make vet       # cargo-vet provenance (regenerate exemptions after a dep change)
+make vet       # cargo-vet provenance (see docs/SUPPLY-CHAIN.md; never add exemptions)
 ```
 
 5. Commit with `git commit -S` (signed).
+
+## First-party dependency policy
+
+`noyalib` (YAML) and `oxml` (`<meta>` parsing) are first-party: they
+share a maintainer with this crate. While a first-party crate is on
+`0.0.x`, it is required with an exact pin (`noyalib = "=0.0.58"`),
+never a caret requirement, so a release upstream cannot reach users
+until a `metadata-gen` release moves the pin
+([ADR-0004](docs/adr/0004-first-party-exact-pins.md)).
+
+- `scripts/verify-release-versions.sh` fails when a first-party
+  requirement lacks the `=` or when `Cargo.lock` disagrees with the pin.
+- A pin bump is its own commit with a CHANGELOG entry, and the
+  `cargo-vet` check must pass for the new version (see
+  [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md)).
+- A crate joins this list when it is published by the same maintainer
+  and is below 1.0; it leaves the list when it reaches 1.0.
 
 ## Commit messages
 

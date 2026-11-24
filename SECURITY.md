@@ -48,18 +48,45 @@ handling untrusted input of unbounded size should cap it before calling
 
 `fuzz/` holds libFuzzer targets for `extract_metadata`,
 `extract_meta_tags` and the HTML escape pair. A committed seed corpus
-and every fixed-bug reproducer are replayed on each push; see
-[`DEVELOPMENT.md`](DEVELOPMENT.md) for how to run the targets locally.
+and every fixed-bug reproducer are replayed on each push, and a
+nightly job fuzzes each target for ten minutes, carrying the grown
+corpus from one run to the next. To fuzz locally (nightly Rust and
+`cargo install --locked cargo-fuzz`):
+
+```sh
+cd fuzz
+cargo +nightly fuzz run fuzz_extract_metadata -- -max_total_time=3600
+```
+
+A crash found by fuzzing is fixed, with its input committed under
+`fuzz/regressions/<target>/` as a regression, within 14 days of being
+found.
+
+### Verification
+
+- Kani proves that `escape_html` never panics on any one-char string
+  ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)), and
+  exhaustive enumeration proves that it leaves no raw `<`, `>`, `"` or
+  `'` and that `unescape_html` inverts it, for every Unicode char and
+  every ASCII string of up to three chars
+  ([`tests/test_escape_exhaustive.rs`](tests/test_escape_exhaustive.rs)).
+- Miri runs the unit tests on every push and every test target with
+  `-Zmiri-strict-provenance` nightly.
+- Mutation testing (`cargo-mutants`) holds an 85 % kill-rate floor:
+  on the lines a pull request changes, and nightly on the whole crate.
 
 ### Supply Chain
 
 - Runtime deps audited in CI: `cargo-deny` (licences, advisories,
   sources) and `cargo-audit`.
-- Dependency provenance recorded with `cargo-vet`
-  (`supply-chain/`); exemptions are regenerated on every dependency
-  change, never added by hand.
-- The first-party crate `noyalib` is pinned exactly (`=0.0.X`); a
-  bump is a deliberate release of this crate (ADR-0004).
+- Dependency provenance recorded with `cargo-vet` (`supply-chain/`):
+  published audit sets are imported, exemptions may only shrink, and
+  audits are recorded by the person who did the review. See
+  [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md).
+- The first-party crates `noyalib` and `oxml` share a maintainer with
+  this crate and are pinned exactly (`=0.0.X`); a bump is a
+  deliberate release of this crate (ADR-0004).
+- Releases attach CycloneDX SBOMs with build-provenance attestations.
 - Front matter is untrusted input: every parse runs under
   `ParseLimits` (block size, nesting depth), and the YAML parser gets
   its strict resource budgets on the flat and typed paths alike.

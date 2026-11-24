@@ -46,12 +46,24 @@ jobs:
       - name: The nightly toolchain is the one in use
         run: rustc --version | grep -F -- '-nightly'
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs cargo-llvm-cov
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6, installs cargo-llvm-cov
         with:
           tool: cargo-llvm-cov
       # The threshold and its rationale live in DEVELOPMENT.md. A number
       # chosen once and defended beats chasing 100%.
-      - run: cargo llvm-cov --all-features --locked --fail-under-lines 98
+      - run: cargo llvm-cov --all-features --locked --fail-under-lines 98 --lcov --output-path lcov.info
+      # Codecov reports this measurement, the one the gate enforces,
+      # under the `llvm-cov` flag; codecov.yml computes its statuses
+      # from that flag alone. ci.yml's shared Coverage job also uploads a
+      # cargo-tarpaulin report, which counts lines differently (async
+      # bodies, multi-line expressions and type aliases read as missed)
+      # and stays visible in Codecov without driving the statuses.
+      - uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5.5.4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          flags: llvm-cov
+          fail_ci_if_error: false
 
   miri:
     name: miri
@@ -117,7 +129,22 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
-      - run: cargo test --test test_proptest -- --nocapture
+      # 10 000 cases per round-trip property and 100 000 for the ASCII
+      # escape involution, optimised so the job stays quick. The seed is
+      # printed first: rerun a failure with the same PROPTEST_RNG_SEED.
+      # A shrunken counterexample is written to
+      # tests/test_proptest.proptest-regressions; commit it and it
+      # replays first on every later run.
+      - name: Properties with a recorded seed
+        env:
+          PROPTEST_CASES: "10000"
+          CARGO_PROFILE_TEST_OPT_LEVEL: "3"
+        run: |
+          set -euo pipefail
+          PROPTEST_RNG_SEED="$(od -An -N8 -tu8 /dev/urandom | tr -d ' ')"
+          export PROPTEST_RNG_SEED
+          echo "PROPTEST_RNG_SEED=$PROPTEST_RNG_SEED" | tee -a "$GITHUB_STEP_SUMMARY"
+          cargo test --test test_proptest -- --nocapture
 
   loom:
     name: loom concurrency check
@@ -141,7 +168,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
       - run: npx --yes markdownlint-cli2 "**/*.md" "!target/**" "!fuzz/target/**"
       - run: uvx codespell
       - run: uvx --with chardet reuse lint
@@ -163,7 +190,7 @@ jobs:
       # Pinned: releases before 0.10 reject a `[[trusted.*]]` entry that
       # names a `trusted-publisher` instead of a `user-id`, which is how
       # a crates.io Trusted Publishing release is attested.
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs cargo-vet
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6, installs cargo-vet
         with:
           tool: cargo-vet@0.10.2
       - run: cargo vet --locked
@@ -173,7 +200,9 @@ jobs:
         run: |
           set -euo pipefail
           baseline="$(tr -d '[:space:]' < supply-chain/exemptions-baseline.txt)"
-          current="$(cargo vet --locked 2>&1 | grep -oE '[0-9]+ exempted' | grep -oE '[0-9]+')"
+          # Count from the JSON report: the text summary omits
+          # "N exempted" when there are none, so grepping it fails at 0.
+          current="$(cargo vet --locked --output-format json | jq -e '(.vetted_with_exemptions | arrays | length) // error("no vetted_with_exemptions in cargo vet JSON")')"
           echo "exempted: $current (baseline $baseline)"
           if [ "$current" -gt "$baseline" ]; then
             echo "::error::exemptions grew from $baseline to $current"
@@ -241,7 +270,7 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs cargo-semver-checks
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6, installs cargo-semver-checks
         with:
           tool: cargo-semver-checks
       # Compares the public API against the last crates.io release. While
@@ -261,7 +290,7 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs cargo-hack
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6, installs cargo-hack
         with:
           tool: cargo-hack
       - run: cargo hack check --feature-powerset --all-targets --locked
@@ -284,6 +313,92 @@ jobs:
       - run: cargo build --lib --locked --no-default-features --features yaml,toml,json --target thumbv7em-none-eabihf
       # A format that is compiled out must report UnsupportedFormatError.
       - run: cargo test --lib --locked --no-default-features --features yaml
+
+  sbom:
+    name: CycloneDX SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: cargo-cyclonedx@0.5.9
+      # The SBOM the release attaches must list every crate of the
+      # default build with its cargo purl (issue #28).
+      - run: python3 -I scripts/check-sbom.py
+
+  wasi-component:
+    name: WASI 0.2 component (wasm32-wasip2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+        with:
+          workspaces: wasi
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs wasmtime and wasm-tools
+        with:
+          tool: wasmtime@50.0.2,wasm-tools@1.261.0
+      # Builds the component, validates it, checks the 1 MiB budget, and
+      # calls every export under wasmtime, comparing each result with the
+      # native build's output for the same input (ADR-0009).
+      - run: python3 -I wasi/check.py
+
+  embedded:
+    name: embedded (${{ matrix.target }}, ${{ matrix.features }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Arm Cortex-M4F: every format, and YAML alone for the size
+          # budget #61 sets on a yaml-only build.
+          - target: thumbv7em-none-eabihf
+            features: yaml,toml,json
+          - target: thumbv7em-none-eabihf
+            features: yaml
+          # RISC-V with atomics: every format.
+          - target: riscv32imac-unknown-none-elf
+            features: yaml,toml,json
+          # RISC-V without atomic read-modify-write: `alloc::sync` does
+          # not exist there, and both `noyalib` and `toml` use `Arc`, so
+          # only JSON builds. This row proves the crate itself needs no
+          # atomics.
+          - target: riscv32imc-unknown-none-elf
+            features: json
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+          components: llvm-tools
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+        with:
+          key: ${{ matrix.target }}
+      # Without `std` the build fails on anything that names it.
+      - name: Build
+        run: cargo build --lib --release --locked --no-default-features --features "${{ matrix.features }}" --target "${{ matrix.target }}"
+      # The crate's own code size, optimised for size without LTO, as
+      # llvm-size reports the rlib's text + data + bss. Dependencies are
+      # measured separately because a linker keeps only what is called.
+      - name: Object size
+        run: ./scripts/embedded_size.sh "${{ matrix.target }}" "${{ matrix.features }}" | tee -a "$GITHUB_STEP_SUMMARY"
 
   complexity:
     name: complexity (per-function ceilings)

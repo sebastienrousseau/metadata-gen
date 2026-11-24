@@ -403,6 +403,7 @@ mod escape_single_pass_tests {
 
     #[test]
     fn escape_html_cow_borrows_clean_input() {
+        assert!(matches!(escape_html_cow(""), Cow::Borrowed("")));
         assert!(matches!(
             escape_html_cow("plain text"),
             Cow::Borrowed(_)

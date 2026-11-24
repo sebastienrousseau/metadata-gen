@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# The WASI 0.2 component build of metadata-gen (issue #62, ADR-0009).
+# A separate package, not a workspace member: the library crate stays
+# free of `unsafe` and of wit-bindgen, and this package is never
+# published to crates.io. The component itself is built with
+# `cargo build --release --target wasm32-wasip2` (see wasi/README.md).
+
+[package]
+name = "metadata-gen-component"
+version = "0.0.10"
+edition = "2021"
+rust-version = "1.89.0"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "WASI 0.2 component wrapping metadata-gen"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+metadata-gen = { path = "..", default-features = false, features = ["std", "yaml", "toml", "json", "html"] }
+wit-bindgen = { version = "0.63", default-features = false, features = ["macros", "realloc"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+panic = "abort"
+strip = true

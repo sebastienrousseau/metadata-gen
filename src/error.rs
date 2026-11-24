@@ -17,12 +17,32 @@ use thiserror::Error;
 
 /// A boxed error that can cross threads; the payload of
 /// [`MetadataError::Other`] and the `source` of [`MetadataError::Parse`].
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::error::{BoxedError, MetadataError};
+///
+/// let source: BoxedError = "disk on fire".into();
+/// let err = MetadataError::Other(source);
+/// assert!(err.to_string().contains("disk on fire"));
+/// ```
 pub type BoxedError =
     Box<dyn core::error::Error + Send + Sync + 'static>;
 
 /// A custom error type to add context to the `Other` variant of `MetadataError`.
 ///
 /// This struct wraps another error and provides additional context information.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::error::MetadataError;
+///
+/// // `MetadataError::context` wraps the error in a `ContextError`.
+/// let err = MetadataError::Other("bad input".into()).context("reading post.md");
+/// assert_eq!(err.to_string(), "Unexpected error: reading post.md: bad input");
+/// ```
 #[derive(Debug)]
 pub struct ContextError {
     /// The context message providing additional information about the error.
@@ -52,6 +72,19 @@ impl core::error::Error for ContextError {
 ///
 /// This enum encompasses all possible errors that can occur during
 /// metadata extraction, processing, and related operations.
+///
+/// # Example
+///
+/// ```
+/// use metadata_gen::{extract_metadata, MetadataError};
+///
+/// match extract_metadata("no front matter") {
+///     Err(MetadataError::ExtractionError { message }) => {
+///         assert!(message.contains("No valid front matter"))
+///     }
+///     other => panic!("unexpected: {other:?}"),
+/// }
+/// ```
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum MetadataError {

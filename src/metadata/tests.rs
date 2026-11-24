@@ -110,6 +110,16 @@ fn test_generate_derived_fields() {
 }
 
 #[test]
+fn test_generate_derived_fields_without_title_adds_nothing() {
+    let mut metadata = Metadata::new(MetadataMap::new());
+    metadata.insert("date".to_string(), "2024-01-02".to_string());
+
+    generate_derived_fields(&mut metadata);
+
+    assert!(!metadata.contains_key("slug"));
+}
+
+#[test]
 fn test_metadata_methods() {
     let mut metadata = Metadata::new(MetadataMap::new());
     metadata.insert("key".to_string(), "value".to_string());

@@ -8,13 +8,11 @@
 //! versions live in `metadata_gen::tokio` behind the `tokio` feature.
 
 use crate::error::MetadataError;
-use crate::{
-    extract_and_prepare_metadata, Keywords, MetaTagGroups, MetadataMap,
-};
+use crate::{Keywords, MetaTagGroups, MetadataMap};
 use std::io::Read;
 use std::path::Path;
 
-/// Reads everything from `reader` and runs [`extract_and_prepare_metadata`].
+/// Reads everything from `reader` and runs [`crate::extract_and_prepare_metadata`].
 ///
 /// An empty (or whitespace-only) input yields empty metadata rather than
 /// an error, matching `metadata_gen::tokio::extract_from_file` (feature `tokio`).
@@ -22,7 +20,7 @@ use std::path::Path;
 /// # Errors
 ///
 /// [`MetadataError::IoError`] when the read fails, otherwise whatever
-/// [`extract_and_prepare_metadata`] returns.
+/// [`crate::extract_and_prepare_metadata`] returns.
 ///
 /// # Example
 ///
@@ -41,7 +39,7 @@ pub fn extract_from_reader<R: Read>(
     extract_from_content(&content)
 }
 
-/// Reads the file at `path` and runs [`extract_and_prepare_metadata`].
+/// Reads the file at `path` and runs [`crate::extract_and_prepare_metadata`].
 ///
 /// # Errors
 ///
@@ -70,19 +68,13 @@ pub fn extract_from_file<P: AsRef<Path>>(
 pub(crate) fn extract_from_content(
     content: &str,
 ) -> Result<(MetadataMap, Keywords, MetaTagGroups), MetadataError> {
-    if content.trim().is_empty() {
-        return Ok((
-            MetadataMap::new(),
-            Vec::new(),
-            MetaTagGroups::default(),
-        ));
-    }
-    extract_and_prepare_metadata(content)
+    crate::extract_from_text(content)
 }
 
 #[cfg(all(test, feature = "yaml"))]
 mod tests {
     use super::*;
+    use crate::extract_and_prepare_metadata;
 
     #[test]
     fn reader_round_trip_matches_string_api() {

@@ -49,7 +49,8 @@ pub struct MetaTagGroups {
     pub twitter: String,
 }
 
-/// Which attribute carries a meta tag's identifier.
+/// Which attribute carries a meta tag's identifier; returned by
+/// [`MetaTag::attribute`], whose example shows each case.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum MetaAttribute {
@@ -63,6 +64,12 @@ pub enum MetaAttribute {
 
 impl MetaAttribute {
     /// The attribute name as written in HTML.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// assert_eq!(metadata_gen::metatags::MetaAttribute::HttpEquiv.as_str(), "http-equiv");
+    /// ```
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Name => "name",
@@ -101,6 +108,13 @@ const PROPERTY_PREFIXES: [&str; 7] = [
 
 impl MetaTag {
     /// Creates a tag from its identifier and content.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let tag = metadata_gen::MetaTag::new("description", "A page");
+    /// assert_eq!((tag.name.as_str(), tag.content.as_str()), ("description", "A page"));
+    /// ```
     pub fn new(
         name: impl Into<String>,
         content: impl Into<String>,
@@ -131,6 +145,13 @@ impl MetaTag {
     }
 
     /// Renders the element with both attribute values escaped.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let tag = metadata_gen::MetaTag::new("description", "A < B");
+    /// assert_eq!(tag.render(), r#"<meta name="description" content="A &lt; B">"#);
+    /// ```
     pub fn render(&self) -> String {
         format!(
             r#"<meta {}="{}" content="{}">"#,
@@ -248,12 +269,28 @@ impl MetaTagGroups {
     }
 
     /// Generates the Apple-specific group from `metadata`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let mut groups = metadata_gen::MetaTagGroups::default();
+    /// groups.generate_apple_meta_tags(&[("apple-mobile-web-app-title".into(), "X".into())].into());
+    /// assert_eq!(groups.apple, r#"<meta name="apple-mobile-web-app-title" content="X">"#);
+    /// ```
     pub fn generate_apple_meta_tags(&mut self, metadata: &MetadataMap) {
         self.apple = self.generate_group(metadata, Group::Apple);
     }
 
     /// Generates the primary group (author, description, keywords,
     /// viewport) from `metadata`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let mut groups = metadata_gen::MetaTagGroups::default();
+    /// groups.generate_primary_meta_tags(&[("author".into(), "X".into())].into());
+    /// assert_eq!(groups.primary, r#"<meta name="author" content="X">"#);
+    /// ```
     pub fn generate_primary_meta_tags(
         &mut self,
         metadata: &MetadataMap,
@@ -262,16 +299,40 @@ impl MetaTagGroups {
     }
 
     /// Generates the Open Graph group from `metadata`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let mut groups = metadata_gen::MetaTagGroups::default();
+    /// groups.generate_og_meta_tags(&[("og:title".into(), "X".into())].into());
+    /// assert_eq!(groups.og, r#"<meta property="og:title" content="X">"#);
+    /// ```
     pub fn generate_og_meta_tags(&mut self, metadata: &MetadataMap) {
         self.og = self.generate_group(metadata, Group::Og);
     }
 
     /// Generates the Microsoft-specific group from `metadata`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let mut groups = metadata_gen::MetaTagGroups::default();
+    /// groups.generate_ms_meta_tags(&[("msapplication-TileColor".into(), "X".into())].into());
+    /// assert_eq!(groups.ms, r#"<meta name="msapplication-TileColor" content="X">"#);
+    /// ```
     pub fn generate_ms_meta_tags(&mut self, metadata: &MetadataMap) {
         self.ms = self.generate_group(metadata, Group::Ms);
     }
 
     /// Generates the Twitter group from `metadata`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let mut groups = metadata_gen::MetaTagGroups::default();
+    /// groups.generate_twitter_meta_tags(&[("twitter:card".into(), "X".into())].into());
+    /// assert_eq!(groups.twitter, r#"<meta name="twitter:card" content="X">"#);
+    /// ```
     pub fn generate_twitter_meta_tags(
         &mut self,
         metadata: &MetadataMap,

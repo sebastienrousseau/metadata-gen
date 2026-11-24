@@ -2,7 +2,8 @@
 #
 # Tag-driven release. Pushing a signed, annotated `vX.Y.Z` tag that passed
 # scripts/release-preflight.sh locally produces the GitHub release:
-# the packaged crate, a CycloneDX SBOM, build provenance for both, and
+# the packaged crate, CycloneDX SBOMs (JSON and XML), the WASI 0.2
+# component, build provenance for every asset, and
 # release notes in the repository-standard shape (hand-written Highlights
 # from docs/releases/vX.Y.Z.md, generated What's Changed, checksums,
 # Full Changelog).
@@ -71,10 +72,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: stable
+          targets: wasm32-wasip2
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
       - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
         with:
-          tool: cargo-cyclonedx
+          tool: cargo-cyclonedx@0.5.9
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs wasmtime and wasm-tools
+        with:
+          tool: wasmtime@50.0.2,wasm-tools@1.261.0
       - name: Package the crate and generate the SBOM
         run: |
           set -euo pipefail
@@ -82,8 +87,21 @@ jobs:
           mkdir -p dist
           cargo package --locked
           cp "target/package/metadata-gen-${version}.crate" dist/
-          cargo cyclonedx --format json --all-features --override-filename "metadata-gen-${version}.cdx"
-          mv "metadata-gen-${version}.cdx.json" dist/
+          # The default feature set: what `cargo add metadata-gen` gives.
+          # CycloneDX JSON and XML, so a consumer can ingest either.
+          for fmt in json xml; do
+            cargo cyclonedx --spec-version 1.5 --format "${fmt}" --override-filename "metadata-gen-${version}.cdx"
+            mv "metadata-gen-${version}.cdx.${fmt}" dist/
+          done
+      - name: Build and check the WASI 0.2 component
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          # Same gate as the quality workflow: validate, size budget,
+          # and component output equal to native output (ADR-0009).
+          python3 -I wasi/check.py
+          cp wasi/target/wasm32-wasip2/release/metadata_gen_component.wasm \
+            "dist/metadata-gen-${version}.wasm"
           (cd dist && sha256sum -- * > ../SHA256SUMS)
           cat SHA256SUMS
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2

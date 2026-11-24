@@ -1,0 +1,43 @@
+// SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+/// The metadata-gen WASI 0.2 component interface.
+///
+/// The package version follows the crate version: a change here is a
+/// change to the component's public API (ADR-0009).
+package metadata-gen:lib@0.0.10;
+
+/// Front-matter extraction and HTML helpers, the same functions the
+/// Rust crate exposes, with the same output.
+interface metadata {
+    /// One flattened front-matter key and its value. Nested tables use
+    /// dotted keys (`author.name`), as in the Rust `Metadata` map.
+    record entry {
+        key: string,
+        value: string,
+    }
+
+    /// One `<meta>` element found in an HTML document.
+    record meta-tag {
+        name: string,
+        content: string,
+    }
+
+    /// Extracts YAML, TOML or JSON front matter from `content`.
+    ///
+    /// Entries are sorted by key, so the result is deterministic. The
+    /// error is the Rust `MetadataError`'s display text.
+    extract: func(content: string) -> result<list<entry>, string>;
+
+    /// Extracts every `<meta>` tag from `html`, in document order.
+    extract-meta-tags: func(html: string) -> list<meta-tag>;
+
+    /// Escapes `&`, `<`, `>`, `"` and `'` for HTML text and attributes.
+    escape-html: func(text: string) -> string;
+}
+
+/// A component that exports the metadata interface and imports nothing
+/// beyond what the Rust standard library needs on `wasm32-wasip2`.
+world metadata-gen {
+    export metadata;
+}

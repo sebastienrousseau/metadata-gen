@@ -20,6 +20,10 @@
   <a href="docs/POLICIES.md"><img src="https://img.shields.io/badge/MSRV-1.89.0-93450a.svg?style=for-the-badge&logo=rust" alt="MSRV 1.89.0" /></a>
 </p>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sebastienrousseau/metadata-gen/840ff82875aa853f6e0cc9e852350c3f921c8891/.github/demo.gif" alt="A Markdown file's YAML front matter, then the flat metadata map metadata-gen extracts from it" width="100%" />
+</p>
+
 ---
 
 ## Contents
@@ -60,7 +64,7 @@
 
 ```toml
 [dependencies]
-metadata-gen = "0.0.9"
+metadata-gen = "0.0.10"
 ```
 
 Or from the command line:
@@ -91,10 +95,12 @@ Every format and integration is a feature, and all of them are on by default, so
 | `json` | yes | JSON-object front matter (`serde_json`) |
 | `html` | yes | `extract_meta_tags` (`oxml`); implies `std` |
 | `tokio` | yes | `metadata_gen::tokio` and `async_extract_metadata_from_file`; implies `std` |
+| `futures-io` | no | `metadata_gen::futures_io`: read from any `futures_io::AsyncRead` (smol, async-std, `futures`); implies `std` |
+| `embedded-io-async` | no | `metadata_gen::embedded_io`: read from an `embedded_io_async::Read` (Embassy) into a caller buffer; works without `std` |
 
 ```toml
 # YAML only, no standard library:
-metadata-gen = { version = "0.0.9", default-features = false, features = ["yaml"] }
+metadata-gen = { version = "0.0.10", default-features = false, features = ["yaml"] }
 ```
 
 A fence whose format is not compiled in is reported as `UnsupportedFormatError`, not as missing front matter.
@@ -103,7 +109,7 @@ A fence whose format is not compiled in is reported as `UnsupportedFormatError`,
 
 ## Requirements
 
-- **Rust 1.89.0 or newer.** `rust-version` in `Cargo.toml` is the floor and Cargo enforces it; CI builds on stable across Linux, macOS and Windows.
+- **Rust 1.89.0 or newer.** `rust-version` in `Cargo.toml` is the floor and Cargo enforces it; a CI job builds on exactly 1.89.0, and the test suite runs on stable across Linux, macOS and Windows. The floor is the one the first-party `noyalib` and `oxml` crates declare; `time` alone needs 1.88.0 ([`docs/POLICIES.md`](docs/POLICIES.md)).
 - **`alloc`, with `std` optional.** With `default-features = false` the crate is `no_std + alloc` and `MetadataMap` is a `BTreeMap`; `cargo build --no-default-features --features yaml --target thumbv7em-none-eabihf` builds.
 - **No async runtime is required.** Every synchronous entry point works without one. The `tokio` feature adds `metadata_gen::tokio` for callers who run Tokio; the dependency is trimmed to `fs` and `io-util`.
 
@@ -127,9 +133,18 @@ let (metadata, keywords, tags) =
 assert_eq!(metadata.get("title"), Some(&"Hello, world!".to_string()));
 assert_eq!(keywords, vec!["rust", "frontmatter", "seo"]);
 assert!(tags.primary.contains("description"));
+
+// The same call reads TOML (`+++`) and JSON (`{`) front matter.
+use metadata_gen::extract_metadata;
+
+let toml = extract_metadata("+++\ntitle = \"From TOML\"\n[author]\nname = \"Ada\"\n+++\nbody").unwrap();
+assert_eq!(toml.get("author.name").unwrap(), "Ada");
+
+let json = extract_metadata("{\"title\": \"From JSON\", \"draft\": false}\nbody").unwrap();
+assert_eq!(json.get("draft").unwrap(), "false");
 ```
 
-`extract_and_prepare_metadata` detects the format, flattens the metadata into a map, extracts keywords, and generates formatted meta tags in one call.
+`extract_and_prepare_metadata` detects the format, flattens the metadata into a map, extracts keywords, and generates formatted meta tags in one call. `extract_metadata` returns only the map; `extract_typed::<T>` deserialises the block into your own struct.
 
 ---
 
@@ -159,6 +174,8 @@ The family releases along the `0.0.x` line, with each repository owning a focuse
 | Meta tag generation | Open Graph, Twitter, Apple, Microsoft, and primary tags | Stable |
 | Meta tag extraction | Single streaming pass over HTML documents with `oxml` | Stable |
 | Utilities | Single-pass HTML entity escaping and async file loading | Stable |
+| WASI 0.2 component | `extract`, `extract-meta-tags`, `escape-html` over a WIT interface (`wasi/`) | New in 0.0.10 |
+| Agent tools | MCP server example over stdio (`examples/mcp_server.rs`) | Example |
 
 ---
 
@@ -171,25 +188,30 @@ This summary identifies API shape, not a universal winner. Workload-specific tra
 | **`metadata-gen`** | Yes | Yes | Yes | Yes | Yes | Yes |
 | `gray_matter` | Yes | Yes | Yes | Yes | Yes | No |
 | `yaml-front-matter` | Yes | No | No | Yes | Yes | No |
-| `matter` | Yes | No | No | No | Yes | No |
+| `matter` | Split only | Split only | No | No | Yes | No |
 
-The matrix reflects each crate's documented surface at the time of this release.
+The matrix reflects each crate's published source at the time of this release ("split only": the block is separated from the body but not parsed). See [`docs/COMPARISON.md`](docs/COMPARISON.md) for the evidence and the complete matrix.
 
 ---
 
 ## Benchmarks
 
-Measured with Criterion on an Apple A18 Pro, rustc 1.98.0, single thread. Middle estimate of the confidence interval; run `cargo bench` to reproduce on your own hardware.
+Measured with Criterion on a GitHub-hosted `ubuntu-latest` runner (Ubuntu 26.04, x86_64), rustc 1.100.0, single thread, on 2026-11-23 ([Bench run 45157730562](https://github.com/sebastienrousseau/metadata-gen/actions/runs/45157730562), its `criterion` artifact). Mean of the samples from each benchmark's `estimates.json`. Shared CI runners are noisy, so read these as orders of magnitude; run `cargo bench` to measure on your own hardware.
 
 | Scenario | Result | Environment |
 | :--- | ---: | :--- |
-| `extract_metadata` (YAML, 1 KB) | 631 µs (1.5 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_metadata` (YAML, 10 KB) | 1.81 ms (5.4 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_metadata` (YAML, 1 MB) | 181 ms (5.5 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_meta_tags` (1 KB) | 50 µs (18.7 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_meta_tags` (1 MB) | 34.9 ms (28.7 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `escape_html` (10 KB) | 31.9 µs (295 MiB/s) | Apple A18 Pro, rustc 1.98.0 |
-| `extract_and_prepare_metadata` (~250 B) | 23 µs | Apple A18 Pro, rustc 1.98.0 |
+| `extract_metadata` (1 KiB YAML block) | 19.4 µs (49.5 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `extract_metadata` (32 KiB YAML block) | 588 µs (53.1 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `extract_metadata` (1 KiB header, 10 MiB document) | 20.2 µs | ubuntu-latest, rustc 1.100.0 |
+| `extract_meta_tags` (1 KiB) | 21.4 µs (43.3 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `extract_meta_tags` (1 MiB) | 23.9 ms (41.9 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `escape_html` (10 KiB) | 17.0 µs (554 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `escape_html` (10 MiB) | 18.6 ms (519 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `unescape_html` (10 KiB) | 22.8 µs (873 MiB/s) | ubuntu-latest, rustc 1.100.0 |
+| `extract_and_prepare_metadata` (292 B) | 4.95 µs | ubuntu-latest, rustc 1.100.0 |
+| Sustained `extract_metadata` (1 KiB post) | 38,400 per second | ubuntu-latest, rustc 1.100.0 |
+
+The 10 MiB `extract_metadata` row costs the same as the 1 KiB one: extraction reads the front matter, not the body.
 
 Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](benches/).
 
@@ -201,13 +223,17 @@ Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](
 - **Dual extraction APIs**:
   - `extract_metadata`: returns flat `Metadata` (`HashMap<String, String>`) with dot-separated keys (`author.name`), ideal for templates.
   - `extract_typed::<T>`: hands the raw block to serde, returning your strongly typed struct; `extract_typed_borrowed` lets `&str` fields point into the document.
+- **Zero-copy and streaming**: `extract_metadata_cow` returns the same dotted keys with values borrowed from the document where no unescaping was needed; `for_each_event` walks the block as `Event`s (keys, scalars, container boundaries) without building a map, and stops parsing when the callback returns `ControlFlow::Break`. `events_into` fills a buffer you own.
+- **Builder**: `Metadata::builder()` is a typestate builder; `build()` does not compile until `title` and `date` are set.
+- **Schema.org JSON-LD**: `schema_org::json_ld` maps front matter onto `Article`, `Product` or `Organization`, and `schema_org::breadcrumb_list` builds a `BreadcrumbList`; no JSON dependency, works without `std`.
 - **Document body access**: `extract_metadata_with_body` returns `(Metadata, &str)` with the body following the closing delimiter. `detect_front_matter` exposes format, raw block, and byte offset without parsing.
 - **Bounded parsing**: every parse runs under `ParseLimits` (block size, nesting depth); the YAML parser gets its strict budget preset on the flat and typed paths alike. `extract_metadata_with_limits` takes your own limits.
 - **Errors that locate the fault**: `MetadataError::Parse` carries the format, the byte span inside the block and the parser's error; an unclosed fence reports its byte offset.
 - **Processing and normalization**: `process_metadata` and `process_metadata_with` normalize dates to `YYYY-MM-DD` (`DD/MM/YYYY` by default, `MM/DD/YYYY` with `DateOrder::MonthFirst`), verify required fields, and derive URL slugs from titles.
 - **Meta tag synthesis**: `generate_metatags` creates grouped tags (`primary`, `og`, `twitter`, `apple`, `ms`); Open Graph tags use `property=`, and attribute values pass through `escape_attribute`. `MetaTag` and `MetaTagGroups::iter` give the same tags as values.
 - **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `oxml` without full DOM allocation; `extract_meta_tags_lenient` also reports where a malformed page stopped the scan.
-- **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, readers and files in `metadata_gen::io`, and Tokio-backed helpers in `metadata_gen::tokio`.
+- **WASI 0.2 component**: `wasi/` builds the crate for `wasm32-wasip2` with the WIT interface in `wit/metadata-gen.wit`; CI checks it returns what the native crate returns. [`docs/deploy/`](docs/deploy/README.md) runs it on Cloudflare Workers.
+- **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, readers and files in `metadata_gen::io`, Tokio-backed helpers in `metadata_gen::tokio`, and runtime-agnostic async readers in `metadata_gen::futures_io` (smol, async-std) and `metadata_gen::embedded_io` (Embassy).
 
 ---
 
@@ -236,6 +262,9 @@ assert!(!processed.contains_key("slug"));
 | `required_fields` | `["title", "date"]` | Missing field returns `MissingFieldError` naming it |
 | `derive_slug` | `true` | Derives `slug` from `title` when absent |
 | `date_order` | `DateOrder::DayFirst` | How a slash-separated date such as `01/02/2024` is read |
+| `optional_fields` | `[]` | Known but not required; `unknown_fields` lists keys outside both lists |
+
+The same options read fluently as a processor: `MetadataProcessor::new().require("author").optional("description").process(&metadata)`.
 
 `ProcessOptions` is `#[non_exhaustive]`, so options can be added without breaking releases.
 
@@ -252,6 +281,12 @@ Run any example with `cargo run --example <name>`:
 | `metatags_example` | Generating `<meta>` groups and reading them back |
 | `utils_example` | HTML escape/unescape and the async file helper |
 | `error_example` | Every `MetadataError` variant and how to recover |
+| `required_fields_example` | `MetadataProcessor` with an extra required field and an unknown-field check |
+| `schema_org_example` | Schema.org `Article` and `BreadcrumbList` JSON-LD from front matter |
+| `streaming_example` | Walking a 100 000-URL manifest as events, and stopping early |
+| `mcp_server` | An MCP server over stdio exposing the crate as agent tools ([`docs/MCP.md`](docs/MCP.md)) |
+
+[`examples/deploy/cloudflare-workers/`](examples/deploy/cloudflare-workers/) is a Cloudflare Worker that runs the WASI component.
 
 `make examples` runs all examples; CI executes the same suite on every push.
 
@@ -291,6 +326,8 @@ make semver       # public API against the last release
 make hack         # every feature combination compiles
 make distcheck    # package and verify the archive
 make deny / vet / audit   # supply chain
+make sbom         # the release SBOM lists the whole default build
+make wasi         # WASI component: validate, size, native parity
 ```
 
 [`DEVELOPMENT.md`](DEVELOPMENT.md) maps each CI job to its local equivalent and explains reproduction steps. [`docs/MIGRATION.md`](docs/MIGRATION.md) lists what changes for consumers between releases.
@@ -304,14 +341,15 @@ make deny / vet / audit   # supply chain
 - `#![forbid(unsafe_code)]` proves the absence of unsafe code ([ADR-0001](docs/adr/0001-zero-unsafe-policy.md)).
 - No C dependencies, no FFI, no network I/O, no environment reads.
 - Meta-tag attribute values are escaped on generation, preventing markup injection.
-- Supply chain audited via `cargo-audit`, `cargo-deny`, and `cargo-vet` with a locked exemption baseline.
+- Supply chain checked by `cargo-audit`, `cargo-deny` and `cargo-vet` (imported audit sets, an exemption count that may only shrink); releases attach CycloneDX SBOMs with build-provenance attestations. [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md) explains each and how to verify a download.
 - Front matter is parsed under `ParseLimits` (block size and depth), with the YAML parser's strict resource budgets on every path, the typed one included.
-- The first-party dependency `noyalib` is pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)).
-- Property-based testing via Proptest for parser round-trips and HTML escape involution.
-- Concurrency testing scaffold via Loom (`tests/loom_smoke.rs`) for thread schedule exploration.
-- Formal verification via Kani (`tests/kani/`) proving HTML escape totality and ASCII round-trip.
-- Mutation testing via `cargo-mutants` configured with `.cargo/mutants.toml`.
-- Three fuzz targets replaying seed and regression corpora per push.
+- The first-party dependencies `noyalib` and `oxml` share this crate's maintainer and are pinned exactly ([ADR-0004](docs/adr/0004-first-party-exact-pins.md)); that shared authorship is disclosed in [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md) so you can weigh it.
+- Property-based testing via Proptest: YAML, TOML and JSON round trips at 10 000 cases each and the ASCII escape involution at 100 000 per CI run, with the seed printed for replay.
+- Concurrency testing scaffold via Loom (`tests/loom_smoke.rs`, `MAX_PREEMPTIONS` in `tests/loom/mod.rs`) for thread schedule exploration.
+- A Kani proof ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)) on every push that `escape_html` never panics on any one-char string, and enumeration ([`tests/test_escape_exhaustive.rs`](tests/test_escape_exhaustive.rs)) over every Unicode char and every ASCII string of up to three chars that escaping leaves no raw markup and `unescape_html` inverts it.
+- Miri on the unit tests per push, and on every test target with `-Zmiri-strict-provenance` nightly.
+- Mutation testing via `cargo-mutants` (`.cargo/mutants.toml`), gated at an 85 % kill rate on each pull request's changed lines and nightly on the whole crate.
+- Three fuzz targets replaying seed and regression corpora per push and fuzzed for ten minutes each nightly; `fuzz/oss-fuzz/` is ready for OSS-Fuzz.
 
 ---
 
@@ -324,6 +362,8 @@ The canonical entry points across the repository family:
 - **[Architecture](docs/ARCHITECTURE.md)**: module map, pipeline, design decisions
 - **[Engineering policies](docs/POLICIES.md)**: MSRV, SemVer, security, concurrency
 - **[Decision records](docs/adr/README.md)**: irreversible architectural decisions
+- **[FAQ](docs/FAQ.md)**: formats, async, `no_std`, MSRV, dates, required fields, escaping, typed structs, MCP, reporting vulnerabilities
+- **[Roadmap](https://github.com/sebastienrousseau/metadata-gen/milestones)**: planned releases as GitHub milestones
 
 | Document | Covers |
 | :--- | :--- |
@@ -333,6 +373,11 @@ The canonical entry points across the repository family:
 | [`GOVERNANCE.md`](GOVERNANCE.md) | Project stewardship, how changes land |
 | [`SUPPORT.md`](SUPPORT.md) | Support channels and expectations |
 | [`AGENTS.md`](AGENTS.md) | Invariants for AI-assisted contributions |
+| [`docs/SUPPLY-CHAIN.md`](docs/SUPPLY-CHAIN.md) | Dependencies, cargo-vet policy, SBOM and provenance verification |
+| [`docs/COMPARISON.md`](docs/COMPARISON.md) | Feature matrix against other front-matter crates, with sources |
+| [`docs/MCP.md`](docs/MCP.md) | The MCP server example: tools, errors, client registration |
+| [`docs/deploy/`](docs/deploy/README.md) | Running the WASI component on Cloudflare Workers, Spin, wasmCloud |
+| [`docs/whitepapers/`](docs/whitepapers/README.md) | Engineering write-ups on the flat map, the WASI component and property testing |
 
 ---
 

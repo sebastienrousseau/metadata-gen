@@ -87,13 +87,37 @@ elif own == version:
 else:
     bad("Cargo.lock", f"{own} — run cargo check to refresh")
 
-# noyalib and dtt are pinned exactly (`=0.0.X`): same-author 0.0.x lines where
-# every release may break. The pin and the lock entry must agree, or CI,
+# The WASI component (ADR-0009): its package, its lock entry for this
+# crate, and the WIT package version all move with the crate version.
+wasi_manifest = root / "wasi" / "Cargo.toml"
+if wasi_manifest.is_file():
+    m = re.search(r'^version\s*=\s*"([^"]+)"', wasi_manifest.read_text(encoding="utf-8"), re.M)
+    got = m.group(1) if m else None
+    (ok if got == version else bad)("wasi/Cargo.toml", got or "no version")
+    wasi_lock = root / "wasi" / "Cargo.lock"
+    lm = re.search(rf'^name = "{re.escape(name)}"\nversion = "([^"]+)"',
+                   wasi_lock.read_text(encoding="utf-8"), re.M) if wasi_lock.is_file() else None
+    got = lm.group(1) if lm else None
+    (ok if got == version else bad)("wasi/Cargo.lock", got or "no entry; run cargo check in wasi/")
+wit = root / "wit" / "metadata-gen.wit"
+if wit.is_file():
+    m = re.search(r'^package\s+metadata-gen:lib@([^;\s]+);', wit.read_text(encoding="utf-8"), re.M)
+    got = m.group(1) if m else None
+    (ok if got == version else bad)("wit/metadata-gen.wit", got or "no package version")
+
+# First-party crates (noyalib, oxml) are pinned exactly (`=0.0.X`):
+# same-author 0.0.x lines where every release may break (ADR-0004,
+# CONTRIBUTING "First-party dependency policy"). A requirement without
+# `=` fails here, and the pin and the lock entry must agree, or CI,
 # which builds --locked, fails on a stale lock.
 manifest = (root / "Cargo.toml").read_text(encoding="utf-8") if (root / "Cargo.toml").is_file() else ""
-for dep in ("noyalib", "oxml", "dtt"):
+for dep in ("noyalib", "oxml"):
+    declared = re.search(rf'^{dep}\s*=', manifest, re.M)
     pin = re.search(rf'^{dep}\s*=\s*(?:"=([^"]+)"|\{{\s*version\s*=\s*"=([^"]+)")', manifest, re.M)
+    if not declared:
+        continue
     if not pin:
+        bad(f"Cargo.toml {dep}", "first-party dependency is not pinned with `=`")
         continue
     pinned = pin.group(1) or pin.group(2)
     locked = locked_version(dep)

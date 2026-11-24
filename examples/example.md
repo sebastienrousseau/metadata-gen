@@ -29,7 +29,7 @@ logo:
   height: 75
   width: 450
 name: "Metadata-Gen"
-permalink: "https://metadata-gen.com/"
+permalink: "https://doc.metadata-gen.com/metadata_gen/"
 robots: "index, follow"
 tags:
   - "Rust"
@@ -37,7 +37,7 @@ tags:
   - "library"
 theme-color: "#336699"
 title: "Metadata-Gen Documentation"
-url: "https://metadata-gen.com"
+url: "https://doc.metadata-gen.com/metadata_gen/"
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no"
 
 ---

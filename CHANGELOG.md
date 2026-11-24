@@ -18,18 +18,198 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **noyalib `=0.0.64`**, which screens printable-ASCII scalars before
+  the byte-level printable checks noyalib 0.0.62 added. Those checks
+  made the YAML benchmarks about 10% slower on x86_64 after the bump
+  from 0.0.58 and failed the 5% bench gate.
 - `toml` 1.2.0 and `loom` 0.7.3, and the GitHub Actions updates for
   `Swatinem/rust-cache`, `taiki-e/install-action` 2.90.3,
   `pipelines` `security.yml` 0.0.4, `ossf/scorecard-action` 2.5.0 and
   `github/codeql-action/upload-sarif` 4.39.3, from Dependabot.
 - cargo-vet covers `loom` and `rustix` through their publishers
   (Alice Ryhl, Dan Gohman), which replaces the `rustix` exemption.
+- **crates.io metadata** (#33): the description is now one 106-character
+  sentence instead of 137 characters starting "A powerful", and the
+  `data-structures` category gives way to `no-std`.
+- **First-party pins are enforced** (#37):
+  `scripts/verify-release-versions.sh` fails when `noyalib` or `oxml`
+  is required without `=`, not only when the lock disagrees.
+- **cargo-vet imports** (#29): `imports.mozilla` now points at the
+  `mozilla/supply-chain` set the cargo-vet registry publishes (it
+  pointed at Firefox's in-tree audits, kept as `firefox`), and the
+  fermyon and ariel-os sets are imported. All 86 audits that AI agents
+  had recorded under the maintainer's name are removed (three were
+  already covered by published audits); the maintainer never reviewed
+  them. The crates they covered are now unvetted until each is
+  imported or reviewed by a person. The exemption baseline moves from
+  81 to the 3 exemptions that exist.
+
+### Added
+
+- **Streaming events** (#50): `for_each_event` walks the front matter as
+  `Event`s (`MapStart`, `Key`, `Scalar`, `SeqStart`, `SeqEnd`, `MapEnd`)
+  through the format's own serde deserialiser without building a map;
+  returning `ControlFlow::Break` stops the walk and nothing after it is
+  parsed. `for_each_event_with_limits` takes explicit `ParseLimits`,
+  `events_into` appends to a caller-owned buffer and `events`
+  collects. YAML and JSON are parsed incrementally; TOML is parsed
+  whole by the `toml` crate, then walked.
+- **Zero-copy flat map** (#46): `extract_metadata_cow` returns
+  `CowMetadata`, the dotted-key map with values borrowed from the
+  document where no unescaping was needed, and `into_owned()` for a
+  `'static` `Metadata`. 100 plain YAML scalars give 100 borrowed values
+  (`tests/test_events.rs`).
+- **`Metadata::builder()`** (#41): a typestate builder whose `build()`
+  only compiles once `title` and `date` are set, with the error
+  "missing required field: date". `Metadata::keywords()` and
+  `Metadata::keys()`.
+- **Configurable required fields** (#45): `ProcessOptions::new`,
+  `require`, `optional`, `unknown_fields` and `process`, the
+  `optional_fields` option, the `MetadataProcessor` alias and
+  `examples/required_fields_example.rs`.
+- **Schema.org JSON-LD** (#10): `schema_org::json_ld` for `Article`,
+  `Product` (with `Brand` and `Offer`) and `Organization`,
+  `schema_org::breadcrumb_list`, and `schema_org::json_ld_script`.
+  No JSON dependency; available without `std`.
+- **Runtime-agnostic async readers** (#59, #60): feature `futures-io`
+  adds `metadata_gen::futures_io::extract_from_reader` for any
+  `futures_io::AsyncRead` (smol, async-std); feature
+  `embedded-io-async` adds `metadata_gen::embedded_io::extract_from_reader`
+  for Embassy and other `no_std` executors, reading into a
+  caller-supplied buffer. Both off by default.
+- `examples/schema_org_example.rs` and `examples/streaming_example.rs`.
+- **WASI 0.2 component** (#62): `wasi/` builds the crate for
+  `wasm32-wasip2` with the WIT interface `wit/metadata-gen.wit`
+  (`extract`, `extract-meta-tags`, `escape-html`). `wasi/check.py`
+  validates it, holds it under 1 MiB (634,763 bytes today) and checks
+  every export returns byte for byte what the native crate returns;
+  the release attaches it as `metadata-gen-<version>.wasm`. ADR-0009.
+- **MCP server example** (#65): `examples/mcp_server.rs` exposes
+  `extract_metadata`, `extract_meta_tags` and `escape_html` as Model
+  Context Protocol tools over stdio, with structured tool errors;
+  `tests/test_mcp.rs` drives it in process and `docs/MCP.md` shows
+  how to register it.
+- **Deploy guides** (#63): `docs/deploy/` for Cloudflare Workers
+  (sample in `examples/deploy/cloudflare-workers/`, checked locally
+  with `wrangler dev`, not deployed), Spin and wasmCloud (not run;
+  marked so).
+
+### Performance
+
+- **`escape_html` is benchmarked against `v_htmlescape`** (#47):
+  `perf/escape-compare` reports both on every pull request, and the
+  output is checked against the five-`replace` chain by a property
+  test and `tests/escape_corpus/`. Copying unescaped runs as slices
+  was tried and reverted: on the CI runner it was 10-16% slower than
+  the per-char loop on markup-dense input, which the bench gate
+  rejects.
+
+### Fixed
+
+- **A YAML block exactly `ParseLimits::max_block_bytes` long is
+  accepted.** The limit is inclusive, but the text handed to noyalib
+  gained a trailing newline, so a block at the limit failed with
+  "document exceeds maximum length". Found by mutation testing.
+- **The 1 MiB `extract_metadata` benchmark timed an error.** Its block
+  held over 1 024 keys, past the default YAML budget, so it measured
+  the budget failure, and the README's 1 MB figure came from it. The
+  size matrix now times a 1 KiB header followed by a body of the stated
+  size, a separate group grows the block to 32 KiB inside the budget,
+  and every bench unwraps its result. The 1 MB row is gone from the
+  README.
+- **`extract_typed_borrowed` leaked an internal noyalib signal.** YAML
+  with a tag (`t: !x 5`) failed with the text
+  `$__noyalib_streaming_fallback`; it now says the block cannot be
+  borrowed and names `extract_typed`, and malformed YAML still reports
+  the parser's error.
+- `extract_metadata_with_body` scans the document once instead of twice.
+- Locating JSON front matter skips over the object with serde's
+  `IgnoredAny` instead of building a `serde_json::Map` that was thrown
+  away; the block found is unchanged.
+
+### Tests
+
+- `tests/test_json_nested.rs` (#26): nested objects, arrays of objects,
+  a body holding `{` and `}`, an unmatched brace, and a property test
+  over random nested objects. The same nested document read with
+  0.0.4's regex detector gave "No valid front matter found."
+- `tests/test_body.rs` (#39): the body is the exact suffix of the input
+  for YAML, TOML and JSON.
+- The property suite (#51) checks round trips with quotes, backslashes
+  and any printable Unicode, compares the whole extracted map, and
+  scales with `PROPTEST_CASES`: CI runs 10 000 cases per round trip and
+  100 000 for the ASCII escape involution and prints the seed.
+- A Kani proof (#55) runs in CI: `escape_html` never panics on any
+  one-char string. A round-trip harness made CBMC run out of memory
+  even for one ASCII char, so `tests/test_escape_exhaustive.rs` proves
+  the round trip and the absence of raw markup by enumeration instead,
+  over every Unicode char and every ASCII string of up to three chars.
+- `tests/test_edge_cases.rs`: boundaries mutation testing showed were
+  untested (#54).
+- Every test target runs under Miri (#53); filesystem tests are
+  ignored there with the reason.
+
+### CI
+
+- `bench.yml` (#49, #36): a 5 % benchmark regression gate on every
+  pull request against the base commit, with Criterion reports as an
+  artifact; a CodSpeed job that activates once a `CODSPEED_TOKEN`
+  secret exists; and the `escape_html` comparison. Benches cover 1 KiB,
+  10 KiB, 1 MiB and 10 MiB, and `benches/stress_tps.rs` reports
+  `extract_metadata` transactions per second on a 1 KiB post.
+- The bench gate compares like with like: the baseline run builds the
+  pull request's `benches/` against the base commit's library
+  (`scripts/bench_overlay.py`), so a rewritten benchmark is no longer
+  reported as a library regression, and a bench target the base cannot
+  build is listed as new, with no baseline. The README benchmark table
+  is re-measured on the CI runner, with the run linked.
+- `assurance.yml`: the Kani proof and an OSS-Fuzz build check
+  (`fuzz/oss-fuzz/`) on every push; mutation testing of a pull
+  request's changed lines; and nightly Miri over every test target
+  with strict provenance, ten minutes of fuzzing per target with the
+  corpus carried between runs, and mutation testing of the whole crate
+  against an 85 % kill-rate floor (#52, #53, #54).
+- An embedded matrix (#61): `thumbv7em-none-eabihf` and
+  `riscv32imac-unknown-none-elf` with every format, and
+  `riscv32imc-unknown-none-elf` with JSON, since `noyalib` and `toml`
+  use `Arc` and that target has no atomics. Each row reports the
+  crate's object size.
+- `codecov.yml` holds project and patch coverage to 98 %, the number
+  the coverage job enforces (#56).
+- `make mutants` runs the mutants instead of only building them.
+- **SBOM check** (#28): a `CycloneDX SBOM` job fails unless the SBOM
+  lists every crate of the default build with its purl. Releases now
+  attach CycloneDX 1.5 JSON and XML for the default feature set (was
+  1.3 JSON of `--all-features`), with build provenance.
+- A `WASI 0.2 component` job runs `wasi/check.py`.
+- `make examples` runs each example with stdin from `/dev/null`.
 
 ### Documentation
 
+- `extract_typed` documents `MetadataError::Parse` instead of the
+  `YamlError`, `TomlError` and `JsonError` variants it stopped
+  returning in 0.0.8, and its examples cover all three formats,
+  `#[serde(default)]` and `#[serde(rename)]`.
 - `docs/MIGRATION.md` shows the 0.0.8 `#[non_exhaustive]` migration in
   code: a wildcard arm for `MetadataError`, and `MetaTag::new` and
   `MetaTagGroups::default()` in place of struct literals.
+- **Every public function has a runnable example** (#34); 61 were
+  added. The outer docs on four `pub mod` lines are gone, which made
+  intra-doc links fail one of the stable or nightly doc builds.
+- **README** (#32): the demo GIF rendered from `.github/demo.tape`
+  (`make demo`), TOML and JSON in the Quick Start, the new features,
+  a corrected comparison backed by `docs/COMPARISON.md`, the
+  first-party disclosure, and links to `docs/FAQ.md` (13 questions)
+  and the milestones.
+- **ADRs** (#66): 0006 (`oxml` for `<meta>` extraction, superseding
+  0003, which still described quick-xml), 0007 (detection order), 0008
+  (noyalib), 0009 (WASI component), 0010 (PQC encoding, rejected), 0011
+  (borrowed values); the index has dates.
+- `docs/SUPPLY-CHAIN.md` (#29, #37): dependencies, the shared
+  maintainer of noyalib and oxml, the cargo-vet policy, and how to
+  verify release assets with `gh attestation verify`.
+- `docs/whitepapers/` (#67): three engineering write-ups from
+  repository evidence. Not published elsewhere.
 
 ## [0.0.9] - 2026-11-01
 

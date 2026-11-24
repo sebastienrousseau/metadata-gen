@@ -20,13 +20,23 @@ Nothing is silently rewritten.
 
 ## Index
 
-| # | Title | Status |
-|---|---|---|
-| [0001](./0001-zero-unsafe-policy.md) | `#![forbid(unsafe_code)]`, pure Rust, no FFI | accepted |
-| [0002](./0002-flat-string-metadata.md) | Front matter flattens to `HashMap<String, String>` with dotted keys | accepted |
-| [0003](./0003-streaming-meta-extraction.md) | `<meta>` extraction is a streaming `quick-xml` pass, not a DOM | accepted |
-| [0004](./0004-first-party-exact-pins.md) | First-party crates are pinned exactly (`=0.0.X`) | accepted |
-| [0005](./0005-feature-flags-and-no-std.md) | Formats and integrations are Cargo features; the core is `no_std + alloc` | accepted |
+| # | Title | Status | Date |
+|---|---|---|---|
+| [0001](./0001-zero-unsafe-policy.md) | `#![forbid(unsafe_code)]`, pure Rust, no FFI | accepted | 2024-10-03 |
+| [0002](./0002-flat-string-metadata.md) | Front matter flattens to `HashMap<String, String>` with dotted keys | accepted | 2024-10-03 |
+| [0003](./0003-streaming-meta-extraction.md) | `<meta>` extraction is a streaming `quick-xml` pass, not a DOM | superseded by 0006 | 2026-06-28 |
+| [0004](./0004-first-party-exact-pins.md) | First-party crates are pinned exactly (`=0.0.X`) | accepted | 2026-06-28 |
+| [0005](./0005-feature-flags-and-no-std.md) | Formats and integrations are Cargo features; the core is `no_std + alloc` | accepted | 2026-10-09 |
+| [0006](./0006-meta-extraction-on-oxml.md) | `<meta>` extraction scans with `memchr` and parses tags with `oxml` | accepted | 2026-11-01 |
+| [0007](./0007-front-matter-detection-order.md) | Front matter is detected by its opening delimiter: YAML, then TOML, then JSON | accepted | 2026-11-23 |
+| [0008](./0008-noyalib-for-yaml.md) | YAML front matter is parsed by `noyalib` | accepted | 2026-04-18 |
+| [0009](./0009-wasi-component-shape.md) | The WASI build is a separate component package with a three-function WIT interface | accepted | 2026-11-23 |
+| [0010](./0010-pqc-canonical-encoding.md) | Metadata is signed with ML-DSA-65 over a length-prefixed, key-sorted encoding | rejected | 2026-11-23 |
+| [0011](./0011-borrowed-values-beside-owned-map.md) | Borrowed (`Cow`) values are a separate API beside the owned flat map | accepted | 2026-11-23 |
+
+Numbers are sequential and four digits wide. A superseded ADR keeps
+its text; only its status line changes, in the same change that adds
+its replacement.
 
 ## When to add an ADR
 

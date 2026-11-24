@@ -173,3 +173,61 @@ fn process_metadata_reports_a_missing_required_field() {
         matches!(err, MetadataError::MissingFieldError(ref f) if f == "date")
     );
 }
+
+fn post(pairs: &[(&str, &str)]) -> Metadata {
+    Metadata::new(
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+            .collect(),
+    )
+}
+
+#[test]
+fn processor_requires_and_records_fields() {
+    let processor = MetadataProcessor::new()
+        .require("author")
+        .require("author")
+        .optional("description")
+        .optional("description");
+    assert_eq!(processor.required_fields, ["title", "date", "author"]);
+    assert_eq!(processor.optional_fields, ["description"]);
+
+    let complete = post(&[
+        ("title", "Hello"),
+        ("date", "2026-01-02"),
+        ("author", "Ada"),
+        ("zeta", "1"),
+        ("alpha", "2"),
+    ]);
+    let out = processor.process(&complete).unwrap();
+    assert_eq!(out.get("slug").map(String::as_str), Some("hello"));
+    assert_eq!(processor.unknown_fields(&complete), ["alpha", "zeta"]);
+    assert_eq!(out.keys().count(), 6);
+
+    let err = processor
+        .process(&post(&[("title", "T"), ("date", "2026-01-02")]))
+        .unwrap_err();
+    assert!(
+        matches!(err, MetadataError::MissingFieldError(f) if f == "author")
+    );
+    assert_eq!(ProcessOptions::new(), ProcessOptions::default());
+}
+
+#[test]
+fn borrowed_yaml_syntax_error_keeps_the_parser_message() {
+    let err = extract_typed_borrowed::<
+        std::collections::BTreeMap<&str, &str>,
+    >("---\na: b: c\n---\n")
+    .unwrap_err();
+    assert!(
+        matches!(
+            err,
+            MetadataError::Parse {
+                format: FrontMatterFormat::Yaml,
+                ..
+            }
+        ),
+        "{err:?}"
+    );
+}

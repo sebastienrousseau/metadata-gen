@@ -17,8 +17,14 @@ extern crate alloc;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
+#[cfg(feature = "embedded-io-async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "embedded-io-async")))]
+pub mod embedded_io;
 /// The `error` module contains error types for metadata processing.
 pub mod error;
+#[cfg(feature = "futures-io")]
+#[cfg_attr(docsrs, doc(cfg(feature = "futures-io")))]
+pub mod futures_io;
 /// Synchronous readers and files (`std`).
 #[cfg(feature = "std")]
 #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
@@ -27,6 +33,7 @@ pub mod io;
 pub mod metadata;
 /// The `metatags` module contains functions for generating meta tags.
 pub mod metatags;
+pub mod schema_org;
 /// Async file helpers on the Tokio runtime (feature `tokio`).
 #[cfg(all(feature = "tokio", not(loom)))]
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio")))]
@@ -35,13 +42,17 @@ pub mod tokio;
 pub mod utils;
 
 pub use error::MetadataError;
+#[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
+pub use metadata::events::{for_each_event, Event};
 pub use metadata::{
     detect_front_matter, extract_metadata, extract_metadata_with_body,
     extract_metadata_with_limits, extract_typed,
     extract_typed_borrowed, process_metadata, process_metadata_with,
-    DateOrder, FrontMatterFormat, Metadata, ParseLimits,
-    ProcessOptions,
+    DateOrder, FrontMatterFormat, Metadata, MetadataProcessor,
+    ParseLimits, ProcessOptions,
 };
+#[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
+pub use metadata::{extract_metadata_cow, CowMetadata};
 pub use metatags::{generate_metatags, MetaTag, MetaTagGroups};
 #[cfg(all(feature = "tokio", not(loom)))]
 pub use utils::async_extract_metadata_from_file;
@@ -145,6 +156,21 @@ pub fn extract_and_prepare_metadata(content: &str) -> MetadataResult {
     let all_meta_tags = generate_metatags(&metadata_map);
 
     Ok((metadata_map, keywords, all_meta_tags))
+}
+
+/// [`extract_and_prepare_metadata`], except that empty (or
+/// whitespace-only) input is empty metadata: the tail every reader helper
+/// shares.
+#[cfg(any(feature = "std", feature = "embedded-io-async"))]
+pub(crate) fn extract_from_text(content: &str) -> MetadataResult {
+    if content.trim().is_empty() {
+        return Ok((
+            MetadataMap::new(),
+            Vec::new(),
+            MetaTagGroups::default(),
+        ));
+    }
+    extract_and_prepare_metadata(content)
 }
 
 /// Extracts keywords from the metadata.

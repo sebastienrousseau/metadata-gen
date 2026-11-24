@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# `escape_html` against `v_htmlescape`, the SIMD reference (#47).
+#
+# A workspace of its own, like fuzz/, so the comparison crate never
+# enters metadata-gen's Cargo.lock or the dependency graph that
+# cargo-vet and cargo-deny certify. Run with:
+#
+#   cd perf/escape-compare && cargo bench
+
+[package]
+name = "metadata-gen-escape-compare"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+members = ["."]
+
+[dependencies]
+metadata-gen = { path = "../..", default-features = false, features = ["std"] }
+v_htmlescape = "1.0.0"
+
+[dev-dependencies]
+criterion = "0.8"
+
+[[bench]]
+name = "escape_compare"
+harness = false
+
+[profile.bench]
+debug = "line-tables-only"
+lto = true
+codegen-units = 1
+opt-level = 3

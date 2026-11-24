@@ -33,6 +33,15 @@ path = [
     "supply-chain/**",
     "fuzz/Cargo.toml",
     "fuzz/Cargo.lock",
+    "wasi/.gitignore",
+    "wasi/README.md",
+    ".github/demo.gif",
+    ".github/demo/post.md",
+    "examples/deploy/cloudflare-workers/.gitignore",
+    "examples/deploy/cloudflare-workers/package.json",
+    "examples/deploy/cloudflare-workers/wrangler.jsonc",
+    "wasi/Cargo.lock",
+    "wasi/cases/**",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
@@ -74,6 +83,7 @@ path = [
     "examples/**",
     "benches/**",
     "fuzz/**",
+    "perf/**",
     "scripts/**",
 ]
 precedence = "aggregate"
@@ -86,3 +96,4 @@ path = ["KEYS.asc", "LICENSES/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2024 - 2026 metadata-gen contributors"
 SPDX-License-Identifier = "Apache-2.0 OR MIT"
+

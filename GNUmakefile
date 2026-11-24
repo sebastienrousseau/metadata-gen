@@ -17,6 +17,12 @@
 #   make fuzz      — build every fuzz target and replay the corpus (nightly)
 #   make examples  — run every example to completion
 #   make bench-smoke — compile and run each bench once, no measurement
+#   make bench-gate — benches against a saved baseline, 5% regression gate
+#   make bench-compare — escape_html against v_htmlescape (separate workspace)
+#   make proptest  — property tests at CI scale (10 000 cases, seed printed)
+#   make kani      — the escape_html totality proof (needs cargo-kani)
+#   make mutants   — mutation testing with the 85% kill-rate gate
+#   make embedded  — no_std builds and object sizes on the embedded targets
 #   make versions  — every version-bearing file agrees with Cargo.toml
 #   make sbom      — CycloneDX software bill of materials (cargo-cyclonedx)
 #   make complexity — per-function complexity gate against the baseline
@@ -31,7 +37,7 @@
 #   make tools     — install the cargo tools the gates above need
 #   make clean     — remove build artifacts
 
-.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke versions sbom complexity links msrv semver hack no-std dist distcheck preflight tools clean
+.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke bench-gate bench-compare embedded versions sbom wasi demo complexity links msrv semver hack no-std dist distcheck preflight tools clean
 
 all: check clippy test
 
@@ -75,18 +81,27 @@ coverage:
 miri:
 	cargo +nightly miri test --lib
 
+# CI scale, optimised; rerun a failure with the printed seed:
+# `make proptest PROPTEST_RNG_SEED=<seed>`.
+ifndef PROPTEST_RNG_SEED
+PROPTEST_RNG_SEED := $(shell od -An -N8 -tu8 /dev/urandom | tr -d ' ')
+endif
 proptest:
-	cargo test --test test_proptest
+	@echo "PROPTEST_RNG_SEED=$(PROPTEST_RNG_SEED)"
+	PROPTEST_RNG_SEED=$(PROPTEST_RNG_SEED) PROPTEST_CASES=10000 \
+	  CARGO_PROFILE_TEST_OPT_LEVEL=3 cargo test --test test_proptest
 
 loom:
 	RUSTFLAGS="--cfg loom" cargo test --test loom_smoke --release
 
 kani:
 	cargo kani --tests --harness check_escape_html_totality
-	cargo kani --tests --harness check_html_escape_ascii_roundtrip
 
+# A full run takes a while; `cargo mutants --in-diff <file>` narrows it
+# to a diff, as the PR job does.
 mutants:
-	cargo mutants --no-shuffle --check
+	cargo mutants --no-shuffle || { rc=$$?; [ $$rc -eq 2 ] || [ $$rc -eq 3 ]; }
+	python3 -I scripts/mutants_gate.py --min 0.85
 
 # Build every target, then replay the seed corpus and the regression
 # inputs without generating new ones. Mirrors the per-push CI gate.
@@ -99,11 +114,33 @@ fuzz:
 examples:
 	@for f in examples/*.rs; do \
 	  name=$$(basename "$$f" .rs); \
-	  echo "== $$name"; cargo run --quiet --all-features --example "$$name" || exit 1; \
+	  echo "== $$name"; cargo run --quiet --all-features --example "$$name" < /dev/null || exit 1; \
 	done
 
 bench-smoke:
 	cargo bench --all-features -- --test
+
+# Save a baseline on the commit you start from (`make bench-gate
+# BENCH_SAVE=1`), change the code, then run `make bench-gate`.
+bench-gate:
+ifdef BENCH_SAVE
+	cargo bench --all-features --bench '*' -- --save-baseline base
+else
+	cargo bench --all-features --bench '*' -- --baseline-lenient base
+	python3 -I scripts/bench_compare.py --threshold 0.05
+endif
+
+bench-compare:
+	cd perf/escape-compare && cargo bench
+
+# `rustup target add thumbv7em-none-eabihf riscv32imac-unknown-none-elf
+# riscv32imc-unknown-none-elf` and `rustup component add llvm-tools`
+# once. Mirrors the `embedded` CI matrix.
+embedded:
+	./scripts/embedded_size.sh thumbv7em-none-eabihf yaml,toml,json
+	./scripts/embedded_size.sh thumbv7em-none-eabihf yaml
+	./scripts/embedded_size.sh riscv32imac-unknown-none-elf yaml,toml,json
+	./scripts/embedded_size.sh riscv32imc-unknown-none-elf json
 
 versions:
 	./scripts/verify-release-versions.sh
@@ -111,7 +148,17 @@ versions:
 # CycloneDX 1.5 JSON, the format the release workflow attaches and
 # attests. Written next to Cargo.toml as metadata-gen.cdx.json.
 sbom:
-	cargo cyclonedx --format json --all-features
+	python3 -I scripts/check-sbom.py
+
+wasi:
+	python3 -I wasi/check.py
+
+# Re-renders .github/demo.gif from .github/demo.tape (needs vhs). The
+# README links the GIF by commit SHA, so it resolves before the commit
+# reaches main; point it at the new commit after re-rendering.
+demo:
+	cargo build --quiet --all-features --example mcp_server
+	vhs .github/demo.tape
 
 # Ceilings: cyclomatic <= 10, cognitive <= 15, Halstead difficulty <= 30,
 # <= 60 lines per function, <= 500 per file. The baseline may only shrink.

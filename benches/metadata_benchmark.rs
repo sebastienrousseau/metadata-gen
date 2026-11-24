@@ -93,9 +93,9 @@ fn benchmark_unescape_html(c: &mut Criterion) {
     });
 }
 
-/// A YAML front-matter document of roughly `bytes` bytes: a fixed header
+/// A YAML front-matter block of roughly `bytes` bytes: a fixed header
 /// plus as many `key_N: value N` lines as fit, then a short body.
-fn yaml_document(bytes: usize) -> String {
+fn yaml_block_document(bytes: usize) -> String {
     let mut doc = String::with_capacity(bytes + 64);
     doc.push_str("---\ntitle: Throughput\ndate: 2024-01-02\n");
     let mut i = 0;
@@ -124,48 +124,110 @@ fn html_document(bytes: usize) -> String {
     doc
 }
 
-/// Throughput at 1 KB, 10 KB and 1 MB (#49). The point is the slope: a
-/// regression that only shows at scale is invisible on the 200-byte
-/// fixtures above.
+/// The sizes of the throughput matrix (#49): 1 KiB, 10 KiB, 1 MiB and
+/// 10 MiB. The point is the slope: a regression that only shows at
+/// scale is invisible on the 200-byte fixtures above.
+const SIZES: [usize; 4] = [1 << 10, 10 << 10, 1 << 20, 10 << 20];
+
+/// Block sizes for the parse benchmark. The default `ParseLimits` cap a
+/// YAML mapping at 1 024 keys and a block at 1 MiB, so a larger block
+/// would measure the budget error, not the parse; 32 KiB is about 800
+/// keys.
+const BLOCK_SIZES: [usize; 3] = [1 << 10, 10 << 10, 32 << 10];
+
+/// A document of `bytes` bytes as a static-site generator sees one: a
+/// 1 KiB YAML header followed by a Markdown body. Extraction should cost
+/// the header, not the body (#48).
+fn yaml_document(bytes: usize) -> String {
+    let mut doc = yaml_block_document(1 << 10);
+    let line = "Body text that the delimiter scan must not read. ---\n";
+    while doc.len() + line.len() < bytes {
+        doc.push_str(line);
+    }
+    doc
+}
+
+/// Fewer samples for the large inputs so the whole matrix stays within
+/// the CI budget; Criterion's minimum is 10.
+fn sample_size(size: usize) -> usize {
+    if size >= 1 << 20 {
+        10
+    } else {
+        100
+    }
+}
+
+/// Benchmarks `routine` over a document of every size in `sizes`,
+/// reporting bytes per second.
+fn throughput_group(
+    c: &mut Criterion,
+    name: &str,
+    sizes: &[usize],
+    make: fn(usize) -> String,
+    routine: fn(&str),
+) {
+    let mut group = c.benchmark_group(name);
+    for &size in sizes {
+        let doc = make(size);
+        group.sample_size(sample_size(size));
+        group.throughput(Throughput::Bytes(doc.len() as u64));
+        group.bench_with_input(
+            BenchmarkId::from_parameter(size),
+            &doc,
+            |b, d| b.iter(|| routine(black_box(d))),
+        );
+    }
+    group.finish();
+}
+
+/// Text with seven escapable bytes in every 27 (about one in four).
+fn escapable_text(size: usize) -> String {
+    "a <b> & \"c\" 'd' plain text ".repeat(size / 28 + 1)
+}
+
+/// What [`escapable_text`] escapes to: the unescape input.
+fn escaped_text(size: usize) -> String {
+    escape_html(&escapable_text(size))
+}
+
 fn benchmark_throughput(c: &mut Criterion) {
-    let sizes = [1 << 10, 10 << 10, 1 << 20];
-
-    let mut group = c.benchmark_group("throughput/extract_metadata");
-    for &size in &sizes {
-        let doc = yaml_document(size);
-        group.throughput(Throughput::Bytes(doc.len() as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &doc,
-            |b, d| b.iter(|| extract_metadata(black_box(d))),
-        );
-    }
-    group.finish();
-
-    let mut group = c.benchmark_group("throughput/extract_meta_tags");
-    for &size in &sizes {
-        let doc = html_document(size);
-        group.throughput(Throughput::Bytes(doc.len() as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &doc,
-            |b, d| b.iter(|| extract_meta_tags(black_box(d))),
-        );
-    }
-    group.finish();
-
-    let mut group = c.benchmark_group("throughput/escape_html");
-    for &size in &sizes {
-        let text: String =
-            "a <b> & \"c\" 'd' plain text ".repeat(size / 28 + 1);
-        group.throughput(Throughput::Bytes(text.len() as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &text,
-            |b, d| b.iter(|| escape_html(black_box(d))),
-        );
-    }
-    group.finish();
+    // `unwrap` so a document the budget rejects fails the bench run
+    // instead of timing the error path.
+    throughput_group(
+        c,
+        "throughput/extract_metadata",
+        &SIZES,
+        yaml_document,
+        |d| drop(black_box(extract_metadata(d).unwrap())),
+    );
+    throughput_group(
+        c,
+        "throughput/parse_yaml_block",
+        &BLOCK_SIZES,
+        yaml_block_document,
+        |d| drop(black_box(extract_metadata(d).unwrap())),
+    );
+    throughput_group(
+        c,
+        "throughput/extract_meta_tags",
+        &SIZES,
+        html_document,
+        |d| drop(black_box(extract_meta_tags(d))),
+    );
+    throughput_group(
+        c,
+        "throughput/escape_html",
+        &SIZES,
+        escapable_text,
+        |d| drop(black_box(escape_html(d))),
+    );
+    throughput_group(
+        c,
+        "throughput/unescape_html",
+        &SIZES,
+        escaped_text,
+        |d| drop(black_box(unescape_html(d))),
+    );
 }
 
 criterion_group!(
