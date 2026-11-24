@@ -331,6 +331,13 @@ user-id = 336629
 user-login = "rexmas"
 user-name = "Rex"
 
+[[publisher.r-efi]]
+version = "6.0.0"
+when = "2026-02-03"
+user-id = 12177
+user-login = "dvdhrm"
+user-name = "David Rheinsberg"
+
 [[publisher.rand_xorshift]]
 version = "0.5.0"
 when = "2026-02-02"

@@ -349,6 +349,13 @@ start = "2025-09-20"
 end = "2027-11-24"
 notes = "Maintainer's trust decision for #144 (2026-11-24): publisher rexmas."
 
+[[trusted.r-efi]]
+criteria = "safe-to-run"
+user-id = 12177 # David Rheinsberg (dvdhrm)
+start = "2019-03-01"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher dvdhrm."
+
 [[trusted.rand_xorshift]]
 criteria = "safe-to-run"
 user-id = 1234 # Diggory Hardy (dhardy)
