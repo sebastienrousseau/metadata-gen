@@ -33,15 +33,3 @@ url = "https://raw.githubusercontent.com/zcash/rust-ecosystem/main/supply-chain/
 
 [policy.metadata-gen]
 audit-as-crates-io = true
-
-[[exemptions.libc]]
-version = "0.2.189"
-criteria = "safe-to-run"
-
-[[exemptions.web-sys]]
-version = "0.3.103"
-criteria = "safe-to-run"
-
-[[exemptions.zmij]]
-version = "1.0.23"
-criteria = "safe-to-deploy"

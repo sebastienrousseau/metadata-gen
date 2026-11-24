@@ -15,6 +15,34 @@ user-id = 6743 # Ed Page (epage)
 start = "2019-11-29"
 end = "2027-11-05"
 
+[[trusted.autocfg]]
+criteria = "safe-to-run"
+user-id = 539 # Josh Stone (cuviper)
+start = "2019-05-22"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher cuviper."
+
+[[trusted.bitflags]]
+criteria = "safe-to-run"
+user-id = 3204 # Ashley Mannix (KodrAus)
+start = "2019-05-02"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher KodrAus."
+
+[[trusted.borsh]]
+criteria = "safe-to-run"
+user-id = 134703 # nearprotocol-ci
+start = "2022-01-26"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher nearprotocol-ci."
+
+[[trusted.borsh-derive]]
+criteria = "safe-to-run"
+user-id = 134703 # nearprotocol-ci
+start = "2022-01-26"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher nearprotocol-ci."
+
 [[trusted.bstr]]
 criteria = "safe-to-deploy"
 user-id = 189 # Andrew Gallant (BurntSushi)
@@ -27,6 +55,13 @@ criteria = "safe-to-deploy"
 user-id = 6741 # Alice Ryhl (Darksonn)
 start = "2021-01-11"
 end = "2027-11-05"
+
+[[trusted.cc]]
+criteria = "safe-to-run"
+trusted-publisher = "github:rust-lang/cc-rs"
+start = "2025-09-01"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:rust-lang/cc-rs."
 
 [[trusted.clap]]
 criteria = "safe-to-deploy"
@@ -46,12 +81,110 @@ user-id = 6743 # Ed Page (epage)
 start = "2022-04-15"
 end = "2027-11-05"
 
+[[trusted.criterion]]
+criteria = "safe-to-run"
+user-id = 8785 # Brook Heisler (bheisler)
+start = "2019-04-09"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher bheisler."
+
+[[trusted.crossbeam-deque]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2020-10-12"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher taiki-e."
+
+[[trusted.crossbeam-utils]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2020-10-12"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher taiki-e."
+
 [[trusted.dtt]]
 criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
 start = "2023-02-05"
 end = "2027-07-26"
 notes = "Same-author crate. user-id 186843 is Sebastien Rousseau (sebastienrousseau)."
+
+[[trusted.either]]
+criteria = "safe-to-run"
+user-id = 539 # Josh Stone (cuviper)
+start = "2019-04-02"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher cuviper."
+
+[[trusted.fastrand]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2021-04-24"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher taiki-e."
+
+[[trusted.find-msvc-tools]]
+criteria = "safe-to-run"
+trusted-publisher = "github:rust-lang/cc-rs"
+start = "2025-09-05"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:rust-lang/cc-rs."
+
+[[trusted.float-cmp]]
+criteria = "safe-to-run"
+user-id = 718 # Michael Dilger (mikedilger)
+start = "2019-06-09"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher mikedilger."
+
+[[trusted.futures-core]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2020-10-05"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher taiki-e."
+
+[[trusted.futures-task]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2019-07-29"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher taiki-e."
+
+[[trusted.futures-util]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2020-10-05"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher taiki-e."
+
+[[trusted.generator]]
+criteria = "safe-to-run"
+user-id = 2542 # Xudong Huang (Xudong-Huang)
+start = "2019-04-13"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher Xudong-Huang."
+
+[[trusted.globset]]
+criteria = "safe-to-run"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher BurntSushi."
+
+[[trusted.globwalk]]
+criteria = "safe-to-run"
+user-id = 10122 # Gilad Naaman (Gilnaa)
+start = "2019-02-23"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher Gilnaa."
+
+[[trusted.half]]
+criteria = "safe-to-run"
+user-id = 3416 # Kathryn Long (VoidStarKat)
+start = "2019-10-04"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher VoidStarKat."
 
 [[trusted.hashbrown]]
 criteria = "safe-to-deploy"
@@ -60,12 +193,40 @@ start = "2025-04-30"
 end = "2027-11-23"
 notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
 
+[[trusted.ignore]]
+criteria = "safe-to-run"
+user-id = 189 # Andrew Gallant (BurntSushi)
+start = "2019-04-15"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher BurntSushi."
+
 [[trusted.itoa]]
 criteria = "safe-to-deploy"
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-05-02"
 end = "2027-11-23"
 notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.js-sys]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:wasm-bindgen/wasm-bindgen."
+
+[[trusted.lazy_static]]
+criteria = "safe-to-run"
+user-id = 55123 # rust-lang-owner
+start = "2026-10-01"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher rust-lang-owner."
+
+[[trusted.libc]]
+criteria = "safe-to-run"
+user-id = 55123 # rust-lang-owner
+start = "2024-08-15"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher rust-lang-owner."
 
 [[trusted.libm]]
 criteria = "safe-to-deploy"
@@ -121,6 +282,34 @@ start = "2026-10-18"
 end = "2027-11-23"
 notes = "Same-author crate, published from github:sebastienrousseau/oxml; mirrors the noyalib entry."
 
+[[trusted.pin-project-lite]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:taiki-e/pin-project-lite"
+start = "2026-02-27"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:taiki-e/pin-project-lite."
+
+[[trusted.plotters]]
+criteria = "safe-to-run"
+user-id = 108598 # Aaron Erhardt (AaronErhardt)
+start = "2023-06-16"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher AaronErhardt."
+
+[[trusted.plotters-backend]]
+criteria = "safe-to-run"
+user-id = 108598 # Aaron Erhardt (AaronErhardt)
+start = "2023-06-16"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher AaronErhardt."
+
+[[trusted.plotters-svg]]
+criteria = "safe-to-run"
+user-id = 108598 # Aaron Erhardt (AaronErhardt)
+start = "2023-06-16"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher AaronErhardt."
+
 [[trusted.predicates]]
 criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
@@ -139,12 +328,40 @@ user-id = 6743 # Ed Page (epage)
 start = "2020-12-29"
 end = "2027-11-05"
 
+[[trusted.proc-macro-crate]]
+criteria = "safe-to-run"
+user-id = 6134 # Bastian Köcher (bkchr)
+start = "2019-05-09"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher bkchr."
+
 [[trusted.proc-macro2]]
 criteria = "safe-to-deploy"
 user-id = 3618 # David Tolnay (dtolnay)
 start = "2019-04-23"
 end = "2027-11-23"
 notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.proptest]]
+criteria = "safe-to-run"
+user-id = 336629 # Rex (rexmas)
+start = "2025-09-20"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher rexmas."
+
+[[trusted.rand_xorshift]]
+criteria = "safe-to-run"
+user-id = 1234 # Diggory Hardy (dhardy)
+start = "2019-06-06"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher dhardy."
+
+[[trusted.rayon]]
+criteria = "safe-to-run"
+user-id = 539 # Josh Stone (cuviper)
+start = "2019-06-13"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher cuviper."
 
 [[trusted.regex]]
 criteria = "safe-to-deploy"
@@ -254,6 +471,20 @@ start = "2019-09-07"
 end = "2027-11-23"
 notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
 
+[[trusted.time]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:time-rs/time"
+start = "2026-06-30"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:time-rs/time."
+
+[[trusted.time-macros]]
+criteria = "safe-to-deploy"
+trusted-publisher = "github:time-rs/time"
+start = "2026-06-30"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:time-rs/time."
+
 [[trusted.tokio]]
 criteria = "safe-to-deploy"
 user-id = 6741 # Alice Ryhl (Darksonn)
@@ -296,6 +527,20 @@ user-id = 6743 # Ed Page (epage)
 start = "2025-07-08"
 end = "2027-10-14"
 
+[[trusted.tracing]]
+criteria = "safe-to-run"
+user-id = 172786 # Hayden Stainsby (hds)
+start = "2024-11-27"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher hds."
+
+[[trusted.tracing-subscriber]]
+criteria = "safe-to-run"
+user-id = 172786 # Hayden Stainsby (hds)
+start = "2024-11-29"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher hds."
+
 [[trusted.unicode-ident]]
 criteria = "safe-to-deploy"
 user-id = 3618 # David Tolnay (dtolnay)
@@ -309,6 +554,41 @@ user-id = 189 # Andrew Gallant (BurntSushi)
 start = "2019-06-09"
 end = "2027-11-23"
 notes = "Publisher trusted for this crate by mozilla, firefox or bytecodealliance; trust decision by the maintainer (option B, 2026-11-23)."
+
+[[trusted.wasm-bindgen]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:wasm-bindgen/wasm-bindgen."
+
+[[trusted.wasm-bindgen-macro]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:wasm-bindgen/wasm-bindgen."
+
+[[trusted.wasm-bindgen-macro-support]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:wasm-bindgen/wasm-bindgen."
+
+[[trusted.wasm-bindgen-shared]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:wasm-bindgen/wasm-bindgen."
+
+[[trusted.web-sys]]
+criteria = "safe-to-run"
+trusted-publisher = "github:wasm-bindgen/wasm-bindgen"
+start = "2026-04-28"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:wasm-bindgen/wasm-bindgen."
 
 [[trusted.windows-result]]
 criteria = "safe-to-deploy"
@@ -329,3 +609,24 @@ criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
 start = "2023-02-22"
 end = "2027-11-05"
+
+[[trusted.zerocopy]]
+criteria = "safe-to-run"
+user-id = 7178 # Josh Liebow-Feeser (joshlf)
+start = "2019-02-28"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher joshlf."
+
+[[trusted.zerocopy-derive]]
+criteria = "safe-to-run"
+user-id = 7178 # Josh Liebow-Feeser (joshlf)
+start = "2019-02-28"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher joshlf."
+
+[[trusted.zmij]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2025-12-18"
+end = "2027-11-24"
+notes = "Maintainer's trust decision for #144 (2026-11-24): publisher dtolnay."
