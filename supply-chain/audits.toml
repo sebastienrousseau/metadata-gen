@@ -1,7 +1,25 @@
 
 # cargo-vet audits file
 
-[audits]
+[[audits.embedded-io-async]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+version = "0.7.0"
+
+[[audits.rustc-hash]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-deploy"
+delta = "2.1.1 -> 2.1.3"
+
+[[audits.winapi-i686-pc-windows-gnu]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.4.0"
+
+[[audits.winapi-x86_64-pc-windows-gnu]]
+who = "Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>"
+criteria = "safe-to-run"
+version = "0.4.0"
 
 [[trusted.anstyle]]
 criteria = "safe-to-deploy"
