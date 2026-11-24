@@ -200,7 +200,9 @@ jobs:
         run: |
           set -euo pipefail
           baseline="$(tr -d '[:space:]' < supply-chain/exemptions-baseline.txt)"
-          current="$(cargo vet --locked 2>&1 | grep -oE '[0-9]+ exempted' | grep -oE '[0-9]+')"
+          # Count from the JSON report: the text summary omits
+          # "N exempted" when there are none, so grepping it fails at 0.
+          current="$(cargo vet --locked --output-format json | jq -e '(.vetted_with_exemptions | arrays | length) // error("no vetted_with_exemptions in cargo vet JSON")')"
           echo "exempted: $current (baseline $baseline)"
           if [ "$current" -gt "$baseline" ]; then
             echo "::error::exemptions grew from $baseline to $current"
