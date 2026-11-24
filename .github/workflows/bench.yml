@@ -127,7 +127,7 @@ jobs:
         if: env.CODSPEED_TOKEN != ''
         with:
           toolchain: stable
-      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.6, installs cargo-codspeed
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8, installs cargo-codspeed
         if: env.CODSPEED_TOKEN != ''
         with:
           tool: cargo-codspeed
