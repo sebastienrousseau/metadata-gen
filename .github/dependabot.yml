@@ -8,7 +8,9 @@ updates:
       time: "09:00"
       timezone: "UTC"
     open-pull-requests-limit: 10
-    versioning-strategy: increase-if-necessary
+    # Cargo accepts only auto (the default) or lockfile-only here;
+    # increase-if-necessary made Dependabot reject this file.
+    versioning-strategy: auto
     groups:
       # Routine maintenance: bundle minor/patch bumps into a single PR per week.
       minor-and-patch:
