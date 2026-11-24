@@ -348,7 +348,7 @@ jobs:
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
         with:
           workspaces: wasi
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3, installs wasmtime and wasm-tools
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6, installs wasmtime and wasm-tools
         with:
           tool: wasmtime@50.0.2,wasm-tools@1.261.0
       # Builds the component, validates it, checks the 1 MiB budget, and
