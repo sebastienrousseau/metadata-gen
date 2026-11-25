@@ -45,6 +45,7 @@
 - [Benchmarks](#benchmarks): measured numbers with the host stated
 - [Features](#features): module-level capability list
 - [Configuration](#configuration): core options
+- [Async](#async): Tokio, any `futures-io` runtime, and embedded readers
 - [Examples](#examples): runnable example index
 
 **Operational**
@@ -285,6 +286,49 @@ assert!(!processed.contains_key("slug"));
 The same options read fluently as a processor: `MetadataProcessor::new().require("author").optional("description").process(&metadata)`.
 
 `ProcessOptions` is `#[non_exhaustive]`, so options can be added without breaking releases.
+
+---
+
+## Async
+
+Every synchronous entry point works without a runtime. Three optional modules read from an async source instead; each reads to the end, then gives what `extract_and_prepare_metadata` gives for the same text.
+
+| Module | Feature | Reader it takes |
+| :--- | :--- | :--- |
+| `metadata_gen::tokio` | `tokio` (default) | `tokio::io::AsyncRead`; `extract_from_file(path)` opens a `tokio::fs::File` |
+| `metadata_gen::futures_io` | `futures-io` | `futures_io::AsyncRead`: smol, async-std and `futures` readers, no runtime named |
+| `metadata_gen::embedded_io` | `embedded-io-async` | `embedded_io_async::Read` (Embassy), into a buffer you supply; works without `std` |
+
+With Tokio:
+
+```rust
+use metadata_gen::tokio::extract_from_reader;
+
+let runtime = tokio::runtime::Runtime::new().unwrap();
+let (metadata, _, _) = runtime
+    .block_on(extract_from_reader(b"---\ntitle: Tokio\n---\n" as &[u8]))
+    .unwrap();
+assert_eq!(metadata["title"], "Tokio");
+```
+
+With smol, or any runtime whose readers implement `futures_io::AsyncRead` (`features = ["futures-io"]`). `smol::fs::File` is `async_fs::File` and `smol::block_on` is `futures_lite::future::block_on`, so this is the smol code with the crates named directly:
+
+```rust
+use metadata_gen::futures_io::extract_from_reader;
+
+let dir = tempfile::tempdir().unwrap();
+let path = dir.path().join("post.md");
+std::fs::write(&path, "---\ntitle: smol\n---\nbody").unwrap();
+
+let (metadata, _, _) = futures_lite::future::block_on(async {
+    let file = async_fs::File::open(&path).await?;
+    extract_from_reader(file).await
+})
+.unwrap();
+assert_eq!(metadata["title"], "smol");
+```
+
+A Tokio reader goes into the same function through `tokio_util::compat` (`file.compat()`). On a device, `metadata_gen::embedded_io::extract_from_reader(reader, &mut buffer)` (`default-features = false, features = ["yaml", "embedded-io-async"]`) reads into `buffer` and allocates nothing for the input. `examples/tokio_example.rs`, `examples/futures_io_example.rs` and `examples/embedded_io_example.rs` run each path.
 
 ---
 
