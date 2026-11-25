@@ -64,8 +64,10 @@ found.
 
 ### Verification
 
-- Kani proves that `escape_html` never panics on any one-char string
-  ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)), and
+- Kani proves that `escape_html` never panics on any one-char string,
+  and that `unescape_html(escape_html(s)) == s` for every one-char
+  ASCII string ([`tests/kani/escape_html.rs`](tests/kani/escape_html.rs)
+  says why the proof stops at one char), and
   exhaustive enumeration proves that it leaves no raw `<`, `>`, `"` or
   `'` and that `unescape_html` inverts it, for every Unicode char and
   every ASCII string of up to three chars
