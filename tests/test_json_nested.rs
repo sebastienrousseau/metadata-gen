@@ -127,6 +127,16 @@ fn nested_object() -> impl Strategy<Value = Map<String, Value>> {
 }
 
 proptest! {
+    // Under Miri failures are not persisted: proptest's file
+    // persistence calls `getcwd`, which Miri's isolation forbids.
+    #![proptest_config(ProptestConfig {
+        failure_persistence: if cfg!(miri) {
+            None
+        } else {
+            ProptestConfig::default().failure_persistence
+        },
+        ..ProptestConfig::default()
+    })]
     /// Any object, nested or not, followed by a body full of braces, is
     /// read in full and the body is left alone.
     #[test]
