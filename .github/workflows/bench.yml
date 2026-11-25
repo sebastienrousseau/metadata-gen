@@ -76,7 +76,12 @@ jobs:
           git worktree add "$RUNNER_TEMP/base" "$BASE_SHA"
           python3 -I scripts/bench_overlay.py "$RUNNER_TEMP/base" > "$RUNNER_TEMP/benches.txt"
           cd "$RUNNER_TEMP/base"
-          export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
+          # Its own target directory. Sharing the change's let cargo
+          # reuse the base build for the change: both builds hash to
+          # the same unit, its dep-info lists the base worktree's files,
+          # and those never change, so the change was never compiled
+          # and every comparison measured the base against itself.
+          export CARGO_TARGET_DIR="$RUNNER_TEMP/base-target"
           while read -r bench; do
             if cargo bench --all-features --bench "$bench" --no-run < /dev/null; then
               cargo bench --all-features --bench "$bench" -- --save-baseline base < /dev/null
@@ -84,8 +89,8 @@ jobs:
               echo "::notice::bench target $bench does not build on $BASE_SHA: new, no baseline"
             fi
           done < "$RUNNER_TEMP/benches.txt"
-          # The instruction workloads, built now because the change's
-          # build below reuses the same target directory.
+          # The instruction workloads, copied out of the base target
+          # directory so the gate step finds them by one path.
           if bin="$(instructions_binary)"; then
             cp "$bin" "$RUNNER_TEMP/instructions-base"
           else
@@ -112,7 +117,7 @@ jobs:
           base=()
           if [ -x "$RUNNER_TEMP/instructions-base" ]; then base=(--base "$RUNNER_TEMP/instructions-base"); fi
           status=0
-          python3 -I scripts/instruction_compare.py --head "$bin" "${base[@]}" --threshold 0.01 \
+          python3 -I scripts/instruction_compare.py --head "$bin" "${base[@]}" --threshold 0.01 --runs 5 \
             > bench-comment/instructions.txt || status=$?
           cat bench-comment/instructions.txt
           exit "$status"
