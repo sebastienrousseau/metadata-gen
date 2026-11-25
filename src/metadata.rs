@@ -21,6 +21,7 @@ mod date;
 )]
 pub mod events;
 mod front_matter;
+mod iso_date;
 mod model;
 mod process;
 mod scan;

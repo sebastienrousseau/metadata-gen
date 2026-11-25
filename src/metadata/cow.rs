@@ -166,11 +166,15 @@ impl<'a> CowMetadata<'a> {
     /// assert_eq!(owned.get("title").unwrap(), "Hello");
     /// ```
     pub fn into_owned(self) -> Metadata {
-        let map: MetadataMap = self
-            .inner
-            .into_iter()
-            .map(|(k, v)| (k.into_owned(), v.into_owned()))
-            .collect();
+        // `extend`, not `collect`: a `BTreeMap` (no_std) built by
+        // `collect` sorts a Vec first, which costs a stable sort in the
+        // binary (#61); the source is already a map, so insert directly.
+        let mut map = MetadataMap::new();
+        map.extend(
+            self.inner
+                .into_iter()
+                .map(|(k, v)| (k.into_owned(), v.into_owned())),
+        );
         Metadata::new(map)
     }
 }
@@ -307,13 +311,17 @@ impl<'a> Flattener<'a> {
     /// The dotted key for the pending key under the open mappings.
     fn full_key(&mut self) -> Cow<'a, str> {
         let last = self.pending.take().unwrap_or_default();
-        let parents: Vec<&str> =
-            self.maps.iter().flatten().map(|k| &**k).collect();
-        if parents.is_empty() {
+        let mut parents = self.maps.iter().flatten().peekable();
+        if parents.peek().is_none() {
             return last;
         }
-        let mut key = parents.join(".");
-        key.push('.');
+        // Written in place rather than collected and joined: no
+        // intermediate Vec, and no `join` for `&str` in the binary (#61).
+        let mut key = String::new();
+        for parent in parents {
+            key.push_str(parent);
+            key.push('.');
+        }
         key.push_str(&last);
         Cow::Owned(key)
     }

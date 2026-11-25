@@ -8,13 +8,14 @@
 //! and renders every one of them as `YYYY-MM-DD`. Built on the `time`
 //! crate so it works without `std`.
 
+use super::iso_date::{self, Ymd};
 use super::DateOrder;
 use crate::error::MetadataError;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use time::format_description::well_known::{Iso8601, Rfc3339};
-use time::{Date, OffsetDateTime};
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 
 /// Standardizes the date format.
 ///
@@ -35,9 +36,7 @@ pub(super) fn standardize_date(
     // Format the date to the standardized YYYY-MM-DD format
     Ok(format!(
         "{:04}-{:02}-{:02}",
-        parsed.year(),
-        parsed.month() as u8,
-        parsed.day()
+        parsed.year, parsed.month, parsed.day
     ))
 }
 
@@ -100,12 +99,18 @@ fn invalid_slash_date(order: DateOrder) -> MetadataError {
 /// RFC 3339 first (keeps the offset's date), then a bare ISO 8601 date.
 /// A string with a time component that is not RFC 3339 is rejected rather
 /// than silently truncated to its date.
-fn parse_lenient(date: &str) -> Result<Date, MetadataError> {
+fn parse_lenient(date: &str) -> Result<Ymd, MetadataError> {
     if let Ok(odt) = OffsetDateTime::parse(date, &Rfc3339) {
-        return Ok(odt.date());
+        return Ok(Ymd {
+            year: odt.year(),
+            month: odt.month() as u8,
+            day: odt.day(),
+        });
     }
+    // `iso_date` answers as `Date::parse(date, &Iso8601::DATE)` does for
+    // input without a `T` (#61).
     if !date.contains('T') && !date.contains(' ') {
-        if let Ok(d) = Date::parse(date, &Iso8601::DATE) {
+        if let Some(d) = iso_date::parse(date) {
             return Ok(d);
         }
     }

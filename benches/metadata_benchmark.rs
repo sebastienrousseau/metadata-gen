@@ -8,6 +8,7 @@ use metadata_gen::{
     metadata::{extract_metadata, process_metadata, Metadata},
     metatags::{extract_meta_tags, generate_metatags},
     utils::{escape_html, unescape_html},
+    MetadataMap,
 };
 use std::collections::HashMap;
 use std::hint::black_box;
@@ -157,8 +158,31 @@ fn sample_size(size: usize) -> usize {
     }
 }
 
-/// Benchmarks `routine` over a document of every size in `sizes`,
-/// reporting bytes per second.
+/// Benchmarks `routine` over an input of every size in `sizes`,
+/// reporting bytes per second. `make` returns the input and the number
+/// of bytes it stands for.
+fn throughput_group_of<T>(
+    c: &mut Criterion,
+    name: &str,
+    sizes: &[usize],
+    make: impl Fn(usize) -> (T, u64),
+    routine: impl Fn(&T),
+) {
+    let mut group = c.benchmark_group(name);
+    for &size in sizes {
+        let (input, bytes) = make(size);
+        group.sample_size(sample_size(size));
+        group.throughput(Throughput::Bytes(bytes));
+        group.bench_with_input(
+            BenchmarkId::from_parameter(size),
+            &input,
+            |b, i| b.iter(|| routine(black_box(i))),
+        );
+    }
+    group.finish();
+}
+
+/// [`throughput_group_of`] for a text input: its length is its size.
 fn throughput_group(
     c: &mut Criterion,
     name: &str,
@@ -166,18 +190,69 @@ fn throughput_group(
     make: fn(usize) -> String,
     routine: fn(&str),
 ) {
-    let mut group = c.benchmark_group(name);
-    for &size in sizes {
+    let make_text = |size| {
         let doc = make(size);
-        group.sample_size(sample_size(size));
-        group.throughput(Throughput::Bytes(doc.len() as u64));
-        group.bench_with_input(
-            BenchmarkId::from_parameter(size),
-            &doc,
-            |b, d| b.iter(|| routine(black_box(d))),
-        );
+        let bytes = doc.len() as u64;
+        (doc, bytes)
+    };
+    throughput_group_of(c, name, sizes, make_text, |d: &String| {
+        routine(d)
+    });
+}
+
+/// The bytes a map holds: every key and value.
+fn map_bytes(map: &MetadataMap) -> u64 {
+    map.iter().map(|(k, v)| (k.len() + v.len()) as u64).sum()
+}
+
+/// Metadata of about `bytes` bytes for `process_metadata`: a title (the
+/// slug source) and a date (the standardised field), then `key_N`
+/// fields. `process_metadata` clones every entry, so all of them count.
+fn metadata_of_size(bytes: usize) -> (Metadata, u64) {
+    let mut map = MetadataMap::new();
+    map.insert("title".into(), "Throughput Benchmark Page".into());
+    map.insert("date".into(), "2024-01-02".into());
+    let mut size = map_bytes(&map);
+    let mut i = 0;
+    while size + 40 < bytes as u64 {
+        let (key, value) =
+            (format!("key_{i}"), format!("value {i} text"));
+        size += (key.len() + value.len()) as u64;
+        let _ = map.insert(key, value);
+        i += 1;
     }
-    group.finish();
+    (Metadata::new(map), size)
+}
+
+/// The tag names `generate_metatags` looks up, one per group at least.
+const TAG_NAMES: [&str; 8] = [
+    "author",
+    "description",
+    "keywords",
+    "og:title",
+    "og:description",
+    "twitter:card",
+    "twitter:description",
+    "apple-mobile-web-app-title",
+];
+
+/// A map of about `bytes` bytes for `generate_metatags`, all of it in
+/// values the function reads. It looks up a fixed table of tag names,
+/// so `key_N` filler would be bytes it never touches; the size axis is
+/// the length of the recognised values instead, each one escapable
+/// text the renderer must escape.
+fn tag_map_of_size(bytes: usize) -> (MetadataMap, u64) {
+    let per_value = bytes / TAG_NAMES.len();
+    let map: MetadataMap = TAG_NAMES
+        .iter()
+        .map(|&name| {
+            let mut value = escapable_text(per_value);
+            value.truncate(per_value);
+            (name.to_string(), value)
+        })
+        .collect();
+    let size = map_bytes(&map);
+    (map, size)
 }
 
 /// Text with seven escapable bytes in every 27 (about one in four).
@@ -199,6 +274,33 @@ fn benchmark_throughput(c: &mut Criterion) {
         &SIZES,
         yaml_document,
         |d| drop(black_box(extract_metadata(d).unwrap())),
+    );
+    // The front-matter header stays 1 KiB at every size, as in
+    // `extract_metadata`: the rest of the pipeline (keywords, meta tags)
+    // costs the header, so the slope should match extraction's.
+    throughput_group(
+        c,
+        "throughput/extract_and_prepare_metadata",
+        &SIZES,
+        yaml_document,
+        |d| drop(black_box(extract_and_prepare_metadata(d).unwrap())),
+    );
+    // Both maps are built directly, not extracted, so the 1 MiB block
+    // budget does not bound them; the sizes above it model a caller
+    // that assembles the map itself.
+    throughput_group_of(
+        c,
+        "throughput/process_metadata",
+        &SIZES,
+        metadata_of_size,
+        |m| drop(black_box(process_metadata(m).unwrap())),
+    );
+    throughput_group_of(
+        c,
+        "throughput/generate_metatags",
+        &SIZES,
+        tag_map_of_size,
+        |m| drop(black_box(generate_metatags(m))),
     );
     throughput_group(
         c,

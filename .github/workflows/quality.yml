@@ -356,6 +356,39 @@ jobs:
       # native build's output for the same input (ADR-0009).
       - run: python3 -I wasi/check.py
 
+  deploy-cloudflare-workers:
+    # The Cloudflare Workers sample (#63), built the way
+    # docs/deploy/cloudflare-workers.md says: npm ci, npm run build (the
+    # component as in wasi-component, then jco transpile), and a
+    # wrangler dry run that bundles the Worker. No account, no secrets,
+    # nothing is deployed.
+    name: deploy sample (Cloudflare Workers)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: examples/deploy/cloudflare-workers
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+        with:
+          workspaces: wasi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.1
+      - run: npm ci --ignore-scripts
+      - run: npm audit
+      - run: npm run build
+      - run: npx --no-install wrangler deploy --dry-run --outdir dist
+
   embedded:
     name: embedded (${{ matrix.target }}, ${{ matrix.features }})
     runs-on: ubuntu-latest
@@ -370,6 +403,11 @@ jobs:
             features: yaml,toml,json
           - target: thumbv7em-none-eabihf
             features: yaml
+            max_bytes: 50000
+          # The `embedded-io-async` reader (Embassy) must build without
+          # `std`; no other row compiles `src/embedded_io.rs`.
+          - target: thumbv7em-none-eabihf
+            features: yaml,embedded-io-async
           # RISC-V with atomics: every format.
           - target: riscv32imac-unknown-none-elf
             features: yaml,toml,json
@@ -391,14 +429,31 @@ jobs:
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
         with:
           key: ${{ matrix.target }}
+          workspaces: |
+            . -> target
+            embedded/size-probe -> target
       # Without `std` the build fails on anything that names it.
       - name: Build
         run: cargo build --lib --release --locked --no-default-features --features "${{ matrix.features }}" --target "${{ matrix.target }}"
       # The crate's own code size, optimised for size without LTO, as
       # llvm-size reports the rlib's text + data + bss. Dependencies are
       # measured separately because a linker keeps only what is called.
+      # A row with `max_bytes` fails above it: the yaml-only build is
+      # held to 50,000 B (#61). `shell: bash` adds pipefail, so the
+      # script's exit status survives the `tee`.
       - name: Object size
-        run: ./scripts/embedded_size.sh "${{ matrix.target }}" "${{ matrix.features }}" | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash
+        env:
+          MAX_BYTES: ${{ matrix.max_bytes }}
+        run: ./scripts/embedded_size.sh "${{ matrix.target }}" "${{ matrix.features }}" "$MAX_BYTES" | tee -a "$GITHUB_STEP_SUMMARY"
+      # What a yaml-only build adds to a linked no_std firmware image
+      # (LTO, --gc-sections, opt-level s): flash, not object code. It
+      # includes noyalib and core's formatting and float code, which
+      # this crate does not own, so it is reported, not gated; #61's
+      # budget is gated on the object size above.
+      - name: Firmware size
+        if: matrix.features == 'yaml'
+        run: ./scripts/embedded_firmware_size.sh "${{ matrix.target }}" | tee -a "$GITHUB_STEP_SUMMARY"
 
   complexity:
     name: complexity (per-function ceilings)

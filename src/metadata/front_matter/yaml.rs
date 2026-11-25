@@ -4,6 +4,7 @@
 //! YAML front matter on noyalib.
 
 use super::*;
+use alloc::vec::Vec;
 use noyalib::ParserConfig;
 
 fn config(limits: &ParseLimits) -> ParserConfig {
@@ -28,9 +29,8 @@ pub(in crate::metadata) fn flatten_block(
     limits: &ParseLimits,
 ) -> Result<MetadataMap, MetadataError> {
     let collapsed = collapse_multiline_quoted_scalars(raw);
-    let value: noyalib::Value =
-        noyalib::from_str_with_config(&collapsed, &config(limits))
-            .map_err(|e| parse_error(&collapsed, e))?;
+    let value = parse_value(&collapsed, &config(limits))
+        .map_err(|e| parse_error(&collapsed, e))?;
     Ok(flatten_yaml(&value))
 }
 
@@ -107,8 +107,41 @@ pub(in crate::metadata) fn value(
     raw: &str,
     limits: &ParseLimits,
 ) -> Result<noyalib::Value, MetadataError> {
-    noyalib::from_str_with_config(raw, &config(limits))
-        .map_err(|e| parse_error(raw, e))
+    parse_value(raw, &config(limits)).map_err(|e| parse_error(raw, e))
+}
+
+/// `text` as one value tree, as `from_str_with_config::<Value>` reads it.
+#[cfg(feature = "std")]
+fn parse_value(
+    text: &str,
+    config: &ParserConfig,
+) -> Result<noyalib::Value, noyalib::Error> {
+    noyalib::from_str_with_config(text, config)
+}
+
+/// `text` as one value tree, through noyalib's non-generic document
+/// loader (#61, code size): `from_str_with_config::<Value>` compiles
+/// serde's streaming and tree deserialisers for `Value` into this
+/// crate, though a `Value` target never runs them.
+///
+/// Without `std`, both entry points run the same checks in the same
+/// order (noyalib 0.0.64): the `max_document_length` check, the
+/// span-free loader over every document, then the post-parse pass,
+/// which is a no-op here because [`config`] sets no include resolver,
+/// properties or policies. What is left is `from_str`'s one-document
+/// rule: more than one is `MoreThanOneDocument`, none is `Null`.
+/// `value_path_matches_from_str` holds the two to the same answers.
+#[cfg(not(feature = "std"))]
+fn parse_value(
+    text: &str,
+    config: &ParserConfig,
+) -> Result<noyalib::Value, noyalib::Error> {
+    let mut docs =
+        noyalib::document::load_all_with_config(text, config)?;
+    if docs.len() > 1 {
+        return Err(noyalib::Error::MoreThanOneDocument);
+    }
+    docs.next().unwrap_or(Ok(noyalib::Value::Null))
 }
 
 /// The crate error for a noyalib error on `raw`.
@@ -161,7 +194,7 @@ pub(in crate::metadata) fn collapse_multiline_quoted_scalars(
 /// Returns the `key: "` head of a line whose double-quoted scalar opens
 /// but does not close on that line.
 fn open_quoted_scalar(line: &str) -> Option<&str> {
-    let eq_pos = line.find(": \"")?;
+    let eq_pos = crate::utils::find_str(line, ": \"")?;
     let after_quote = &line[eq_pos + 3..];
     after_quote.trim().is_empty().then(|| &line[..eq_pos + 3])
 }
@@ -244,5 +277,45 @@ fn yaml_scalar(value: &noyalib::Value) -> String {
     match value.as_str() {
         Some(s) => s.to_string(),
         None => value.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod parse_value_tests {
+    use super::{config, parse_value, ParseLimits};
+    use alloc::string::ToString;
+
+    /// The value path answers exactly as noyalib's own
+    /// `from_str_with_config::<Value>`, in the `std` build and the
+    /// `no_std` one: same tree, or the same error message.
+    #[test]
+    fn value_path_matches_from_str() {
+        let small = ParseLimits::default().max_block_bytes(16);
+        let cases: [(&str, &ParseLimits); 10] = [
+            ("a: 1\nb: [x, y]\n", &ParseLimits::default()),
+            ("", &ParseLimits::default()),
+            ("# only a comment\n", &ParseLimits::default()),
+            ("a: 1\n...\nb: 2\n", &ParseLimits::default()),
+            ("a: 1\n---\nb: 2\n", &ParseLimits::default()),
+            ("a: [1, 2\n", &ParseLimits::default()),
+            ("a: 1\na: 2\n", &ParseLimits::default()),
+            (
+                "base: &b {x: 1}\nc:\n  <<: *b\n",
+                &ParseLimits::default(),
+            ),
+            ("a: !!str 1\nb: yes\n", &ParseLimits::default()),
+            ("title: longer than sixteen bytes\n", &small),
+        ];
+        for (text, limits) in cases {
+            let cfg = config(limits);
+            let ours =
+                parse_value(text, &cfg).map_err(|e| e.to_string());
+            let theirs =
+                noyalib::from_str_with_config::<noyalib::Value>(
+                    text, &cfg,
+                )
+                .map_err(|e| e.to_string());
+            assert_eq!(ours, theirs, "input: {text:?}");
+        }
     }
 }

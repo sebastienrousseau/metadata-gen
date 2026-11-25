@@ -10,12 +10,17 @@
 # and for every rlib in its dependency graph. The second figure is an
 # upper bound: a firmware link keeps only the functions it calls.
 #
-# Usage: scripts/embedded_size.sh <target> <features>
+# With a third argument, exits 1 when metadata-gen's own figure is
+# larger than that many bytes: CI holds the yaml-only build to 50,000 B
+# that way (#61).
+#
+# Usage: scripts/embedded_size.sh <target> <features> [max-bytes]
 # Needs: rustup component add llvm-tools; rustup target add <target>
 set -euo pipefail
 
 target="${1:?usage: embedded_size.sh <target> <features>}"
 features="${2:?usage: embedded_size.sh <target> <features>}"
+max="${3:-}"
 cd "$(dirname "$0")/.."
 
 host="$(rustc -vV | sed -n 's/^host: //p')"
@@ -52,4 +57,9 @@ all="$(total_of "${all_rlibs[@]}")"
 
 echo "| Target | Features | metadata-gen | With every dependency (upper bound) |"
 echo "| :--- | :--- | ---: | ---: |"
-printf '| `%s` | `%s` | %d B | %d B |\n' "$target" "$features" "$own" "$all"
+printf "| \`%s\` | \`%s\` | %d B | %d B |\n" "$target" "$features" "$own" "$all"
+
+if [ -n "$max" ] && [ "$own" -gt "$max" ]; then
+  echo "::error::metadata-gen object for $target [$features] is $own B, over the $max B budget (#61)" >&2
+  exit 1
+fi

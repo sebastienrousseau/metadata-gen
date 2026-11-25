@@ -100,7 +100,10 @@ where
     ) -> Result<(), A::Error> {
         let first = next_key(&mut map)?;
         if first.as_deref() == Some(TOML_DATETIME) {
-            let text: String = map.next_value()?;
+            // Through the key seed rather than `String`: the same text,
+            // without compiling serde's `String` visitor for every
+            // format, YAML included, where this branch cannot occur (#61).
+            let text = map.next_value::<CowStr<'de>>()?.0.into_owned();
             return self
                 .0
                 .emit(Event::Scalar(Scalar::Str(Cow::Owned(text))));

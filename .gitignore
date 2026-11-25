@@ -21,3 +21,8 @@ release-notes.md
 # repository's dependency graph or its Dependabot alerts.
 /perf/escape-compare/Cargo.lock
 /perf/escape-compare/target/
+
+# embedded/size-probe builds against a copy of the root Cargo.lock that
+# scripts/embedded_firmware_size.sh makes on every run.
+/embedded/size-probe/Cargo.lock
+/embedded/size-probe/target/

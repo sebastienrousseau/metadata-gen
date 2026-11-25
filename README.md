@@ -45,6 +45,7 @@
 - [Benchmarks](#benchmarks): measured numbers with the host stated
 - [Features](#features): module-level capability list
 - [Configuration](#configuration): core options
+- [Async](#async): Tokio, any `futures-io` runtime, and embedded readers
 - [Examples](#examples): runnable example index
 
 **Operational**
@@ -112,6 +113,25 @@ A fence whose format is not compiled in is reported as `UnsupportedFormatError`,
 - **Rust 1.89.0 or newer.** `rust-version` in `Cargo.toml` is the floor and Cargo enforces it; a CI job builds on exactly 1.89.0, and the test suite runs on stable across Linux, macOS and Windows. The floor is the one the first-party `noyalib` and `oxml` crates declare; `time` alone needs 1.88.0 ([`docs/POLICIES.md`](docs/POLICIES.md)).
 - **`alloc`, with `std` optional.** With `default-features = false` the crate is `no_std + alloc` and `MetadataMap` is a `BTreeMap`; `cargo build --no-default-features --features yaml --target thumbv7em-none-eabihf` builds.
 - **No async runtime is required.** Every synchronous entry point works without one. The `tokio` feature adds `metadata_gen::tokio` for callers who run Tokio; the dependency is trimmed to `fs` and `io-util`.
+
+### Embedded targets
+
+The `embedded` CI job builds the `no_std` core for each target below on every pull request; a `std` call in that path fails the build, and so does a `yaml` object over 50,000 B (#61). Sizes were measured locally on macOS with rustc 1.100.0 by the scripts named in each metric (for the same commit, CI on Linux reported the `yaml` object 4% lower, 72,400 B against 75,389 B):
+
+| Target | Features | Metric | Size |
+| :--- | :--- | :--- | ---: |
+| `thumbv7em-none-eabihf` | `yaml,toml,json` | object | 64,056 B |
+| `thumbv7em-none-eabihf` | `yaml` | object (budget 50,000 B) | 48,240 B |
+| `thumbv7em-none-eabihf` | `yaml,embedded-io-async` | object | 48,344 B |
+| `thumbv7em-none-eabihf` | `yaml` | linked firmware | 164,041 B |
+| `riscv32imac-unknown-none-elf` | `yaml,toml,json` | object | 70,370 B |
+| `riscv32imac-unknown-none-elf` | `yaml` | linked firmware | 194,255 B |
+| `riscv32imc-unknown-none-elf` | `json` | object | 53,483 B |
+
+- **object**: `scripts/embedded_size.sh <target> <features>`, the text + data + bss of metadata-gen's own rlib at `opt-level = "s"` without LTO. It leaves out every dependency.
+- **linked firmware**: `scripts/embedded_firmware_size.sh <target>`, the `.text + .rodata + .data` that a yaml-only `extract_metadata` call adds to a minimal `no_std` image linked with LTO, `opt-level = "s"` and `--gc-sections` (`embedded/size-probe`). It includes `noyalib` and the `core` formatting and float code it pulls in; `opt-level = "z"` brings it to 135,101 B on `thumbv7em-none-eabihf`. Most of it is not this crate's code, so the 50,000 B budget applies to the object figure. The `riscv32imac` figure is not run in CI.
+
+`riscv32imc-unknown-none-elf` has no atomic read-modify-write, so only the JSON format builds there: `noyalib` and `toml` use `Arc`.
 
 ---
 
@@ -270,6 +290,49 @@ The same options read fluently as a processor: `MetadataProcessor::new().require
 
 ---
 
+## Async
+
+Every synchronous entry point works without a runtime. Three optional modules read from an async source instead; each reads to the end, then gives what `extract_and_prepare_metadata` gives for the same text.
+
+| Module | Feature | Reader it takes |
+| :--- | :--- | :--- |
+| `metadata_gen::tokio` | `tokio` (default) | `tokio::io::AsyncRead`; `extract_from_file(path)` opens a `tokio::fs::File` |
+| `metadata_gen::futures_io` | `futures-io` | `futures_io::AsyncRead`: smol, async-std and `futures` readers, no runtime named |
+| `metadata_gen::embedded_io` | `embedded-io-async` | `embedded_io_async::Read` (Embassy), into a buffer you supply; works without `std` |
+
+With Tokio:
+
+```rust
+use metadata_gen::tokio::extract_from_reader;
+
+let runtime = tokio::runtime::Runtime::new().unwrap();
+let (metadata, _, _) = runtime
+    .block_on(extract_from_reader(b"---\ntitle: Tokio\n---\n" as &[u8]))
+    .unwrap();
+assert_eq!(metadata["title"], "Tokio");
+```
+
+With smol, or any runtime whose readers implement `futures_io::AsyncRead` (`features = ["futures-io"]`). `smol::fs::File` is `async_fs::File` and `smol::block_on` is `futures_lite::future::block_on`, so this is the smol code with the crates named directly:
+
+```rust
+use metadata_gen::futures_io::extract_from_reader;
+
+let dir = tempfile::tempdir().unwrap();
+let path = dir.path().join("post.md");
+std::fs::write(&path, "---\ntitle: smol\n---\nbody").unwrap();
+
+let (metadata, _, _) = futures_lite::future::block_on(async {
+    let file = async_fs::File::open(&path).await?;
+    extract_from_reader(file).await
+})
+.unwrap();
+assert_eq!(metadata["title"], "smol");
+```
+
+A Tokio reader goes into the same function through `tokio_util::compat` (`file.compat()`). On a device, `metadata_gen::embedded_io::extract_from_reader(reader, &mut buffer)` (`default-features = false, features = ["yaml", "embedded-io-async"]`) reads into `buffer` and allocates nothing for the input. `examples/tokio_example.rs`, `examples/futures_io_example.rs` and `examples/embedded_io_example.rs` run each path.
+
+---
+
 ## Examples
 
 Run any example with `cargo run --example <name>`:
@@ -284,6 +347,9 @@ Run any example with `cargo run --example <name>`:
 | `required_fields_example` | `MetadataProcessor` with an extra required field and an unknown-field check |
 | `schema_org_example` | Schema.org `Article` and `BreadcrumbList` JSON-LD from front matter |
 | `streaming_example` | Walking a 100 000-URL manifest as events, and stopping early |
+| `tokio_example` | `metadata_gen::tokio`: a file and a reader on the Tokio runtime |
+| `futures_io_example` | `metadata_gen::futures_io`: any `futures_io::AsyncRead`, no runtime named (needs `--features futures-io`) |
+| `embedded_io_example` | `metadata_gen::embedded_io`: an `embedded_io_async::Read` into a fixed buffer, run on the host (needs `--features embedded-io-async`) |
 | `mcp_server` | An MCP server over stdio exposing the crate as agent tools ([`docs/MCP.md`](docs/MCP.md)) |
 
 [`examples/deploy/cloudflare-workers/`](examples/deploy/cloudflare-workers/) is a Cloudflare Worker that runs the WASI component.
@@ -350,6 +416,15 @@ make wasi         # WASI component: validate, size, native parity
 - Miri on the unit tests per push, and on every test target with `-Zmiri-strict-provenance` nightly.
 - Mutation testing via `cargo-mutants` (`.cargo/mutants.toml`), gated at an 85 % kill rate on each pull request's changed lines and nightly on the whole crate.
 - Three fuzz targets replaying seed and regression corpora per push and fuzzed for ten minutes each nightly; `fuzz/oss-fuzz/` is ready for OSS-Fuzz.
+- To fuzz locally, install nightly Rust and `cargo install --locked cargo-fuzz`, then run a target from the repository root (`-max_total_time` is in seconds; new corpus entries land in `fuzz/corpus/<target>/`):
+
+  ```bash
+  cargo +nightly fuzz run fuzz_extract_metadata -- -max_total_time=600
+  cargo +nightly fuzz run fuzz_extract_meta_tags -- -max_total_time=600
+  cargo +nightly fuzz run fuzz_html_escape -- -max_total_time=600
+  ```
+
+  `make fuzz` builds every target and replays the committed corpus and regressions once, as CI does per push.
 
 ---
 

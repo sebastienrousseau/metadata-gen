@@ -11,9 +11,21 @@
 # base commit's library (scripts/bench_overlay.py), so a pull request
 # that rewrites a benchmark is not reported as a library regression.
 #
-# `codspeed` adds CodSpeed's instrumented, noise-free measurements once
-# the repository is registered at codspeed.io and the CODSPEED_TOKEN
-# secret exists. Until then it reports that it was skipped and passes.
+# `codspeed` adds CodSpeed's instrumented measurements (instruction
+# counts, not wall-clock time) once the repository is registered at
+# codspeed.io and the CODSPEED_TOKEN secret exists. Until then it
+# reports that it was skipped and passes, and measures nothing.
+#
+# The comparison table is posted to the pull request as one comment
+# that every push updates, by bench-comment.yml (see the note at the
+# `Prepare the pull request comment` step).
+#
+# Who blocks: without the token the Criterion gate fails the pull
+# request on a regression. With the token, CodSpeed's check is the
+# gate and the Criterion gate turns advisory (warnings, exit 0):
+# wall-clock timings on shared runners moved by 6-15% between two
+# builds of identical library code on PRs that changed only
+# workflows (#152, #154, #155, #158), more than the 5% threshold.
 
 name: Bench
 
@@ -40,6 +52,8 @@ jobs:
       # Both runs write to one place so the second finds the baseline.
       CRITERION_HOME: ${{ github.workspace }}/criterion
       BASE_SHA: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+      # "true" once CodSpeed is the blocking gate; see the header.
+      CODSPEED_ENABLED: ${{ secrets.CODSPEED_TOKEN != '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -70,7 +84,57 @@ jobs:
         # measured but not compared.
         run: cargo bench --all-features --bench '*' -- --baseline-lenient base
       - name: Gate
-        run: python3 -I scripts/bench_compare.py --threshold 0.05 --criterion-dir "$CRITERION_HOME"
+        run: |
+          set -euo pipefail
+          advisory=()
+          if [ "$CODSPEED_ENABLED" = true ]; then advisory=(--advisory); fi
+          mkdir -p bench-comment
+          status=0
+          python3 -I scripts/bench_compare.py --threshold 0.05 --criterion-dir "$CRITERION_HOME" "${advisory[@]}" \
+            > bench-comment/gate.txt || status=$?
+          cat bench-comment/gate.txt
+          exit "$status"
+      # The table goes to the pull request through bench-comment.yml,
+      # which runs on `workflow_run` with `pull-requests: write`; this
+      # job keeps `contents: read` and only hands over an artifact, so a
+      # fork's pull request gets its comment without its code ever
+      # running with a write token.
+      - name: Prepare the pull request comment
+        if: always() && github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p bench-comment
+          {
+            echo '## Benchmark comparison'
+            echo
+            if [ -s bench-comment/gate.txt ]; then
+              grep -v '^::' bench-comment/gate.txt || true
+              if grep -q '^::' bench-comment/gate.txt; then
+                echo
+                grep '^::' bench-comment/gate.txt | sed 's/^::[a-z]*::/- /'
+              fi
+            else
+              echo 'The benchmarks did not reach the comparison; see the run log.'
+            fi
+            echo
+            echo "Measured on ${HEAD_SHA} against ${BASE_SHA}, one shared runner."
+            if [ "$CODSPEED_ENABLED" = true ]; then
+              echo 'Advisory: CodSpeed is the blocking gate.'
+            fi
+          } > bench-comment/comment.md
+          printf '%s\n' "$PR_NUMBER" > bench-comment/pr-number
+      - name: Upload the pull request comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bench-comment
+          path: |
+            bench-comment/comment.md
+            bench-comment/pr-number
+          retention-days: 7
       - name: Upload the Criterion reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -6,6 +6,24 @@
 use alloc::borrow::Cow;
 use alloc::string::String;
 
+/// The byte offset of the first `needle` in `haystack`, with the
+/// `memchr::memmem` searcher the crate already uses for fences, so
+/// `str::find` with a `&str` pattern is not compiled in as well (#61).
+/// A match of a UTF-8 needle in a `str` starts and ends on a character
+/// boundary, so the offset can be used to slice.
+pub(crate) fn find_str(haystack: &str, needle: &str) -> Option<usize> {
+    memchr::memmem::find(haystack.as_bytes(), needle.as_bytes())
+}
+
+/// `haystack` split around the first `needle`, like `str::split_once`.
+pub(crate) fn split_once_str<'a>(
+    haystack: &'a str,
+    needle: &str,
+) -> Option<(&'a str, &'a str)> {
+    let at = find_str(haystack, needle)?;
+    Some((&haystack[..at], &haystack[at + needle.len()..]))
+}
+
 /// Escapes special HTML characters in a string.
 ///
 /// This function replaces the following characters with their HTML entity equivalents:
@@ -40,9 +58,17 @@ use alloc::string::String;
 /// potentially dangerous characters. However, it should not be relied upon as the sole
 /// method of sanitizing user input for use in HTML contexts.
 pub fn escape_html(value: &str) -> String {
-    // One pass, one allocation. The five-`replace` chain this replaces
-    // walked the string five times and allocated up to five
-    // intermediates; the output is byte-identical.
+    escape(value, true)
+}
+
+/// The one escaper behind [`escape_html`] and [`escape_attribute`]:
+/// `apostrophe` says whether `'` is escaped too. One body for both keeps
+/// a single copy of the loop in the binary (#61).
+///
+/// One pass, one allocation. The five-`replace` chain this replaces
+/// walked the string five times and allocated up to five intermediates;
+/// the output is byte-identical.
+fn escape(value: &str, apostrophe: bool) -> String {
     let mut out = String::with_capacity(value.len() + value.len() / 8);
     for ch in value.chars() {
         match ch {
@@ -50,7 +76,7 @@ pub fn escape_html(value: &str) -> String {
             '<' => out.push_str("&lt;"),
             '>' => out.push_str("&gt;"),
             '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#x27;"),
+            '\'' if apostrophe => out.push_str("&#x27;"),
             other => out.push(other),
         }
     }
@@ -99,17 +125,7 @@ pub fn escape_html_cow(value: &str) -> Cow<'_, str> {
 /// );
 /// ```
 pub fn escape_attribute(value: &str) -> String {
-    let mut out = String::with_capacity(value.len() + value.len() / 8);
-    for ch in value.chars() {
-        match ch {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            other => out.push(other),
-        }
-    }
-    out
+    escape(value, false)
 }
 
 /// Unescapes HTML entities in a string.

@@ -86,6 +86,20 @@ serde = { version = "1.0", features = ["derive"] }
 regex = "1.12"
 proptest = { version = "1.6", default-features = false, features = ["std", "bit-set"] }
 
+# The runtime parity tests (#59, #60), left out of the loom build:
+# `RUSTFLAGS="--cfg loom"` reaches every crate, and concurrent-queue and
+# event-listener (under async-fs) then expect a `loom` they do not have.
+[target.'cfg(not(loom))'.dev-dependencies]
+# `tokio_util::compat` turns a Tokio reader into a `futures_io::AsyncRead`,
+# so a test can prove `metadata_gen::futures_io` takes Tokio files.
+# smol's own file type and executor: `smol::fs::File` is
+# `async_fs::File` and `smol::block_on` is `futures_lite::future::block_on`.
+# Taken directly so the smol parity test does not pull in smol's
+# reactor, process and networking crates.
+async-fs = "2"
+futures-lite = { version = "2", default-features = false, features = ["std"] }
+tokio-util = { version = "0.7", default-features = false, features = ["compat"] }
+
 [target.'cfg(loom)'.dev-dependencies]
 loom = "0.7"
 tokio = { version = "1.50", features = ["sync"] }
@@ -95,9 +109,19 @@ tokio = { version = "1.50", features = ["sync"] }
 # -----------------------------------------------------------------------------
 
 [[example]]
+name = "embedded_io_example"
+path = "examples/embedded_io_example.rs"
+required-features = ["yaml", "embedded-io-async"]
+
+[[example]]
 name = "error_example"
 path = "examples/error_example.rs"
 required-features = ["std", "yaml", "toml", "json", "html", "tokio"]
+
+[[example]]
+name = "futures_io_example"
+path = "examples/futures_io_example.rs"
+required-features = ["yaml", "futures-io"]
 
 [[example]]
 name = "lib_example"
@@ -133,6 +157,11 @@ required-features = ["yaml"]
 name = "streaming_example"
 path = "examples/streaming_example.rs"
 required-features = ["yaml"]
+
+[[example]]
+name = "tokio_example"
+path = "examples/tokio_example.rs"
+required-features = ["std", "yaml", "tokio"]
 
 [[example]]
 name = "utils_example"

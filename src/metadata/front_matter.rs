@@ -15,8 +15,6 @@ use alloc::format;
 #[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
 use alloc::string::String;
 use alloc::string::ToString;
-#[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
-use alloc::vec::Vec;
 #[cfg(any(feature = "yaml", feature = "json"))]
 use core::ops::Range;
 
@@ -151,7 +149,16 @@ fn join_key(prefix: &str, key: &str) -> String {
 /// shares for lists.
 #[cfg(any(feature = "yaml", feature = "toml", feature = "json"))]
 fn inline_list<I: Iterator<Item = String>>(items: I) -> String {
-    format!("[{}]", items.collect::<Vec<String>>().join(", "))
+    // Written in place rather than collected and joined (#61).
+    let mut out = String::from("[");
+    for (i, item) in items.enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        out.push_str(&item);
+    }
+    out.push(']');
+    out
 }
 
 #[cfg(feature = "yaml")]

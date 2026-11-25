@@ -15,10 +15,13 @@ most favourable reading of the samples. A point estimate alone would
 fail on runner noise.
 
 Usage:
-    scripts/bench_compare.py [--threshold 0.05] [--criterion-dir DIR]
+    scripts/bench_compare.py [--threshold 0.05] [--criterion-dir DIR] [--advisory]
 
 Writes a Markdown table to stdout (and to `$GITHUB_STEP_SUMMARY` when
-set) and exits 1 naming every regressed benchmark. A benchmark the
+set) and exits 1 naming every regressed benchmark. With `--advisory`
+it names them as warnings and exits 0: CI passes it once CodSpeed's
+instruction counts are the blocking gate, because wall-clock timings
+on shared runners move by more than the threshold between runs. A benchmark the
 baseline run did not have (its bench target does not build on the base
 commit) has no `change/` directory; it is listed as new, not compared.
 """
@@ -86,6 +89,11 @@ def main() -> int:
     parser.add_argument(
         "--criterion-dir", type=Path, default=Path("target/criterion")
     )
+    parser.add_argument(
+        "--advisory",
+        action="store_true",
+        help="report regressions as warnings and exit 0",
+    )
     args = parser.parse_args()
 
     rows = load_changes(args.criterion_dir)
@@ -98,9 +106,10 @@ def main() -> int:
     if summary:
         with open(summary, "a", encoding="utf-8") as handle:
             handle.write("## Benchmark comparison\n\n" + table)
+    level = "warning" if args.advisory else "error"
     for item in regressed:
-        print(f"::error::benchmark regressed: {item}")
-    return 1 if regressed else 0
+        print(f"::{level}::benchmark regressed: {item}")
+    return 1 if regressed and not args.advisory else 0
 
 
 if __name__ == "__main__":

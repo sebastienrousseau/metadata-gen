@@ -22,6 +22,16 @@ fn body() -> impl Strategy<Value = String> {
 }
 
 proptest! {
+    // Under Miri failures are not persisted: proptest's file
+    // persistence calls `getcwd`, which Miri's isolation forbids.
+    #![proptest_config(ProptestConfig {
+        failure_persistence: if cfg!(miri) {
+            None
+        } else {
+            ProptestConfig::default().failure_persistence
+        },
+        ..ProptestConfig::default()
+    })]
     #[test]
     fn body_is_the_rest_of_the_document(
         value in "[a-z]{1,10}",
