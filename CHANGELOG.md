@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `github/codeql-action/upload-sarif` 4.39.3, from Dependabot.
 - cargo-vet covers `loom` and `rustix` through their publishers
   (Alice Ryhl, Dan Gohman), which replaces the `rustix` exemption.
+- `toml` 1.2.2 (`toml_parser` 1.1.6), and `codecov/codecov-action`
+  7.1.1, `CodSpeedHQ/action` 5.8.0, `taiki-e/install-action` 2.90.8,
+  `ossf/scorecard-action` 2.6.0 and `upload-sarif` 4.39.4, from
+  Dependabot (#156, #157 via #158).
 - **crates.io metadata** (#33): the description is now one 106-character
   sentence instead of 137 characters starting "A powerful", and the
   `data-structures` category gives way to `no-std`.
@@ -176,6 +180,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   crate's object size.
 - `codecov.yml` holds project and patch coverage to 98 %, the number
   the coverage job enforces (#56).
+- The bench gate turns advisory once CodSpeed is live: with a
+  `CODSPEED_TOKEN` secret, `bench_compare.py --advisory` reports
+  Criterion regressions as warnings and CodSpeed's instruction counts
+  block instead. Wall-clock timings moved 6-15 % between builds of
+  identical library code on workflow-only pull requests. Without the
+  secret the Criterion gate still blocks.
+- The cargo-vet exemption ratchet reads the count from the JSON
+  report and its baseline is 0: the text summary drops "N exempted"
+  at zero, which failed the job while vetting passed.
+- `fuzz/oss-fuzz/Dockerfile` pins `base-builder-rust` by digest, and
+  Dependabot updates it weekly (Scorecard PinnedDependencies, #154).
+- `dependabot.yml` uses `versioning-strategy: auto` for cargo, which
+  accepts only `auto` or `lockfile-only`; Dependabot had rejected the
+  file since 0.0.5 (#155).
 - `make mutants` runs the mutants instead of only building them.
 - **SBOM check** (#28): a `CycloneDX SBOM` job fails unless the SBOM
   lists every crate of the default build with its purl. Releases now
