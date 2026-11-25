@@ -18,6 +18,7 @@
 #   make examples  — run every example to completion
 #   make bench-smoke — compile and run each bench once, no measurement
 #   make bench-gate — benches against a saved baseline, 5% regression gate
+#   make bench-instructions — instruction counts under callgrind (Linux, Valgrind)
 #   make bench-compare — escape_html against v_htmlescape (separate workspace)
 #   make proptest  — property tests at CI scale (10 000 cases, seed printed)
 #   make kani      — the escape_html totality proof (needs cargo-kani)
@@ -37,7 +38,7 @@
 #   make tools     — install the cargo tools the gates above need
 #   make clean     — remove build artifacts
 
-.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke bench-gate bench-compare embedded versions sbom wasi demo complexity links msrv semver hack no-std dist distcheck preflight tools clean
+.PHONY: all check clippy test fmt lint deny vet audit doc coverage miri proptest loom kani mutants fuzz examples bench-smoke bench-gate bench-instructions bench-compare embedded versions sbom wasi demo complexity links msrv semver hack no-std dist distcheck preflight tools clean
 
 all: check clippy test
 
@@ -129,6 +130,14 @@ else
 	cargo bench --all-features --bench '*' -- --baseline-lenient base
 	python3 -I scripts/bench_compare.py --threshold 0.05
 endif
+
+# The CI gate's measurement: instructions per fixed workload, under
+# Valgrind's callgrind (Linux). BASE=<instructions binary built from
+# another commit> compares against it with the 1% threshold.
+bench-instructions:
+	python3 -I scripts/instruction_compare.py --threshold 0.01 $(if $(BASE),--base $(BASE)) \
+	  --head "$$(cargo bench --all-features --bench instructions --no-run --message-format=json | \
+	    jq -r 'select(.reason == "compiler-artifact" and .target.name == "instructions" and .executable != null) | .executable' | tail -n 1)"
 
 bench-compare:
 	cd perf/escape-compare && cargo bench
