@@ -84,6 +84,7 @@ path = [
     "benches/**",
     "fuzz/**",
     "perf/**",
+    "embedded/**",
     "scripts/**",
 ]
 precedence = "aggregate"

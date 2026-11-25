@@ -391,6 +391,9 @@ jobs:
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
         with:
           key: ${{ matrix.target }}
+          workspaces: |
+            . -> target
+            embedded/size-probe -> target
       # Without `std` the build fails on anything that names it.
       - name: Build
         run: cargo build --lib --release --locked --no-default-features --features "${{ matrix.features }}" --target "${{ matrix.target }}"
@@ -399,6 +402,12 @@ jobs:
       # measured separately because a linker keeps only what is called.
       - name: Object size
         run: ./scripts/embedded_size.sh "${{ matrix.target }}" "${{ matrix.features }}" | tee -a "$GITHUB_STEP_SUMMARY"
+      # What a yaml-only build adds to a linked no_std firmware image
+      # (LTO, --gc-sections, opt-level s): flash, not object code.
+      # Reported, not gated: it measures over the 50 KB #61 asks for.
+      - name: Firmware size
+        if: matrix.features == 'yaml'
+        run: ./scripts/embedded_firmware_size.sh "${{ matrix.target }}" | tee -a "$GITHUB_STEP_SUMMARY"
 
   complexity:
     name: complexity (per-function ceilings)

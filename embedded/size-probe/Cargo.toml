@@ -1,0 +1,45 @@
+# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# A minimal no_std firmware image that calls `extract_metadata` on a
+# YAML block, linked with LTO and `--gc-sections`, so the linker keeps
+# only the code a real device would flash (#61). Built twice by
+# scripts/embedded_firmware_size.sh: once as a baseline that only
+# allocates, once with the `metadata-gen` feature; the difference is
+# the crate's footprint.
+#
+# A workspace of its own, like fuzz/ and wasi/, so it never enters
+# metadata-gen's Cargo.lock. It adds no dependency beyond metadata-gen.
+
+[package]
+name = "metadata-gen-size-probe"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.89.0"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "size-probe"
+path = "src/main.rs"
+test = false
+bench = false
+
+[dependencies]
+metadata-gen = { path = "../..", default-features = false, features = ["yaml"], optional = true }
+
+[profile.release]
+codegen-units = 1
+debug = false
+incremental = false
+lto = true
+opt-level = "s"
+panic = "abort"
+
+# The same image optimised for size harder; compared, not gated.
+[profile.release-z]
+inherits = "release"
+opt-level = "z"

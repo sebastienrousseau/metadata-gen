@@ -113,6 +113,24 @@ A fence whose format is not compiled in is reported as `UnsupportedFormatError`,
 - **`alloc`, with `std` optional.** With `default-features = false` the crate is `no_std + alloc` and `MetadataMap` is a `BTreeMap`; `cargo build --no-default-features --features yaml --target thumbv7em-none-eabihf` builds.
 - **No async runtime is required.** Every synchronous entry point works without one. The `tokio` feature adds `metadata_gen::tokio` for callers who run Tokio; the dependency is trimmed to `fs` and `io-util`.
 
+### Embedded targets
+
+The `embedded` CI job builds the `no_std` core for each target below on every pull request; a `std` call in that path fails the build. Sizes were measured locally with rustc 1.100.0 by the scripts named in each metric:
+
+| Target | Features | Metric | Size |
+| :--- | :--- | :--- | ---: |
+| `thumbv7em-none-eabihf` | `yaml,toml,json` | object | 94,746 B |
+| `thumbv7em-none-eabihf` | `yaml` | object | 75,389 B |
+| `thumbv7em-none-eabihf` | `yaml` | linked firmware | 164,817 B |
+| `riscv32imac-unknown-none-elf` | `yaml,toml,json` | object | 105,334 B |
+| `riscv32imac-unknown-none-elf` | `yaml` | linked firmware | 195,285 B |
+| `riscv32imc-unknown-none-elf` | `json` | object | 72,477 B |
+
+- **object**: `scripts/embedded_size.sh <target> <features>`, the text + data + bss of metadata-gen's own rlib at `opt-level = "s"` without LTO. It leaves out every dependency.
+- **linked firmware**: `scripts/embedded_firmware_size.sh <target>`, the `.text + .rodata + .data` that a yaml-only `extract_metadata` call adds to a minimal `no_std` image linked with LTO, `opt-level = "s"` and `--gc-sections` (`embedded/size-probe`). It includes `noyalib` and the `core` formatting and float code it pulls in; `opt-level = "z"` brings it to 135,941 B on `thumbv7em-none-eabihf`. The `riscv32imac` figure is not run in CI.
+
+`riscv32imc-unknown-none-elf` has no atomic read-modify-write, so only the JSON format builds there: `noyalib` and `toml` use `Arc`.
+
 ---
 
 ## Quick Start
