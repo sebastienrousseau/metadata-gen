@@ -403,6 +403,10 @@ jobs:
             features: yaml,toml,json
           - target: thumbv7em-none-eabihf
             features: yaml
+          # The `embedded-io-async` reader (Embassy) must build without
+          # `std`; no other row compiles `src/embedded_io.rs`.
+          - target: thumbv7em-none-eabihf
+            features: yaml,embedded-io-async
           # RISC-V with atomics: every format.
           - target: riscv32imac-unknown-none-elf
             features: yaml,toml,json

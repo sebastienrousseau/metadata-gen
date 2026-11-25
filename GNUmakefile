@@ -139,6 +139,7 @@ bench-compare:
 embedded:
 	./scripts/embedded_size.sh thumbv7em-none-eabihf yaml,toml,json
 	./scripts/embedded_size.sh thumbv7em-none-eabihf yaml
+	./scripts/embedded_size.sh thumbv7em-none-eabihf yaml,embedded-io-async
 	./scripts/embedded_size.sh riscv32imac-unknown-none-elf yaml,toml,json
 	./scripts/embedded_size.sh riscv32imc-unknown-none-elf json
 	./scripts/embedded_firmware_size.sh thumbv7em-none-eabihf
