@@ -630,6 +630,82 @@ who = "chrysn <chrysn@fsfe.org>"
 criteria = "safe-to-deploy"
 delta = "0.6.1 -> 0.7.1"
 
+[[audits.ariel-os.audits.futures-lite]]
+who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
+criteria = "safe-to-deploy"
+delta = "1.13.0 -> 2.0.0"
+notes = """
+No new unsafe code.
+Only internal refactors, refactors to drop local `Pending` and `Ready` Futures for core equivalents.
+Also make race futures available in no std using provided rng.
+"""
+
+[[audits.ariel-os.audits.futures-lite]]
+who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
+criteria = "safe-to-deploy"
+delta = "2.0.0 -> 2.0.1"
+notes = "No new code, just removes an unnecessary dependency."
+
+[[audits.ariel-os.audits.futures-lite]]
+who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
+criteria = "safe-to-deploy"
+delta = "2.0.1 -> 2.1.0"
+notes = """
+No new unsafe code.
+Just makes use of the `memchr` crate optional.
+"""
+
+[[audits.ariel-os.audits.futures-lite]]
+who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
+criteria = "safe-to-deploy"
+delta = "2.1.0 -> 2.2.0"
+notes = """
+No new unsafe code.
+Relaxes MSRV; Remove `UnPin` bound; refactor a match expressions; impl `size_hint` for `Filter`
+"""
+
+[[audits.ariel-os.audits.futures-lite]]
+who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
+criteria = "safe-to-deploy"
+delta = "2.2.0 -> 2.3.0"
+notes = """
+No new unsafe code.
+Adds a drain method to streams and related code. Also fix some conditional compilation flags regarding alloc and std.
+"""
+
+[[audits.ariel-os.audits.futures-lite]]
+who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
+criteria = "safe-to-deploy"
+delta = "2.3.0 -> 2.4.0"
+notes = """
+No new unsafe code.
+Make TryZip and Zip drop the futures when completed. Also add some Stream functionality.
+"""
+
+[[audits.ariel-os.audits.futures-lite]]
+who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
+criteria = "safe-to-deploy"
+delta = "2.4.0 -> 2.5.0"
+notes = """
+No new unsafe code.
+Removes `Unpin` bound on `Lines`
+"""
+
+[[audits.ariel-os.audits.futures-lite]]
+who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
+criteria = "safe-to-deploy"
+delta = "2.5.0 -> 2.6.0"
+notes = """
+No new unsafe code.
+Small changes to docs and adds `map_while` to stream and removes some explicit lifetimes.
+"""
+
+[[audits.ariel-os.audits.futures-lite]]
+who = "Antoine Lavandier <antoine.lavandier@inria.fr>"
+criteria = "safe-to-deploy"
+delta = "2.6.0 -> 2.6.1"
+notes = "No new unsafe code. Only docs change and import positions."
+
 [[audits.ariel-os.audits.log]]
 who = "Koen Zandberg <koen@bergzand.net>"
 criteria = "safe-to-deploy"
@@ -648,6 +724,18 @@ who = "Pat Hickey <phickey@fastly.com>"
 criteria = "safe-to-deploy"
 version = "0.1.6"
 notes = "Contains no unsafe code, no IO, no build.rs."
+
+[[audits.bytecodealliance.audits.async-task]]
+who = "Chris Fallin <chris@cfallin.org>"
+criteria = "safe-to-deploy"
+version = "4.7.1"
+notes = "Fairly significant chunk of unsafe code in the async executor core, but seems isolated to well-understood patterns, e.g. a manual vtable and some manual layout code."
+
+[[audits.bytecodealliance.audits.atomic-waker]]
+who = "Alex Crichton <alex@alexcrichton.com>"
+criteria = "safe-to-deploy"
+version = "1.1.2"
+notes = "Contains `unsafe` code but it's well-documented and scoped to what it's intended to be doing. Otherwise a well-focused and straightforward crate."
 
 [[audits.bytecodealliance.audits.cfg-if]]
 who = "Alex Crichton <alex@alexcrichton.com>"
@@ -693,6 +781,12 @@ version = "0.3.31"
 who = "Pat Hickey <p.hickey@f5.com>"
 criteria = "safe-to-deploy"
 delta = "0.3.31 -> 0.3.34"
+
+[[audits.bytecodealliance.audits.futures-lite]]
+who = "Chris Fallin <chris@cfallin.org>"
+criteria = "safe-to-deploy"
+version = "1.13.0"
+notes = "No unsafe code and fairly straightforward/expected imports for async IO primitives."
 
 [[audits.bytecodealliance.audits.futures-sink]]
 who = "Pat Hickey <pat@moreproductive.org>"
@@ -768,6 +862,12 @@ who = "Andrew Brown <andrew.brown@intel.com>"
 criteria = "safe-to-deploy"
 version = "0.2.19"
 notes = "As advertised: a numeric library. The only `unsafe` is from some float-to-int conversions, which seems expected."
+
+[[audits.bytecodealliance.audits.parking]]
+who = "Chris Fallin <chris@cfallin.org>"
+criteria = "safe-to-deploy"
+version = "2.2.1"
+notes = "forbid-unsafe crate with straightforward imports."
 
 [[audits.bytecodealliance.audits.rand]]
 who = "Alex Crichton <alex@alexcrichton.com>"

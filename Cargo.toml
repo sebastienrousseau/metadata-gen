@@ -86,6 +86,12 @@ serde = { version = "1.0", features = ["derive"] }
 regex = "1.12"
 # `tokio_util::compat` turns a Tokio reader into a `futures_io::AsyncRead`,
 # so a test can prove `metadata_gen::futures_io` takes Tokio files.
+# smol's own file type and executor: `smol::fs::File` is
+# `async_fs::File` and `smol::block_on` is `futures_lite::future::block_on`.
+# Taken directly so the smol parity test does not pull in smol's
+# reactor, process and networking crates.
+async-fs = "2"
+futures-lite = { version = "2", default-features = false, features = ["std"] }
 tokio-util = { version = "0.7", default-features = false, features = ["compat"] }
 proptest = { version = "1.6", default-features = false, features = ["std", "bit-set"] }
 
