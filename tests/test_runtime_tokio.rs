@@ -11,7 +11,7 @@
     feature = "futures-io",
     feature = "tokio",
     not(loom)
-, not(loom)))]
+))]
 
 use std::io::Write as _;
 use tokio_util::compat::TokioAsyncReadCompatExt as _;
