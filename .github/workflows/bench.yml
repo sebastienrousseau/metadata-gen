@@ -114,10 +114,15 @@ jobs:
           bin="$(cargo bench --all-features --bench instructions --no-run --message-format=json < /dev/null |
             jq -r 'select(.reason == "compiler-artifact" and .target.name == "instructions" and .executable != null) | .executable' |
             tail -n 1)"
+          # Same directory and name length as the base copy, so the two
+          # programs start from the same path (it is on the start-up
+          # stack). Run from different paths, extract_meta_tags_64k read
+          # about +1.1% with no library change.
+          cp "$bin" "$RUNNER_TEMP/instructions-head"
           base=()
           if [ -x "$RUNNER_TEMP/instructions-base" ]; then base=(--base "$RUNNER_TEMP/instructions-base"); fi
           status=0
-          python3 -I scripts/instruction_compare.py --head "$bin" "${base[@]}" --threshold 0.01 --runs 5 \
+          python3 -I scripts/instruction_compare.py --head "$RUNNER_TEMP/instructions-head" "${base[@]}" --threshold 0.01 --runs 5 \
             > bench-comment/instructions.txt || status=$?
           cat bench-comment/instructions.txt
           exit "$status"
