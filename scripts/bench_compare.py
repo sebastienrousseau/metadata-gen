@@ -19,9 +19,10 @@ Usage:
 
 Writes a Markdown table to stdout (and to `$GITHUB_STEP_SUMMARY` when
 set) and exits 1 naming every regressed benchmark. With `--advisory`
-it names them as warnings and exits 0: CI passes it once CodSpeed's
-instruction counts are the blocking gate, because wall-clock timings
-on shared runners move by more than the threshold between runs. A benchmark the
+it names them as warnings and exits 0: CI passes it, and gates on
+instruction counts instead (scripts/instruction_compare.py), because
+wall-clock timings on shared runners move by more than the threshold
+between runs. A benchmark the
 baseline run did not have (its bench target does not build on the base
 commit) has no `change/` directory; it is listed as new, not compared.
 """

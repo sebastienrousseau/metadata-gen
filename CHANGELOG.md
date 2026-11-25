@@ -124,6 +124,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The bench gate never compiled the change** (since bbaecc6): the
+  base build shared the change's target directory, and cargo reused
+  it for the change, so every comparison measured the base against
+  itself and a slowdown in the crate's own code passed. The base now
+  builds into its own directory. Checked with a planted extra pass in
+  `escape_html`: +87% on `escape_html_64k`, and the gate fails; with
+  no library change every workload stays within 0.17%.
 - **Nightly Miri failed on main**: `test_body` and `test_json_nested`
   let proptest look up its failure file, which calls `getcwd`, and
   Miri's isolation forbids it. Both now turn persistence off under
@@ -178,8 +185,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `bench.yml` (#49, #36): a 5 % benchmark regression gate on every
   pull request against the base commit, with Criterion reports as an
-  artifact; a CodSpeed job that activates once a `CODSPEED_TOKEN`
-  secret exists; and the `escape_html` comparison. Benches cover 1 KiB,
+  artifact; and the `escape_html` comparison. Benches cover 1 KiB,
   10 KiB, 1 MiB and 10 MiB, and `benches/stress_tps.rs` reports
   `extract_metadata` transactions per second on a 1 KiB post.
 - The bench gate compares like with like: the baseline run builds the
@@ -201,12 +207,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   crate's object size.
 - `codecov.yml` holds project and patch coverage to 98 %, the number
   the coverage job enforces (#56).
-- The bench gate turns advisory once CodSpeed is live: with a
-  `CODSPEED_TOKEN` secret, `bench_compare.py --advisory` reports
-  Criterion regressions as warnings and CodSpeed's instruction counts
-  block instead. Wall-clock timings moved 6-15 % between builds of
-  identical library code on workflow-only pull requests. Without the
-  secret the Criterion gate still blocks.
+- The bench gate counts instructions instead of timing (#49):
+  `benches/instructions.rs` runs fixed workloads and
+  `scripts/instruction_compare.py` runs each under Valgrind's
+  callgrind on the base commit and on the change, failing above +1 %.
+  No account or token is needed. Criterion still runs and its table
+  is posted, as warnings (`bench_compare.py --advisory`): wall-clock
+  timings moved 6-15 % between builds of identical library code on
+  workflow-only pull requests.
+  The CodSpeed job, which never had a token, is removed.
 - The embedded matrix builds `yaml,embedded-io-async` on
   `thumbv7em-none-eabihf` (#59), gates the `yaml` object at
   50,000 B, and reports what a `yaml` build adds to a linked firmware

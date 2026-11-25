@@ -85,8 +85,7 @@ Every gate has a local equivalent:
 | `wasi-component` (quality.yml) | `make wasi` | needs the `wasm32-wasip2` target, `wasm-tools` and `wasmtime` |
 | `proptest` (quality.yml) | `make proptest` | 10 000 cases per round trip, 100 000 for the ASCII involution; the seed is printed, rerun with `PROPTEST_RNG_SEED=<seed>` |
 | `embedded` (quality.yml) | `make embedded` | `riscv32imc` has no atomic read-modify-write, so `noyalib` and `toml` (which use `Arc`) cannot build there; that row builds JSON only |
-| `bench regression` (bench.yml) | `make bench-gate` | PRs only; fails when a benchmark's 95 % interval lies wholly above +5 % against the base commit |
-| `codspeed` (bench.yml) | none | skipped until the `CODSPEED_TOKEN` secret exists |
+| `bench regression` (bench.yml) | `make bench-instructions BASE=<base binary>`, `make bench-gate` | PRs only; fails when a workload in `benches/instructions.rs` executes more than 1 % more instructions (Valgrind callgrind) than on the base commit. The Criterion timings (`make bench-gate`, +5 % at the 95 % interval) are reported as warnings, not gated, because shared runners move them by more than that |
 | `kani` (assurance.yml) | `make kani` | needs `cargo install --locked kani-verifier && cargo kani setup` |
 | `mutants (changed lines)` (assurance.yml) | `git diff main... -- src > d.diff && cargo mutants --in-diff d.diff` | PRs only; same 85 % floor |
 | `miri-full`, `fuzz-long`, `mutants-full` (assurance.yml) | `MIRIFLAGS=-Zmiri-strict-provenance cargo +nightly miri test --all-features --lib --tests`, `cargo +nightly fuzz run <target> -- -max_total_time=600`, `make mutants` | nightly schedule and manual dispatch only |

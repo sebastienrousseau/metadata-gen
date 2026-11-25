@@ -195,6 +195,13 @@ name = "stress_tps"
 harness = false
 required-features = ["std", "yaml"]
 
+# Fixed workloads for the instruction-count gate (#49): run under
+# callgrind by scripts/instruction_compare.py, not by Criterion.
+[[bench]]
+name = "instructions"
+harness = false
+required-features = ["std", "yaml", "toml", "json", "html"]
+
 [profile.bench]
 # Match release codegen so reported numbers reflect what users will see.
 # `line-tables-only` keeps just enough debug info for flamegraphs without

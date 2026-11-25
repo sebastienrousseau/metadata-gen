@@ -1,31 +1,26 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# Benchmark regression gate (#49, #36).
+# Benchmark regression gate (#49, #36). No account or token: it runs
+# on every pull request with what the runner has.
 #
-# `regression` runs on every pull request and needs no account: it runs
-# the Criterion suite on the base commit, saves it as a baseline, runs
-# it again on the change and fails when any benchmark is slower than
-# the threshold at the lower bound of its confidence interval
-# (scripts/bench_compare.py). Both runs share one runner and the same
-# benchmark code: the baseline builds the change's benches/ against the
-# base commit's library (scripts/bench_overlay.py), so a pull request
-# that rewrites a benchmark is not reported as a library regression.
+# The gate is the instruction count. benches/instructions.rs runs fixed
+# workloads; scripts/instruction_compare.py runs each under Valgrind's
+# callgrind with the base commit's library and with the change's, and
+# fails when the change executes more than 1% more instructions. The
+# count does not depend on how busy the shared runner is.
 #
-# `codspeed` adds CodSpeed's instrumented measurements (instruction
-# counts, not wall-clock time) once the repository is registered at
-# codspeed.io and the CODSPEED_TOKEN secret exists. Until then it
-# reports that it was skipped and passes, and measures nothing.
+# Criterion still measures wall-clock time for every benchmark and its
+# table is reported, but it is advisory (warnings, exit 0): timings on
+# shared runners moved by 6-15% between two builds of identical
+# library code on PRs that changed only workflows (#152, #154, #155,
+# #158), more than any threshold worth gating on.
 #
-# The comparison table is posted to the pull request as one comment
-# that every push updates, by bench-comment.yml (see the note at the
-# `Prepare the pull request comment` step).
-#
-# Who blocks: without the token the Criterion gate fails the pull
-# request on a regression. With the token, CodSpeed's check is the
-# gate and the Criterion gate turns advisory (warnings, exit 0):
-# wall-clock timings on shared runners moved by 6-15% between two
-# builds of identical library code on PRs that changed only
-# workflows (#152, #154, #155, #158), more than the 5% threshold.
+# Both runs build the change's benches/ against the base commit's
+# library (scripts/bench_overlay.py), so a pull request that rewrites a
+# benchmark is not reported as a library regression. Both tables are
+# posted to the pull request as one comment that every push updates,
+# by bench-comment.yml (see the `Prepare the pull request comment`
+# step).
 
 name: Bench
 
@@ -45,15 +40,13 @@ env:
 
 jobs:
   regression:
-    name: bench regression (5% gate)
+    name: bench regression (instruction-count gate)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
       # Both runs write to one place so the second finds the baseline.
       CRITERION_HOME: ${{ github.workspace }}/criterion
       BASE_SHA: ${{ github.event.pull_request.base.sha || 'origin/main' }}
-      # "true" once CodSpeed is the blocking gate; see the header.
-      CODSPEED_ENABLED: ${{ secrets.CODSPEED_TOKEN != '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -63,15 +56,32 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+      # Valgrind from the runner image's own Ubuntu archive.
+      - name: Install Valgrind
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends valgrind
+          valgrind --version
       - name: Baseline on the base commit, with the change's benches
         # A bench target that does not build against the base library
         # gets no baseline; the gate lists its benchmarks as new.
         run: |
           set -euo pipefail
+          instructions_binary() {
+            cargo bench --all-features --bench instructions --no-run --message-format=json < /dev/null |
+              jq -r 'select(.reason == "compiler-artifact" and .target.name == "instructions" and .executable != null) | .executable' |
+              tail -n 1 | grep .
+          }
           git worktree add "$RUNNER_TEMP/base" "$BASE_SHA"
           python3 -I scripts/bench_overlay.py "$RUNNER_TEMP/base" > "$RUNNER_TEMP/benches.txt"
           cd "$RUNNER_TEMP/base"
-          export CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target"
+          # Its own target directory. Sharing the change's let cargo
+          # reuse the base build for the change: both builds hash to
+          # the same unit, its dep-info lists the base worktree's files,
+          # and those never change, so the change was never compiled
+          # and every comparison measured the base against itself.
+          export CARGO_TARGET_DIR="$RUNNER_TEMP/base-target"
           while read -r bench; do
             if cargo bench --all-features --bench "$bench" --no-run < /dev/null; then
               cargo bench --all-features --bench "$bench" -- --save-baseline base < /dev/null
@@ -79,20 +89,42 @@ jobs:
               echo "::notice::bench target $bench does not build on $BASE_SHA: new, no baseline"
             fi
           done < "$RUNNER_TEMP/benches.txt"
+          # The instruction workloads, copied out of the base target
+          # directory so the gate step finds them by one path.
+          if bin="$(instructions_binary)"; then
+            cp "$bin" "$RUNNER_TEMP/instructions-base"
+          else
+            echo "::notice::the instruction workloads do not build on $BASE_SHA: new, no baseline"
+          fi
       - name: The change against the baseline
         # Lenient: a benchmark the base commit does not have yet is
         # measured but not compared.
         run: cargo bench --all-features --bench '*' -- --baseline-lenient base
-      - name: Gate
+      - name: Criterion timings (advisory)
         run: |
           set -euo pipefail
-          advisory=()
-          if [ "$CODSPEED_ENABLED" = true ]; then advisory=(--advisory); fi
           mkdir -p bench-comment
-          status=0
-          python3 -I scripts/bench_compare.py --threshold 0.05 --criterion-dir "$CRITERION_HOME" "${advisory[@]}" \
-            > bench-comment/gate.txt || status=$?
+          python3 -I scripts/bench_compare.py --threshold 0.05 --criterion-dir "$CRITERION_HOME" --advisory \
+            > bench-comment/gate.txt
           cat bench-comment/gate.txt
+      - name: Instruction-count gate
+        run: |
+          set -euo pipefail
+          mkdir -p bench-comment
+          bin="$(cargo bench --all-features --bench instructions --no-run --message-format=json < /dev/null |
+            jq -r 'select(.reason == "compiler-artifact" and .target.name == "instructions" and .executable != null) | .executable' |
+            tail -n 1)"
+          # Same directory and name length as the base copy, so the two
+          # programs start from the same path (it is on the start-up
+          # stack). Run from different paths, extract_meta_tags_64k read
+          # about +1.1% with no library change.
+          cp "$bin" "$RUNNER_TEMP/instructions-head"
+          base=()
+          if [ -x "$RUNNER_TEMP/instructions-base" ]; then base=(--base "$RUNNER_TEMP/instructions-base"); fi
+          status=0
+          python3 -I scripts/instruction_compare.py --head "$RUNNER_TEMP/instructions-head" "${base[@]}" --threshold 0.01 --runs 5 \
+            > bench-comment/instructions.txt || status=$?
+          cat bench-comment/instructions.txt
           exit "$status"
       # The table goes to the pull request through bench-comment.yml,
       # which runs on `workflow_run` with `pull-requests: write`; this
@@ -107,23 +139,26 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p bench-comment
+          section() { # section <title> <file>
+            echo "### $1"
+            echo
+            if [ -s "$2" ]; then
+              grep -v '^::' "$2" || true
+              if grep -q '^::' "$2"; then
+                echo
+                grep '^::' "$2" | sed 's/^::[a-z]*::/- /'
+              fi
+            else
+              echo 'Not reached; see the run log.'
+            fi
+            echo
+          }
           {
             echo '## Benchmark comparison'
             echo
-            if [ -s bench-comment/gate.txt ]; then
-              grep -v '^::' bench-comment/gate.txt || true
-              if grep -q '^::' bench-comment/gate.txt; then
-                echo
-                grep '^::' bench-comment/gate.txt | sed 's/^::[a-z]*::/- /'
-              fi
-            else
-              echo 'The benchmarks did not reach the comparison; see the run log.'
-            fi
-            echo
+            section 'Instruction counts (the gate)' bench-comment/instructions.txt
+            section 'Criterion timings (advisory)' bench-comment/gate.txt
             echo "Measured on ${HEAD_SHA} against ${BASE_SHA}, one shared runner."
-            if [ "$CODSPEED_ENABLED" = true ]; then
-              echo 'Advisory: CodSpeed is the blocking gate.'
-            fi
           } > bench-comment/comment.md
           printf '%s\n' "$PR_NUMBER" > bench-comment/pr-number
       - name: Upload the pull request comment
@@ -172,40 +207,3 @@ jobs:
             grep -E '^escape_64KiB|thrpt:' bench.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-
-  codspeed:
-    name: codspeed
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      CODSPEED_TOKEN: ${{ secrets.CODSPEED_TOKEN }}
-    steps:
-      - name: Skipped without a CODSPEED_TOKEN
-        if: env.CODSPEED_TOKEN == ''
-        run: echo "::notice::CODSPEED_TOKEN is not set; register the repository at codspeed.io and add the secret to enable this job."
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: env.CODSPEED_TOKEN != ''
-        with:
-          persist-credentials: false
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
-        if: env.CODSPEED_TOKEN != ''
-        with:
-          toolchain: stable
-      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8, installs cargo-codspeed
-        if: env.CODSPEED_TOKEN != ''
-        with:
-          tool: cargo-codspeed
-      # CodSpeed's drop-in layer replaces Criterion for this job only.
-      # Swapping it in here keeps it out of Cargo.lock, and so out of the
-      # dependency graph cargo-vet and cargo-deny certify.
-      - name: Build the benches against codspeed-criterion-compat
-        if: env.CODSPEED_TOKEN != ''
-        run: |
-          set -euo pipefail
-          cargo add --dev --rename criterion codspeed-criterion-compat@6.1.0
-          cargo codspeed build --all-features
-      - uses: CodSpeedHQ/action@b1f28b5eccf7cb5bfe6a2a89cb3053eb67f1150c # v5.8.0
-        if: env.CODSPEED_TOKEN != ''
-        with:
-          run: cargo codspeed run
-          token: ${{ secrets.CODSPEED_TOKEN }}
