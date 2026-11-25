@@ -52,4 +52,4 @@ all="$(total_of "${all_rlibs[@]}")"
 
 echo "| Target | Features | metadata-gen | With every dependency (upper bound) |"
 echo "| :--- | :--- | ---: | ---: |"
-printf '| `%s` | `%s` | %d B | %d B |\n' "$target" "$features" "$own" "$all"
+printf "| \`%s\` | \`%s\` | %d B | %d B |\n" "$target" "$features" "$own" "$all"
