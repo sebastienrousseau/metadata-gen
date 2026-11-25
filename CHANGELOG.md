@@ -124,6 +124,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The bench gate never compiled the change** (since bbaecc6): the
+  base build shared the change's target directory, and cargo reused
+  it for the change, so every comparison measured the base against
+  itself and a slowdown in the crate's own code passed. The base now
+  builds into its own directory. Checked with a planted extra pass in
+  `escape_html`: +87% on `escape_html_64k`, and the gate fails; with
+  no library change every workload stays within 0.17%.
 - **Nightly Miri failed on main**: `test_body` and `test_json_nested`
   let proptest look up its failure file, which calls `getcwd`, and
   Miri's isolation forbids it. Both now turn persistence off under
