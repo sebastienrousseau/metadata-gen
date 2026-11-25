@@ -107,9 +107,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was tried and reverted: on the CI runner it was 10-16% slower than
   the per-char loop on markup-dense input, which the bench gate
   rejects.
+- **The `no_std` `yaml` object is 48,240 B, down from 75,389 B**
+  (#61; `scripts/embedded_size.sh thumbv7em-none-eabihf yaml`,
+  rustc 1.100.0), under the 50,000 B budget CI now enforces. No
+  feature, API or default changed: the event walk runs behind a
+  trait object instead of once per callback type; map conversions
+  use `extend` instead of `collect`, which sorted a Vec for a
+  `BTreeMap`; the `no_std` value path uses noyalib's non-generic
+  document loader (same answers as `from_str::<Value>`, held by a
+  test in both builds); ISO 8601 dates without a time are parsed by
+  `src/metadata/iso_date.rs` instead of `time`'s generic parser,
+  differential-tested against `time` on every calendar, ordinal and
+  week form; and the two HTML escapers share one body. A linked
+  firmware image barely changes (164,041 B), since a linker had
+  already dropped most of that code.
 
 ### Fixed
 
+- **Nightly Miri failed on main**: `test_body` and `test_json_nested`
+  let proptest look up its failure file, which calls `getcwd`, and
+  Miri's isolation forbids it. Both now turn persistence off under
+  Miri, as `test_proptest` already did.
 - **A YAML block exactly `ParseLimits::max_block_bytes` long is
   accepted.** The limit is inclusive, but the text handed to noyalib
   gained a trailing newline, so a block at the limit failed with
@@ -133,6 +151,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+- `futures_io::extract_from_reader` reads a `tokio::fs::File`
+  through `tokio-util`'s compat layer and an `async-fs` (smol) file
+  directly, each equal to the synchronous result (#59, #60).
 - `tests/test_json_nested.rs` (#26): nested objects, arrays of objects,
   a body holding `{` and `}`, an unmatched brace, and a property test
   over random nested objects. The same nested document read with
@@ -186,6 +207,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   block instead. Wall-clock timings moved 6-15 % between builds of
   identical library code on workflow-only pull requests. Without the
   secret the Criterion gate still blocks.
+- The embedded matrix builds `yaml,embedded-io-async` on
+  `thumbv7em-none-eabihf` (#59), gates the `yaml` object at
+  50,000 B, and reports what a `yaml` build adds to a linked firmware
+  image (`scripts/embedded_firmware_size.sh`, `embedded/size-probe`)
+  (#61).
+- Benches cover `process_metadata`, `generate_metatags` and
+  `extract_and_prepare_metadata` at 1 KiB to 10 MiB; a manual
+  `flamegraph.yml` workflow uploads SVGs; the bench comparison is
+  posted as one sticky pull request comment by `bench-comment.yml`
+  (`workflow_run`, so it starts once merged) (#49).
+- A `deploy sample (Cloudflare Workers)` job builds the Workers
+  sample with `npm ci`, `npm audit` and `wrangler deploy --dry-run`;
+  the sample now has a lockfile and overrides `minimatch` to 11.0.6
+  for GHSA-g3hv-75wg-m249 (#63).
 - The cargo-vet exemption ratchet reads the count from the JSON
   report and its baseline is 0: the text summary drops "N exempted"
   at zero, which failed the job while vetting passed.
@@ -204,6 +239,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- README: an Async section (Tokio and smol examples), embedded
+  sizes per target, and how to run the fuzzers locally; examples for
+  Tokio, futures-io and embedded-io-async (#52, #59, #60, #61).
+- The Cloudflare Workers guide records a measured run: 2 min (123 s)
+  from a fresh clone to the first response under `wrangler dev`
+  (#63).
 - `extract_typed` documents `MetadataError::Parse` instead of the
   `YamlError`, `TomlError` and `JsonError` variants it stopped
   returning in 0.0.8, and its examples cover all three formats,
