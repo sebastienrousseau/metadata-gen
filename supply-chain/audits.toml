@@ -33,6 +33,27 @@ user-id = 6743 # Ed Page (epage)
 start = "2019-11-29"
 end = "2027-11-05"
 
+[[trusted.async-channel]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2022-08-08"
+end = "2027-11-25"
+notes = "Maintainer's trust decision for #159 (2026-11-25): publisher taiki-e, dev-only."
+
+[[trusted.async-fs]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2022-08-17"
+end = "2027-11-25"
+notes = "Maintainer's trust decision for #159 (2026-11-25): publisher taiki-e, dev-only."
+
+[[trusted.async-lock]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2021-04-16"
+end = "2027-11-25"
+notes = "Maintainer's trust decision for #159 (2026-11-25): publisher taiki-e, dev-only."
+
 [[trusted.autocfg]]
 criteria = "safe-to-run"
 user-id = 539 # Josh Stone (cuviper)
@@ -46,6 +67,13 @@ user-id = 3204 # Ashley Mannix (KodrAus)
 start = "2019-05-02"
 end = "2027-11-24"
 notes = "Maintainer's trust decision for #144 (2026-11-24): publisher KodrAus."
+
+[[trusted.blocking]]
+criteria = "safe-to-run"
+user-id = 2340 # Ellen Emilia Anna Zscheile (fogti)
+start = "2026-08-23"
+end = "2027-11-25"
+notes = "Maintainer's trust decision for #159 (2026-11-25): publisher fogti, dev-only."
 
 [[trusted.borsh]]
 criteria = "safe-to-run"
@@ -99,6 +127,13 @@ user-id = 6743 # Ed Page (epage)
 start = "2022-04-15"
 end = "2027-11-05"
 
+[[trusted.concurrent-queue]]
+criteria = "safe-to-run"
+user-id = 69526 # John Nunley (notgull)
+start = "2023-04-07"
+end = "2027-11-25"
+notes = "Maintainer's trust decision for #159 (2026-11-25): publisher notgull, dev-only."
+
 [[trusted.criterion]]
 criteria = "safe-to-run"
 user-id = 8785 # Brook Heisler (bheisler)
@@ -133,6 +168,20 @@ user-id = 539 # Josh Stone (cuviper)
 start = "2019-04-02"
 end = "2027-11-24"
 notes = "Maintainer's trust decision for #144 (2026-11-24): publisher cuviper."
+
+[[trusted.event-listener]]
+criteria = "safe-to-run"
+user-id = 6423 # Zeeshan Ali Khan (zeenix)
+start = "2024-02-05"
+end = "2027-11-25"
+notes = "Maintainer's trust decision for #159 (2026-11-25): publisher zeenix, dev-only."
+
+[[trusted.event-listener-strategy]]
+criteria = "safe-to-run"
+user-id = 33035 # Taiki Endo (taiki-e)
+start = "2025-03-27"
+end = "2027-11-25"
+notes = "Maintainer's trust decision for #159 (2026-11-25): publisher taiki-e, dev-only."
 
 [[trusted.fastrand]]
 criteria = "safe-to-run"
@@ -306,6 +355,13 @@ trusted-publisher = "github:taiki-e/pin-project-lite"
 start = "2026-02-27"
 end = "2027-11-24"
 notes = "Maintainer's trust decision for #144 (2026-11-24): publisher github:taiki-e/pin-project-lite."
+
+[[trusted.piper]]
+criteria = "safe-to-run"
+user-id = 69526 # John Nunley (notgull)
+start = "2023-04-24"
+end = "2027-11-25"
+notes = "Maintainer's trust decision for #159 (2026-11-25): publisher notgull, dev-only."
 
 [[trusted.plotters]]
 criteria = "safe-to-run"
@@ -521,6 +577,13 @@ criteria = "safe-to-deploy"
 user-id = 6741 # Alice Ryhl (Darksonn)
 start = "2020-10-26"
 end = "2027-11-05"
+
+[[trusted.tokio-util]]
+criteria = "safe-to-run"
+user-id = 6741 # Alice Ryhl (Darksonn)
+start = "2021-01-12"
+end = "2027-11-25"
+notes = "Maintainer's trust decision for #159 (2026-11-25): publisher Darksonn, dev-only."
 
 [[trusted.toml]]
 criteria = "safe-to-deploy"
