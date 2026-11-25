@@ -13,5 +13,8 @@
   },
   "dependencies": {
     "@bytecodealliance/preview2-shim": "0.31.1"
+  },
+  "overrides": {
+    "minimatch": "11.0.6"
   }
 }

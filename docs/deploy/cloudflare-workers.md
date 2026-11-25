@@ -26,9 +26,15 @@ the deploy step and the production response are untested.
 ```bash
 git clone https://github.com/sebastienrousseau/metadata-gen.git
 cd metadata-gen/examples/deploy/cloudflare-workers
-npm install
+npm ci          # exact versions from package-lock.json
 npm run build   # cargo build of wasi/, then jco transpile into src/gen/
+npx --no-install wrangler deploy --dry-run --outdir dist   # bundle only
 ```
+
+`package.json` overrides `minimatch` to 11.0.6: jco 1.42.0 pulls
+10.2.6 through `@bytecodealliance/jco-std`, which GHSA-g3hv-75wg-m249
+affects. CI runs these three commands and `npm audit` on every push
+(the `deploy sample (Cloudflare Workers)` job in `quality.yml`).
 
 `build.sh` runs `jco transpile ... --instantiation async`, which emits
 `src/gen/metadata-gen.js` plus three core modules. Use the locally
