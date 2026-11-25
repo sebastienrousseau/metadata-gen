@@ -302,6 +302,9 @@ Run any example with `cargo run --example <name>`:
 | `required_fields_example` | `MetadataProcessor` with an extra required field and an unknown-field check |
 | `schema_org_example` | Schema.org `Article` and `BreadcrumbList` JSON-LD from front matter |
 | `streaming_example` | Walking a 100 000-URL manifest as events, and stopping early |
+| `tokio_example` | `metadata_gen::tokio`: a file and a reader on the Tokio runtime |
+| `futures_io_example` | `metadata_gen::futures_io`: any `futures_io::AsyncRead`, no runtime named (needs `--features futures-io`) |
+| `embedded_io_example` | `metadata_gen::embedded_io`: an `embedded_io_async::Read` into a fixed buffer, run on the host (needs `--features embedded-io-async`) |
 | `mcp_server` | An MCP server over stdio exposing the crate as agent tools ([`docs/MCP.md`](docs/MCP.md)) |
 
 [`examples/deploy/cloudflare-workers/`](examples/deploy/cloudflare-workers/) is a Cloudflare Worker that runs the WASI component.

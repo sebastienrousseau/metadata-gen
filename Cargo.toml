@@ -104,9 +104,19 @@ tokio = { version = "1.50", features = ["sync"] }
 # -----------------------------------------------------------------------------
 
 [[example]]
+name = "embedded_io_example"
+path = "examples/embedded_io_example.rs"
+required-features = ["yaml", "embedded-io-async"]
+
+[[example]]
 name = "error_example"
 path = "examples/error_example.rs"
 required-features = ["std", "yaml", "toml", "json", "html", "tokio"]
+
+[[example]]
+name = "futures_io_example"
+path = "examples/futures_io_example.rs"
+required-features = ["yaml", "futures-io"]
 
 [[example]]
 name = "lib_example"
@@ -142,6 +152,11 @@ required-features = ["yaml"]
 name = "streaming_example"
 path = "examples/streaming_example.rs"
 required-features = ["yaml"]
+
+[[example]]
+name = "tokio_example"
+path = "examples/tokio_example.rs"
+required-features = ["std", "yaml", "tokio"]
 
 [[example]]
 name = "utils_example"
