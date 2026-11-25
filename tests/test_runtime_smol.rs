@@ -15,6 +15,10 @@ use std::io::Write as _;
 const DOC: &str = "---\ntitle: Same\nkeywords: a, b\n---\nbody";
 
 #[test]
+#[cfg_attr(
+    miri,
+    ignore = "writes and reads a temp file; Miri isolation forbids it"
+)]
 fn smol_file_matches_the_sync_api() {
     let mut fixture = tempfile::NamedTempFile::new().unwrap();
     fixture.write_all(DOC.as_bytes()).unwrap();

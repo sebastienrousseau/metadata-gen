@@ -47,6 +47,10 @@ fn year_spellings(year: i32) -> [String; 2] {
 }
 
 #[test]
+#[cfg_attr(
+    miri,
+    ignore = "exhaustive; too slow under Miri, run natively"
+)]
 fn weeks_in_year_matches_time() {
     for year in MIN_YEAR..=MAX_YEAR {
         assert_eq!(
@@ -58,6 +62,10 @@ fn weeks_in_year_matches_time() {
 }
 
 #[test]
+#[cfg_attr(
+    miri,
+    ignore = "exhaustive; too slow under Miri, run natively"
+)]
 fn calendar_dates_match_time() {
     for year in YEARS {
         for y in year_spellings(year) {
@@ -72,6 +80,10 @@ fn calendar_dates_match_time() {
 }
 
 #[test]
+#[cfg_attr(
+    miri,
+    ignore = "exhaustive; too slow under Miri, run natively"
+)]
 fn ordinal_dates_match_time() {
     for year in YEARS {
         for y in year_spellings(year) {
@@ -84,6 +96,10 @@ fn ordinal_dates_match_time() {
 }
 
 #[test]
+#[cfg_attr(
+    miri,
+    ignore = "exhaustive; too slow under Miri, run natively"
+)]
 fn week_dates_match_time() {
     for year in YEARS {
         for y in year_spellings(year) {

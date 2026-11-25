@@ -19,6 +19,10 @@ use tokio_util::compat::TokioAsyncReadCompatExt as _;
 const DOC: &str = "---\ntitle: Same\nkeywords: a, b\n---\nbody";
 
 #[test]
+#[cfg_attr(
+    miri,
+    ignore = "writes and reads a temp file; Miri isolation forbids it"
+)]
 fn tokio_file_through_compat_matches_the_sync_api() {
     let mut fixture = tempfile::NamedTempFile::new().unwrap();
     fixture.write_all(DOC.as_bytes()).unwrap();
