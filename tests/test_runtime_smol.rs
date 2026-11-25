@@ -8,7 +8,7 @@
 //! `futures_lite::future::block_on`; the test names those crates so it
 //! does not depend on the rest of smol.
 
-#![cfg(all(feature = "yaml", feature = "futures-io"))]
+#![cfg(all(feature = "yaml", feature = "futures-io", not(loom)))]
 
 use std::io::Write as _;
 

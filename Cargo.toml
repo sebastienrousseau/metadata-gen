@@ -84,6 +84,12 @@ tempfile = "3.27"
 tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "fs", "io-util"] }
 serde = { version = "1.0", features = ["derive"] }
 regex = "1.12"
+proptest = { version = "1.6", default-features = false, features = ["std", "bit-set"] }
+
+# The runtime parity tests (#59, #60), left out of the loom build:
+# `RUSTFLAGS="--cfg loom"` reaches every crate, and concurrent-queue and
+# event-listener (under async-fs) then expect a `loom` they do not have.
+[target.'cfg(not(loom))'.dev-dependencies]
 # `tokio_util::compat` turns a Tokio reader into a `futures_io::AsyncRead`,
 # so a test can prove `metadata_gen::futures_io` takes Tokio files.
 # smol's own file type and executor: `smol::fs::File` is
@@ -93,7 +99,6 @@ regex = "1.12"
 async-fs = "2"
 futures-lite = { version = "2", default-features = false, features = ["std"] }
 tokio-util = { version = "0.7", default-features = false, features = ["compat"] }
-proptest = { version = "1.6", default-features = false, features = ["std", "bit-set"] }
 
 [target.'cfg(loom)'.dev-dependencies]
 loom = "0.7"
