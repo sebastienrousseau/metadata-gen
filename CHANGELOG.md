@@ -171,11 +171,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and any printable Unicode, compares the whole extracted map, and
   scales with `PROPTEST_CASES`: CI runs 10 000 cases per round trip and
   100 000 for the ASCII escape involution and prints the seed.
-- A Kani proof (#55) runs in CI: `escape_html` never panics on any
-  one-char string. A round-trip harness made CBMC run out of memory
-  even for one ASCII char, so `tests/test_escape_exhaustive.rs` proves
-  the round trip and the absence of raw markup by enumeration instead,
-  over every Unicode char and every ASCII string of up to three chars.
+- Kani proofs (#55) run in CI: `escape_html` never panics on any
+  one-char string, and `unescape_html(escape_html(s)) == s` for every
+  one-char ASCII string (four harnesses, one per class of escape
+  length, run by `scripts/kani-round-trip.sh`). Two chars ran CBMC out
+  of memory, so `tests/test_escape_exhaustive.rs` checks the round
+  trip and the absence of raw markup by enumeration beyond that, over
+  every Unicode char and every ASCII string of up to three chars. A
+  new escaping path must pass the same harnesses before it merges.
 - `tests/test_edge_cases.rs`: boundaries mutation testing showed were
   untested (#54).
 - Every test target runs under Miri (#53); filesystem tests are

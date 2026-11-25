@@ -28,6 +28,10 @@ this file covers the rules that are easy for an agent to violate.
   version-bearing files.
 - Every function stays within the complexity ceilings (`make complexity`);
   `complexity-baseline.txt` is empty and must stay empty.
+- A new escaping path (a SIMD `escape_html` or `unescape_html`, say)
+  must pass the Kani harnesses in `tests/kani/escape_html.rs`
+  (`make kani`) before it merges, the same proofs the current path
+  passes.
 - A change to what `extract_metadata` or `generate_metatags` produces
   is a **breaking change** even when no Rust signature moves; see the
   README's Stability guarantees.

@@ -137,6 +137,9 @@ merged. Set up GPG or SSH signing per the
 - `cargo clippy --all-targets --all-features -- -D warnings` must pass.
 - `cargo fmt --check` must pass.
 - New behaviour ships with new tests *in the same commit*.
+- A new escaping path (a SIMD `escape_html` or `unescape_html`, say)
+  must pass the Kani harnesses in `tests/kani/escape_html.rs`
+  (`make kani`) before it merges.
 - New deps must come with a one-line rationale in the commit
   message body. A new lockfile entry is a code change.
 
