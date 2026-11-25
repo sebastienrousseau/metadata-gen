@@ -200,11 +200,22 @@ where
 pub fn for_each_event_with_limits<'a, F>(
     content: &'a str,
     limits: &ParseLimits,
-    on_event: F,
+    mut on_event: F,
 ) -> Result<ControlFlow<()>, MetadataError>
 where
     F: FnMut(Event<'a>) -> ControlFlow<()>,
 {
+    walk_events(content, limits, &mut on_event)
+}
+
+/// The walk behind [`for_each_event_with_limits`], behind a trait
+/// object: the visitor stack and the deserialisers it drives are
+/// compiled once, not once per callback type (#61, code size).
+fn walk_events<'a>(
+    content: &'a str,
+    limits: &ParseLimits,
+    on_event: &mut dyn FnMut(Event<'a>) -> ControlFlow<()>,
+) -> Result<ControlFlow<()>, MetadataError> {
     let (format, raw) = locate(content, limits)?;
     let mut sink = Sink::new(on_event);
     let outcome = walk(format, raw, limits, &mut sink);

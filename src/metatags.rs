@@ -257,14 +257,20 @@ impl MetaTagGroups {
         metadata: &MetadataMap,
         tags: &[&str],
     ) -> String {
-        tags.iter()
-            .filter_map(|&tag| {
-                metadata.get(tag).map(|value| {
-                    MetaTag::new(tag, value.as_str()).render()
-                })
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
+        // Written in place rather than collected and joined: one buffer,
+        // and no `join` in the binary (#61).
+        let mut out = String::new();
+        for &tag in tags {
+            if let Some(value) = metadata.get(tag) {
+                if !out.is_empty() {
+                    out.push('\n');
+                }
+                out.push_str(
+                    &MetaTag::new(tag, value.as_str()).render(),
+                );
+            }
+        }
+        out
     }
 
     /// Every rendered element across the five groups, in group order,
@@ -299,8 +305,9 @@ impl MetaTagGroups {
 /// that is not one of ours.
 fn parse_rendered(line: &str) -> Option<MetaTag> {
     let rest = line.strip_prefix("<meta ")?;
-    let (_, rest) = rest.split_once("=\"")?;
-    let (name, rest) = rest.split_once("\" content=\"")?;
+    let (_, rest) = crate::utils::split_once_str(rest, "=\"")?;
+    let (name, rest) =
+        crate::utils::split_once_str(rest, "\" content=\"")?;
     let content = rest.strip_suffix("\">")?;
     Some(MetaTag::new(
         crate::utils::unescape_html(name),
@@ -371,10 +378,12 @@ pub use html::{extract_meta_tags, extract_meta_tags_lenient};
 /// assert_eq!(map["a"], "2");
 /// ```
 pub fn meta_tags_to_hashmap(meta_tags: Vec<MetaTag>) -> MetadataMap {
-    meta_tags
-        .into_iter()
-        .map(|tag| (tag.name, tag.content))
-        .collect()
+    // `extend`, not `collect`: see `CowMetadata::into_owned` (#61).
+    let mut map = MetadataMap::new();
+    map.extend(
+        meta_tags.into_iter().map(|tag| (tag.name, tag.content)),
+    );
+    map
 }
 
 #[cfg(all(test, feature = "html"))]
