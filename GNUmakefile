@@ -21,7 +21,7 @@
 #   make bench-instructions — instruction counts under callgrind (Linux, Valgrind)
 #   make bench-compare — escape_html against v_htmlescape (separate workspace)
 #   make proptest  — property tests at CI scale (10 000 cases, seed printed)
-#   make kani      — the escape_html totality proof (needs cargo-kani)
+#   make kani      — the escape_html Kani proofs (needs cargo-kani)
 #   make mutants   — mutation testing with the 85% kill-rate gate
 #   make embedded  — no_std builds and object sizes on the embedded targets
 #   make versions  — every version-bearing file agrees with Cargo.toml
@@ -97,6 +97,7 @@ loom:
 
 kani:
 	cargo kani --tests --harness check_escape_html_totality
+	scripts/kani-round-trip.sh
 
 # A full run takes a while; `cargo mutants --in-diff <file>` narrows it
 # to a diff, as the PR job does.
