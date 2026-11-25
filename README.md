@@ -368,6 +368,15 @@ make wasi         # WASI component: validate, size, native parity
 - Miri on the unit tests per push, and on every test target with `-Zmiri-strict-provenance` nightly.
 - Mutation testing via `cargo-mutants` (`.cargo/mutants.toml`), gated at an 85 % kill rate on each pull request's changed lines and nightly on the whole crate.
 - Three fuzz targets replaying seed and regression corpora per push and fuzzed for ten minutes each nightly; `fuzz/oss-fuzz/` is ready for OSS-Fuzz.
+- To fuzz locally, install nightly Rust and `cargo install --locked cargo-fuzz`, then run a target from the repository root (`-max_total_time` is in seconds; new corpus entries land in `fuzz/corpus/<target>/`):
+
+  ```bash
+  cargo +nightly fuzz run fuzz_extract_metadata -- -max_total_time=600
+  cargo +nightly fuzz run fuzz_extract_meta_tags -- -max_total_time=600
+  cargo +nightly fuzz run fuzz_html_escape -- -max_total_time=600
+  ```
+
+  `make fuzz` builds every target and replays the committed corpus and regressions once, as CI does per push.
 
 ---
 
