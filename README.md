@@ -116,19 +116,20 @@ A fence whose format is not compiled in is reported as `UnsupportedFormatError`,
 
 ### Embedded targets
 
-The `embedded` CI job builds the `no_std` core for each target below on every pull request; a `std` call in that path fails the build. Sizes were measured locally with rustc 1.100.0 by the scripts named in each metric:
+The `embedded` CI job builds the `no_std` core for each target below on every pull request; a `std` call in that path fails the build, and so does a `yaml` object over 50,000 B (#61). Sizes were measured locally on macOS with rustc 1.100.0 by the scripts named in each metric (for the same commit, CI on Linux reported the `yaml` object 4% lower, 72,400 B against 75,389 B):
 
 | Target | Features | Metric | Size |
 | :--- | :--- | :--- | ---: |
-| `thumbv7em-none-eabihf` | `yaml,toml,json` | object | 94,746 B |
-| `thumbv7em-none-eabihf` | `yaml` | object | 75,389 B |
-| `thumbv7em-none-eabihf` | `yaml` | linked firmware | 164,817 B |
-| `riscv32imac-unknown-none-elf` | `yaml,toml,json` | object | 105,334 B |
-| `riscv32imac-unknown-none-elf` | `yaml` | linked firmware | 195,285 B |
-| `riscv32imc-unknown-none-elf` | `json` | object | 72,477 B |
+| `thumbv7em-none-eabihf` | `yaml,toml,json` | object | 64,056 B |
+| `thumbv7em-none-eabihf` | `yaml` | object (budget 50,000 B) | 48,240 B |
+| `thumbv7em-none-eabihf` | `yaml,embedded-io-async` | object | 48,344 B |
+| `thumbv7em-none-eabihf` | `yaml` | linked firmware | 164,041 B |
+| `riscv32imac-unknown-none-elf` | `yaml,toml,json` | object | 70,370 B |
+| `riscv32imac-unknown-none-elf` | `yaml` | linked firmware | 194,255 B |
+| `riscv32imc-unknown-none-elf` | `json` | object | 53,483 B |
 
 - **object**: `scripts/embedded_size.sh <target> <features>`, the text + data + bss of metadata-gen's own rlib at `opt-level = "s"` without LTO. It leaves out every dependency.
-- **linked firmware**: `scripts/embedded_firmware_size.sh <target>`, the `.text + .rodata + .data` that a yaml-only `extract_metadata` call adds to a minimal `no_std` image linked with LTO, `opt-level = "s"` and `--gc-sections` (`embedded/size-probe`). It includes `noyalib` and the `core` formatting and float code it pulls in; `opt-level = "z"` brings it to 135,941 B on `thumbv7em-none-eabihf`. The `riscv32imac` figure is not run in CI.
+- **linked firmware**: `scripts/embedded_firmware_size.sh <target>`, the `.text + .rodata + .data` that a yaml-only `extract_metadata` call adds to a minimal `no_std` image linked with LTO, `opt-level = "s"` and `--gc-sections` (`embedded/size-probe`). It includes `noyalib` and the `core` formatting and float code it pulls in; `opt-level = "z"` brings it to 135,101 B on `thumbv7em-none-eabihf`. Most of it is not this crate's code, so the 50,000 B budget applies to the object figure. The `riscv32imac` figure is not run in CI.
 
 `riscv32imc-unknown-none-elf` has no atomic read-modify-write, so only the JSON format builds there: `noyalib` and `toml` use `Arc`.
 
