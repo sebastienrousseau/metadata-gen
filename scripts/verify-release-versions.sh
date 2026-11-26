@@ -105,6 +105,21 @@ if wit.is_file():
     got = m.group(1) if m else None
     (ok if got == version else bad)("wit/metadata-gen.wit", got or "no package version")
 
+# The deploy samples (#63) name the WIT package version where they
+# import or depend on it, and the handler's package follows the crate.
+deploy = root / "examples" / "deploy"
+for rel, pattern in (
+    ("http-handler/Cargo.toml", r'^version\s*=\s*"([^"]+)"'),
+    ("http-handler/src/lib.rs", r'import metadata-gen:lib/metadata@([^;\s]+);'),
+    ("spin/spin.toml", r'^version\s*=\s*"([^"]+)"'),
+    ("spin/spin.toml", r'"metadata-gen:lib/metadata@([^"]+)"'),
+):
+    path = deploy / rel
+    if path.is_file():
+        m = re.search(pattern, path.read_text(encoding="utf-8"), re.M)
+        got = m.group(1) if m else None
+        (ok if got == version else bad)(f"examples/deploy/{rel}", got or "no version")
+
 # First-party crates (noyalib, oxml) are pinned exactly (`=0.0.X`):
 # same-author 0.0.x lines where every release may break (ADR-0004,
 # CONTRIBUTING "First-party dependency policy"). A requirement without
