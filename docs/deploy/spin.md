@@ -2,52 +2,78 @@
 
 # Fermyon Spin
 
-**Status: not run.** Nothing on this page was executed for this
-release: the Spin CLI was not available where the guide was written.
-The steps rely on Spin's component dependencies (Spin 3.0 and later),
-which let an HTTP component import an interface that another component
-exports. Treat them as a starting point and report what differs.
+Spin runs WASI 0.2 components and can plug one component into another
+at load time: a *component dependency* in `spin.toml`. The sample's
+HTTP handler,
+[`examples/deploy/http-handler/`](../../examples/deploy/http-handler/),
+imports the `metadata-gen:lib/metadata` interface, and Spin satisfies
+that import with the component built from [`wasi/`](../../wasi/). The
+app is in [`examples/deploy/spin/`](../../examples/deploy/spin/).
 
-## 1. Build the component
+**What was checked (2026-11-26):** the steps below on macOS with Rust
+1.100 and Spin 4.3.0. `spin up` served the app and answered every
+request in step 4. CI runs `spin build`, `spin up` and
+[`examples/deploy/smoke.sh`](../../examples/deploy/smoke.sh) on every
+push (the `deploy sample (Spin)` job in `quality.yml`). It was **not**
+deployed to Fermyon Cloud, so step 5 is untested.
+
+**Measured: 30 s on an Apple A18 Pro Mac (6 cores, macOS), 2026-11-26**, from `git clone` to the first `200` from
+`spin up`, with cold `target/` directories and a warm Cargo registry.
+Installing Spin is not included.
+
+## 1. Prerequisites
+
+- Rust with the `wasm32-wasip2` target: `rustup target add wasm32-wasip2`
+- [Spin](https://spinframework.dev/) 3.0 or newer (component
+  dependencies arrived in 3.0; checked with 4.3.0)
+- A Fermyon Cloud account, for the deploy step only
+
+## 2. Build
 
 ```bash
-rustup target add wasm32-wasip2
 git clone https://github.com/sebastienrousseau/metadata-gen.git
-cd metadata-gen/wasi
-cargo build --locked --release --target wasm32-wasip2 --lib
-cp target/wasm32-wasip2/release/metadata_gen_component.wasm ~/metadata-gen.wasm
+cd metadata-gen/examples/deploy/spin
+spin build   # cargo builds wasi/ and ../http-handler for wasm32-wasip2
 ```
 
-## 2. An HTTP component that imports the interface
+## 3. How it fits together
 
-Create a Spin HTTP app (`spin new -t http-rust frontmatter`), copy
-`wit/metadata-gen.wit` from this repository into the app's `wit/`
-directory, and add the import to the app's world:
-
-```wit
-world frontmatter {
-    import metadata-gen:lib/metadata@0.0.10;
-}
-```
-
-Generate bindings for that world with `wit-bindgen` in the handler
-crate, and call `metadata::extract(&body)` from the request handler.
-
-## 3. Wire the dependency in `spin.toml`
+[`spin.toml`](../../examples/deploy/spin/spin.toml) routes every path to
+the `frontmatter` component, whose source is the HTTP handler, and
+declares the dependency:
 
 ```toml
 [component.frontmatter.dependencies]
-"metadata-gen:lib/metadata" = { path = "/home/you/metadata-gen.wasm" }
+"metadata-gen:lib/metadata@0.0.10" = { path = "../../../wasi/target/wasm32-wasip2/release/metadata_gen_component.wasm" }
 ```
 
-Spin composes the two components at load time.
+The handler holds no parser: it reads the body, calls
+`metadata::extract`, and writes the result as JSON. `POST` returns the
+front matter as a JSON object, or HTTP 422 with `{"error": ...}`; any
+other method gets 405.
 
-## 4. Run
+## 4. Run it locally
 
 ```bash
-spin build
 spin up
-curl -X POST --data-binary $'---\ntitle: Hi\n---\n' http://127.0.0.1:3000/
+# in another terminal:
+curl -X POST --data-binary $'---\ntitle: Hi\nauthor:\n  name: Ada\n---\nbody' http://127.0.0.1:3000/
+# {"author.name":"Ada","title":"Hi"}
+curl -X POST --data-binary 'plain' http://127.0.0.1:3000/
+# {"error":"Failed to extract metadata: No valid front matter found."}  (HTTP 422)
+../smoke.sh http://127.0.0.1:3000/   # the same checks CI runs
 ```
 
-`spin deploy` publishes to Fermyon Cloud with an account; also not run.
+## 5. Deploy to Fermyon Cloud
+
+```bash
+spin plugins install cloud
+spin cloud login
+spin cloud deploy
+```
+
+Not run for this guide; see the note at the top. If the platform
+does not accept component dependencies, deploy the composed component
+the wasmCloud sample builds instead (`examples/deploy/wasmcloud/build.sh`
+writes it to `build/frontmatter.wasm`): point `source` at that file
+and remove the `dependencies` table.

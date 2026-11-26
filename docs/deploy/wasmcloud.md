@@ -2,49 +2,77 @@
 
 # wasmCloud
 
-**Status: not run.** Nothing on this page was executed for this
-release: the `wash` CLI was not available where the guide was written.
-wasmCloud runs WASI 0.2 components, and the usual way to use a library
-component is to compose it into the HTTP component that calls it before
-deployment. Treat these steps as a starting point.
+wasmCloud runs WASI 0.2 components. The sample composes the component
+built from [`wasi/`](../../wasi/) into the HTTP handler in
+[`examples/deploy/http-handler/`](../../examples/deploy/http-handler/)
+before it runs, with [`wac`](https://github.com/bytecodealliance/wac),
+so the host sees one component that exports `wasi:http` and needs
+nothing from metadata-gen. The app is in
+[`examples/deploy/wasmcloud/`](../../examples/deploy/wasmcloud/).
 
-## 1. Build the component
+**What was checked (2026-11-26):** the steps below on macOS with Rust
+1.100, wash 2.12.1 and wac 0.12.0. `wash dev` served the
+component and answered every request in step 4. CI runs `wash build`,
+`wash dev` and [`examples/deploy/smoke.sh`](../../examples/deploy/smoke.sh)
+on every push (the `deploy sample (wasmCloud)` job in `quality.yml`).
+It was **not** deployed to a wasmCloud cluster, so step 5 is untested.
+
+**Measured: 33 s on an Apple A18 Pro Mac (6 cores, macOS), 2026-11-26**, from `git clone` to the first `200` from
+`wash dev`, with cold `target/` directories and a warm Cargo registry.
+Installing wash and wac is not included.
+
+## 1. Prerequisites
+
+- Rust with the `wasm32-wasip2` target: `rustup target add wasm32-wasip2`
+- [wash](https://wasmcloud.com/docs/installation) 2.x (checked with 2.12.1)
+- wac: `cargo install --locked wac-cli`
+- For the deploy step: a Kubernetes cluster running the wasmCloud
+  runtime operator, and an OCI registry you can push to
+
+## 2. Build
 
 ```bash
-rustup target add wasm32-wasip2
 git clone https://github.com/sebastienrousseau/metadata-gen.git
-cd metadata-gen/wasi
-cargo build --locked --release --target wasm32-wasip2 --lib
+cd metadata-gen/examples/deploy/wasmcloud
+wash build
 ```
 
-## 2. An HTTP component that imports the interface
-
-Start from a wasmCloud Rust HTTP template (`wash new component
-frontmatter --template-name hello-world-rust`), copy
-`wit/metadata-gen.wit` into its `wit/` directory, add
-`import metadata-gen:lib/metadata@0.0.10;` to its world, and call
-`metadata::extract` from the `wasi:http` handler. Build it with
-`wash build`.
-
-## 3. Compose
-
-Plug the library into the handler with
-[`wac`](https://github.com/bytecodealliance/wac):
+`wash build` runs the command in
+[`.wash/config.yaml`](../../examples/deploy/wasmcloud/.wash/config.yaml),
+[`build.sh`](../../examples/deploy/wasmcloud/build.sh): it builds both
+components for `wasm32-wasip2` and runs
 
 ```bash
-wac plug build/frontmatter_s.wasm \
-  --plug ../metadata-gen/wasi/target/wasm32-wasip2/release/metadata_gen_component.wasm \
-  -o frontmatter-composed.wasm
+wac plug http-handler.wasm --plug metadata_gen_component.wasm -o build/frontmatter.wasm
 ```
 
-## 4. Deploy
+## 3. The handler
 
-Point the component entry of the app's `wadm.yaml` at
-`file://./frontmatter-composed.wasm`, add an `httpserver` link as in the
-template, then:
+The handler reads the request body, calls `metadata::extract`, and
+writes the result as JSON. `POST` returns the front matter as a JSON
+object, or HTTP 422 with `{"error": ...}`; any other method gets 405.
+
+## 4. Run it locally
 
 ```bash
-wash up -d
-wash app deploy wadm.yaml
-curl -X POST --data-binary $'---\ntitle: Hi\n---\n' http://127.0.0.1:8000/
+wash dev
+# in another terminal:
+curl -X POST --data-binary $'---\ntitle: Hi\nauthor:\n  name: Ada\n---\nbody' http://127.0.0.1:8000/
+# {"author.name":"Ada","title":"Hi"}
+curl -X POST --data-binary 'plain' http://127.0.0.1:8000/
+# {"error":"Failed to extract metadata: No valid front matter found."}  (HTTP 422)
+../smoke.sh http://127.0.0.1:8000/   # the same checks CI runs
 ```
+
+## 5. Deploy
+
+wasmCloud 2 runs workloads on Kubernetes through its runtime operator.
+Push the component to a registry, then apply a `WorkloadDeployment`
+that names it:
+
+```bash
+wash oci push ghcr.io/<you>/metadata-gen-frontmatter:0.0.10 build/frontmatter.wasm
+```
+
+Not run for this guide; see the note at the top. The cluster setup is
+in wasmCloud's documentation.

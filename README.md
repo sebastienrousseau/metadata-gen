@@ -252,7 +252,7 @@ Reproduce with `cargo bench --all-features`; the harnesses live in [`benches/`](
 - **Processing and normalization**: `process_metadata` and `process_metadata_with` normalize dates to `YYYY-MM-DD` (`DD/MM/YYYY` by default, `MM/DD/YYYY` with `DateOrder::MonthFirst`), verify required fields, and derive URL slugs from titles.
 - **Meta tag synthesis**: `generate_metatags` creates grouped tags (`primary`, `og`, `twitter`, `apple`, `ms`); Open Graph tags use `property=`, and attribute values pass through `escape_attribute`. `MetaTag` and `MetaTagGroups::iter` give the same tags as values.
 - **Streaming HTML tag extraction**: `extract_meta_tags` extracts `<meta>` tags in a single streaming pass using `oxml` without full DOM allocation; `extract_meta_tags_lenient` also reports where a malformed page stopped the scan.
-- **WASI 0.2 component**: `wasi/` builds the crate for `wasm32-wasip2` with the WIT interface in `wit/metadata-gen.wit`; CI checks it returns what the native crate returns. [`docs/deploy/`](docs/deploy/README.md) runs it on Cloudflare Workers.
+- **WASI 0.2 component**: `wasi/` builds the crate for `wasm32-wasip2` with the WIT interface in `wit/metadata-gen.wit`; CI checks it returns what the native crate returns. [`docs/deploy/`](docs/deploy/README.md) runs it on Cloudflare Workers, Spin and wasmCloud.
 - **HTML escaping and file utilities**: single-pass, single-allocation `escape_html` and `unescape_html`, readers and files in `metadata_gen::io`, Tokio-backed helpers in `metadata_gen::tokio`, and runtime-agnostic async readers in `metadata_gen::futures_io` (smol, async-std) and `metadata_gen::embedded_io` (Embassy).
 
 ---

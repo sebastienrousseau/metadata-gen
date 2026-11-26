@@ -95,8 +95,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   how to register it.
 - **Deploy guides** (#63): `docs/deploy/` for Cloudflare Workers
   (sample in `examples/deploy/cloudflare-workers/`, checked locally
-  with `wrangler dev`, not deployed), Spin and wasmCloud (not run;
-  marked so).
+  with `wrangler dev`, not deployed), Spin and wasmCloud. Spin and
+  wasmCloud share one `wasi:http` handler
+  (`examples/deploy/http-handler/`) that imports the component's
+  `metadata` interface: Spin plugs the component in as a component
+  dependency (`examples/deploy/spin/`), and the wasmCloud sample
+  composes the two with `wac` (`examples/deploy/wasmcloud/`). Both
+  were run locally (`spin up`, `wash dev`) and answer the same JSON
+  contract as the Worker; none is deployed to a hosted platform.
 
 ### Performance
 
@@ -233,6 +239,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sample with `npm ci`, `npm audit` and `wrangler deploy --dry-run`;
   the sample now has a lockfile and overrides `minimatch` to 11.0.6
   for GHSA-g3hv-75wg-m249 (#63).
+- `deploy sample (Spin)` and `deploy sample (wasmCloud)` jobs build
+  each sample, validate the result with `wasm-tools`, serve it
+  (`spin up`, `wash dev`) and run `examples/deploy/smoke.sh` against
+  it: a `200` with the front matter, a `422` without, a `405` for
+  `GET`. Spin and wash are downloaded at pinned checksums; wac is
+  built from crates.io with `--locked` (#63).
 - The cargo-vet exemption ratchet reads the count from the JSON
   report and its baseline is 0: the text summary drops "N exempted"
   at zero, which failed the job while vetting passed.
