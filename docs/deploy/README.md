@@ -11,9 +11,14 @@ check it and what was not.
 | Host | Guide | Checked |
 | :--- | :--- | :--- |
 | Cloudflare Workers | [cloudflare-workers.md](cloudflare-workers.md) | Built and served locally with `wrangler dev` (workerd); `wrangler deploy --dry-run` bundles it. Not deployed to a Cloudflare account. |
-| Fermyon Spin | [spin.md](spin.md) | Not run. The steps follow Spin's documented component-dependency support. |
-| wasmCloud | [wasmcloud.md](wasmcloud.md) | Not run. The steps follow wasmCloud's documented composition workflow. |
+| Fermyon Spin | [spin.md](spin.md) | Served locally with `spin up` and checked in CI on every push. Not deployed to Fermyon Cloud. |
+| wasmCloud | [wasmcloud.md](wasmcloud.md) | Served locally with `wash dev` and checked in CI on every push. Not deployed to a wasmCloud cluster. |
 
 The component itself is checked in CI on every push: it validates with
 `wasm-tools`, stays under 1 MiB, and returns byte-for-byte what the
 native crate returns under `wasmtime` (`python3 -I wasi/check.py`).
+All three samples answer the same contract, which
+[`examples/deploy/smoke.sh`](../../examples/deploy/smoke.sh) checks
+against a running server: `POST` a document and get its front matter
+as JSON, `422` with `{"error": ...}` when it has none, `405` for any
+other method.

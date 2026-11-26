@@ -389,6 +389,108 @@ jobs:
       - run: npm run build
       - run: npx --no-install wrangler deploy --dry-run --outdir dist
 
+  deploy-spin:
+    # The Spin sample (#63), run the way docs/deploy/spin.md says:
+    # `spin build`, `spin up`, then examples/deploy/smoke.sh against it.
+    # Spin plugs the component into the HTTP handler at load time (a
+    # component dependency in spin.toml). Nothing is deployed.
+    name: deploy sample (Spin)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SPIN_VERSION: v4.3.0
+      SPIN_SHA256: 25de087b1f8443e979c8de1339e412c882dcb19eb5990c7888f9d206d0fbfa44
+      SPIN_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+        with:
+          workspaces: |
+            wasi
+            examples/deploy/http-handler
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8, installs wasm-tools
+        with:
+          tool: wasm-tools@1.261.0
+      - name: Install Spin (checksum pinned)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="spin-${SPIN_VERSION}-static-linux-amd64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$tarball" \
+            "https://github.com/spinframework/spin/releases/download/${SPIN_VERSION}/$tarball"
+          echo "${SPIN_SHA256}  $RUNNER_TEMP/$tarball" | sha256sum -c
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP/bin" spin
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Build, serve and check
+        working-directory: examples/deploy/spin
+        shell: bash
+        run: |
+          set -euo pipefail
+          spin build
+          wasm-tools validate --features component-model \
+            ../http-handler/target/wasm32-wasip2/release/metadata_gen_http_handler.wasm
+          spin up --listen 127.0.0.1:3000 > "$RUNNER_TEMP/spin.log" 2>&1 &
+          trap 'kill %1 || true; cat "$RUNNER_TEMP/spin.log"' EXIT
+          ../smoke.sh http://127.0.0.1:3000/
+
+  deploy-wasmcloud:
+    # The wasmCloud sample (#63), run the way docs/deploy/wasmcloud.md
+    # says: `wash build` (build.sh composes the component into the HTTP
+    # handler with wac), `wash dev`, then examples/deploy/smoke.sh.
+    # Nothing is deployed.
+    name: deploy sample (wasmCloud)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      WASH_VERSION: v2.12.1
+      WASH_SHA256: cb7eb2920cff9f0c95e7badfaac069141a6f9b527b12a62b47b4220552ee0477
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+          targets: wasm32-wasip2
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
+        with:
+          workspaces: |
+            wasi
+            examples/deploy/http-handler
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8, installs wasm-tools
+        with:
+          tool: wasm-tools@1.261.0
+      - name: Install wash (checksum pinned) and wac
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSLo "$RUNNER_TEMP/bin/wash" \
+            "https://github.com/wasmCloud/wasmCloud/releases/download/${WASH_VERSION}/wash-x86_64-unknown-linux-musl"
+          echo "${WASH_SHA256}  $RUNNER_TEMP/bin/wash" | sha256sum -c
+          chmod +x "$RUNNER_TEMP/bin/wash"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          # wac's release binaries carry no checksum or attestation, so
+          # it is built from crates.io against its own lockfile.
+          cargo install --locked wac-cli@0.12.0
+      - name: Build, serve and check
+        working-directory: examples/deploy/wasmcloud
+        shell: bash
+        run: |
+          set -euo pipefail
+          wash --non-interactive build
+          wasm-tools validate --features component-model build/frontmatter.wasm
+          wash --non-interactive dev > "$RUNNER_TEMP/wash.log" 2>&1 &
+          trap 'kill %1 || true; cat "$RUNNER_TEMP/wash.log"' EXIT
+          ../smoke.sh http://127.0.0.1:8000/
+
   embedded:
     name: embedded (${{ matrix.target }}, ${{ matrix.features }})
     runs-on: ubuntu-latest

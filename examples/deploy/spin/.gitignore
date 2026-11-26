@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+.spin/
+# written by `spin build` from the dependencies in spin.toml
+spin-dependencies.wit

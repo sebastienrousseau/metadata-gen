@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# A wasi:http handler that imports the metadata-gen component's
+# `metadata` interface (#63). It holds no parser: composed with
+# wasi/'s component (by Spin's dependencies, or by `wac plug` for
+# wasmCloud) it answers POST requests with the document's front matter
+# as JSON, the same contract as the Cloudflare Workers sample.
+# Its own package, never published, not a member of any workspace.
+
+[package]
+name = "metadata-gen-http-handler"
+version = "0.0.10"
+edition = "2021"
+rust-version = "1.89.0"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasip2 = "=2.0.1"
+wit-bindgen = { version = "0.63", default-features = false, features = ["macros", "realloc"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+panic = "abort"
+strip = true
+
+[workspace]

@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# A Spin app serving the metadata-gen component over HTTP (#63). The
+# HTTP handler (../http-handler) imports the `metadata` interface, and
+# Spin plugs the component built from ../../../wasi into it at load
+# time. See docs/deploy/spin.md.
+
+spin_manifest_version = 2
+
+[application]
+name = "metadata-gen-frontmatter"
+version = "0.0.10"
+description = "POST a Markdown document, get its front matter as JSON"
+
+[[trigger.http]]
+route = "/..."
+component = "frontmatter"
+
+[component.frontmatter]
+source = "../http-handler/target/wasm32-wasip2/release/metadata_gen_http_handler.wasm"
+
+[component.frontmatter.dependencies]
+"metadata-gen:lib/metadata@0.0.10" = { path = "../../../wasi/target/wasm32-wasip2/release/metadata_gen_component.wasm" }
+
+[component.frontmatter.build]
+command = "cargo build --locked --release --target wasm32-wasip2 --manifest-path ../../../wasi/Cargo.toml --lib && cargo build --locked --release --target wasm32-wasip2 --manifest-path ../http-handler/Cargo.toml"
+watch = ["../http-handler/src/**/*.rs", "../../../src/**/*.rs"]

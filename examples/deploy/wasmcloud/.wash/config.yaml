@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2024 - 2026 metadata-gen contributors
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# wash 2 project config for the wasmCloud sample (#63): `wash build`
+# and `wash dev` run build.sh and serve build/frontmatter.wasm.
+version: 2.12.1
+
+build:
+  command: ./build.sh
+  component_path: build/frontmatter.wasm
