@@ -7,13 +7,15 @@
 #   POST no front matter    -> 422 {"error":...}
 #   GET                     -> 405
 # Usage: examples/deploy/smoke.sh http://127.0.0.1:3000/
-# Waits up to 60 s for the server to come up.
+# Waits up to 60 s for the sample to answer GET with 405. Any answer
+# is not enough: `wash dev` opens its port before the component is
+# loaded and answers 404 until it is.
 set -eu
 url="${1:?usage: smoke.sh <url>}"
 i=0
-until curl -s -o /dev/null "$url" 2>/dev/null; do
+until [ "$(curl -s -o /dev/null -w '%{http_code}' "$url" 2>/dev/null)" = 405 ]; do
   i=$((i + 1))
-  [ "$i" -lt 60 ] || { echo "no server at $url" >&2; exit 1; }
+  [ "$i" -lt 60 ] || { echo "no sample answering at $url after 60 s" >&2; exit 1; }
   sleep 1
 done
 fail=0
