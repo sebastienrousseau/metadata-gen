@@ -10,7 +10,7 @@ check it and what was not.
 
 | Host | Guide | Checked |
 | :--- | :--- | :--- |
-| Cloudflare Workers | [cloudflare-workers.md](cloudflare-workers.md) | Built and served locally with `wrangler dev` (workerd); `wrangler deploy --dry-run` bundles it. Not deployed to a Cloudflare account. |
+| Cloudflare Workers | [cloudflare-workers.md](cloudflare-workers.md) | Built and served locally with `wrangler dev` (workerd); deployed to a Cloudflare account on 2026-11-26 and checked with `smoke.sh` at its `workers.dev` URL. |
 | Fermyon Spin | [spin.md](spin.md) | Served locally with `spin up` and checked in CI on every push. Not deployed to Fermyon Cloud. |
 | wasmCloud | [wasmcloud.md](wasmcloud.md) | Served locally with `wash dev` and checked in CI on every push. Not deployed to a wasmCloud cluster. |
 

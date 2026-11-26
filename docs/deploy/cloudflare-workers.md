@@ -12,8 +12,14 @@ JavaScript glue, and the Worker instantiates that. The sample is in
 checkout on macOS with Rust 1.100, Node 26, jco 1.42.0 and wrangler
 4.162.0. `wrangler dev` served the Worker locally on workerd and answered
 both requests shown. `wrangler deploy --dry-run` bundled it to 998 KiB
-(286 KiB gzipped). It was **not** deployed to a Cloudflare account, so
-the deploy step and the production response are untested.
+(286 KiB gzipped).
+
+**Deployed (2026-11-26):** step 5, run from a fresh clone of `main` at
+e27ecaa with wrangler 4.162.0, uploaded 1011.64 KiB (290.50 KiB
+gzipped) to a Cloudflare account; the Worker reported a 1 ms startup
+time. [`examples/deploy/smoke.sh`](../../examples/deploy/smoke.sh)
+against its `workers.dev` URL got the documented `200`, `422` and
+`405`.
 
 **Measured: 2 min (123 s) on an Apple A18 Pro Mac (6 cores, macOS),
 2026-11-25**, from `git clone` to the first `200` from `wrangler dev`:
@@ -74,8 +80,9 @@ npx wrangler login
 npm run deploy
 ```
 
-Not run for this guide; see the note at the top. The bundle is within
-the Workers Free plan's 3 MiB compressed limit.
+`wrangler deploy` prints the Worker's `workers.dev` URL; check it with
+`../smoke.sh https://<worker>.<subdomain>.workers.dev/`. The bundle is
+within the Workers Free plan's 3 MiB compressed limit.
 
 ## Limits
 

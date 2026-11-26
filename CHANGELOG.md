@@ -95,14 +95,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   how to register it.
 - **Deploy guides** (#63): `docs/deploy/` for Cloudflare Workers
   (sample in `examples/deploy/cloudflare-workers/`, checked locally
-  with `wrangler dev`, not deployed), Spin and wasmCloud. Spin and
+  with `wrangler dev` and deployed to Cloudflare, where `smoke.sh`
+  passed against the live URL), Spin and wasmCloud. Spin and
   wasmCloud share one `wasi:http` handler
   (`examples/deploy/http-handler/`) that imports the component's
   `metadata` interface: Spin plugs the component in as a component
   dependency (`examples/deploy/spin/`), and the wasmCloud sample
   composes the two with `wac` (`examples/deploy/wasmcloud/`). Both
   were run locally (`spin up`, `wash dev`) and answer the same JSON
-  contract as the Worker; none is deployed to a hosted platform.
+  contract as the Worker; neither is deployed to a hosted platform.
 
 ### Performance
 
